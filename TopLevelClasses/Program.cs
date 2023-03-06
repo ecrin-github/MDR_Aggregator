@@ -51,7 +51,6 @@ class Program
 
         if (opts != null && paramChecker.ValidArgumentValues(opts))
         {
-            
             Aggregator aggregator = ActivatorUtilities.CreateInstance<Aggregator>(host.Services);
             Environment.ExitCode = aggregator.AggregateData(opts);
         }
