@@ -59,5 +59,4 @@ public static class CopyHelpers
              .MapInteger("other_source_id", x => x.other_source_id)
              .MapVarchar("other_source_name", x => x.other_source_name)
              .MapInteger("number_in_other_source", x => x.number_in_other_source);
-
 }
