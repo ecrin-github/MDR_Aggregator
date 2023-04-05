@@ -1,138 +1,135 @@
 ﻿using CommandLine;
+namespace MDR_Aggregator;
 
-namespace MDR_Aggregator
+internal class ParametersChecker
 {
-    internal class ParametersChecker : IParametersChecker
+    private readonly ILoggingHelper _loggingHelper;
+
+    public ParametersChecker(ILoggingHelper logginghelper)
     {
-        private ILoggingHelper _loggingHelper;
-        private ILoggingHelper _logging_helper;
+        _loggingHelper = logginghelper;
+    }
 
-        public ParametersChecker(ILoggingHelper logginghelper, ILoggingHelper logginghelper_helper)
+    public ParamsCheckResult CheckParams(IEnumerable<string>? args)
+    {
+        // Calls the CommandLine parser. If an error in the initial parsing, log it and return an error.
+        // If parameters can be passed, check their validity and if invalid log and return an error,
+        // otherwise return the parameters, processed as an instance of the Options class.
+
+        var parsedArguments = Parser.Default.ParseArguments<Options>(args);
+        if (parsedArguments.Errors.Any())
         {
-            _loggingHelper = logginghelper;
-            _logging_helper = logginghelper_helper;
+            LogParseError(((NotParsed<Options>)parsedArguments).Errors);
+            return new ParamsCheckResult(true, false, null);
         }
 
-        // Parse command line arguments and return true only if no errors.
-        // Otherwise log errors and return false.
+        var opts = parsedArguments.Value;
+        return CheckArgumentValuesAreValid(opts);
+    }
 
-        public Options ObtainParsedArguments(string[] args)
+    private ParamsCheckResult CheckArgumentValuesAreValid(Options opts)
+    {
+        // 'opts' is passed by reference and may be changed by the checking mechanism.
+        
+        try
         {
-            var parsedArguments = Parser.Default.ParseArguments<Options>(args);
-            if (parsedArguments.Tag.ToString() == "NotParsed")
+            if (opts.testing)
             {
-                HandleParseError(((NotParsed<Options>)parsedArguments).Errors);
-                return null;
+                // No particular requirement here - can drop straight through to run the program
+                // but set the other parameters as true so all functions are tested.
+
+                opts.transfer_data = true;
+                opts.create_core = true;
+                opts.create_json = true;
+                opts.do_statistics = true;
             }
-            else
+            else if (opts is { transfer_data: false, create_core: false, create_json: false, do_statistics: false })
             {
-                return ((Parsed<Options>)parsedArguments).Value;
+                // If not testing need at least one of D, C, J or S to be true
+
+                throw new Exception("None of the allowed optional parameters appear to be present!");
             }
+
+            // Parameters valid - return opts and the source.
+
+            return new ParamsCheckResult(false, false, opts);
         }
 
-        // Parse command line arguments and return true if values are valid.
-        // Otherwise log errors and return false.
-
-        public bool ValidArgumentValues(Options opts)
+        catch (Exception e)
         {
-            try
-            {
+            //_loggingHelper.OpenNoSourceLogFile();
+            _loggingHelper.LogHeader("INVALID PARAMETERS");
+            _loggingHelper.LogCommandLineParameters(opts);
+            _loggingHelper.LogCodeError("MDR_Aggregator application aborted", e.Message, e.StackTrace ?? "");
+            _loggingHelper.CloseLog();
+            return new ParamsCheckResult(false, true, null);
+        }
+    }
 
-                if (opts.testing)
-                {
-                    // no particular requirement here
-                    // can drop straight through to run the program
-                    // but set the other parameters as true so all functions are tested
-
-                    opts.transfer_data = true;
-                    opts.create_core = true;
-                    opts.create_json = true;
-                    opts.do_statistics = true;
-                }
-                else if ((opts.transfer_data == false)
-                    && (opts.create_core == false)
-                    && (opts.create_json == false)
-                    && (opts.do_statistics == false))
-                {
-                    // If not testing need at least one of D, C, J or S to be true
-
-                    throw new Exception("None of the allowed optional parameters appear to be present!");
-                }
-                else if (opts.also_do_files)
-                {
-                    // F only valid if J is present (but F option being dropped)
-
-                    if(opts.create_json == false)
-                    {
-                        throw new Exception("F parameter can only be provided if J paramewter also provided");
-                    }
-                }
     
-                return true;    // OK the program can run!
-            }
-
-            catch (Exception e)
-            {
-                _loggingHelper.LogError(e.Message);
-                _loggingHelper.LogError(e.StackTrace);
-                _loggingHelper.LogLine("Harvester application aborted");
-                _loggingHelper.LogHeader("Closing Log");
-                return false;
-            }
-
-        }
-
-
-        private void HandleParseError(IEnumerable<Error> errs)
-        {
-            // log the errors
-            _loggingHelper.LogError("Error in the command line arguments - they could not be parsed");
-            int n = 0;
-            foreach (Error e in errs)
-            {
-                n++;
-                _loggingHelper.LogParseError("Error {n}: Tag was {Tag}", n.ToString(), e.Tag.ToString());
-                if (e.GetType().Name == "UnknownOptionError")
-                {
-                    _loggingHelper.LogParseError("Error {n}: Unknown option was {UnknownOption}", n.ToString(), ((UnknownOptionError)e).Token);
-                }
-                if (e.GetType().Name == "MissingRequiredOptionError")
-                {
-                    _loggingHelper.LogParseError("Error {n}: Missing option was {MissingOption}", n.ToString(), ((MissingRequiredOptionError)e).NameInfo.NameText);
-                }
-                if (e.GetType().Name == "BadFormatConversionError")
-                {
-                    _loggingHelper.LogParseError("Error {n}: Wrongly formatted option was {MissingOption}", n.ToString(), ((BadFormatConversionError)e).NameInfo.NameText);
-                }
-            }
-            _loggingHelper.LogLine("Harvester application aborted");
-            _loggingHelper.LogHeader("Closing Log");
-        }
-
-    }
-
-
-    public class Options
+    private void LogParseError(IEnumerable<Error> errs)
     {
-        // Lists the command line arguments and options
-        [Option('D', "transfer and aggregate data", Required = false, HelpText = "Indicates that data should be imported from source systems and aggregate st, ob, nk tables constructed ")]
-        public bool transfer_data { get; set; }
+        //_loggingHelper.OpenNoSourceLogFile();
+        _loggingHelper.LogHeader("UNABLE TO PARSE PARAMETERS");
+        _loggingHelper.LogLine("Error in the command line arguments - they could not be parsed");
 
-        [Option('C', "create core table data", Required = false, HelpText = "Indicates that the core tables should be crated and filled from the aggregate tables.")]
-        public bool create_core { get; set; }
-
-        [Option('J', "create json", Required = false, HelpText = "Indicates json fields should be constructed from the core table data.")]
-        public bool create_json { get; set; }
-
-        [Option('F', "create json files", Required = false, HelpText = "Indicates json files should also be constructed from the core table data. Only has an effect if -J parameter present ")]
-        public bool also_do_files { get; set; }
-
-        [Option('S', "do statistics", Required = false, HelpText = "Summarises record numbers, of each sort, in different sources and in the summary and core tables")]
-        public bool do_statistics { get; set; }
-
-        [Option('T', "use test data", Required = false, HelpText = "Carry out D, C, S and J but usiung test data only, in the test database")]
-        public bool testing { get; set; }
+        int n = 0;
+        foreach (Error e in errs)
+        {
+            n++;
+            _loggingHelper.LogParseError("Error {n}: Tag was {Tag}", n.ToString(), e.Tag.ToString());
+            if (e.GetType().Name == "UnknownOptionError")
+            {
+                _loggingHelper.LogParseError("Error {n}: Unknown option was {UnknownOption}", n.ToString(), 
+                    ((UnknownOptionError)e).Token);
+            }
+            if (e.GetType().Name == "MissingRequiredOptionError")
+            {
+                _loggingHelper.LogParseError("Error {n}: Missing option was {MissingOption}", n.ToString(), 
+                    ((MissingRequiredOptionError)e).NameInfo.NameText);
+            }
+            if (e.GetType().Name == "BadFormatConversionError")
+            {
+                _loggingHelper.LogParseError("Error {n}: Wrongly formatted option was {MissingOption}", n.ToString(), 
+                    ((BadFormatConversionError)e).NameInfo.NameText);
+            }
+        }
+        _loggingHelper.LogLine("MDR_Aggregator application aborted");
+        _loggingHelper.CloseLog();
     }
-
 }
-      
+
+
+public class Options
+{
+    // Lists the command line arguments and options
+    [Option('D', "transfer and aggregate data", Required = false, HelpText = "Indicates that data should be imported from source systems and aggregate st, ob, nk tables constructed ")]
+    public bool transfer_data { get; set; }
+
+    [Option('C', "create core table data", Required = false, HelpText = "Indicates that the core tables should be crated and filled from the aggregate tables.")]
+    public bool create_core { get; set; }
+
+    [Option('J', "create json", Required = false, HelpText = "Indicates json fields should be constructed from the core table data.")]
+    public bool create_json { get; set; }
+
+    [Option('S', "do statistics", Required = false, HelpText = "Summarises record numbers, of each sort, in different sources and in the summary and core tables")]
+    public bool do_statistics { get; set; }
+
+    [Option('T', "use test data", Required = false, HelpText = "Carry out D, C, S and J but using test data only, in the test database")]
+    public bool testing { get; set; }
+}
+
+  
+public class ParamsCheckResult
+{
+    internal bool ParseError { get; set; }
+    internal bool ValidityError { get; set; }
+    internal Options? Pars { get; set; }
+
+    internal ParamsCheckResult(bool _ParseError, bool _ValidityError, Options? _Pars)
+    {
+        ParseError = _ParseError;
+        ValidityError = _ValidityError;
+        Pars = _Pars;
+    }
+}

@@ -1,9 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-
 namespace MDR_Aggregator;
-
 
 public class LoggingHelper : ILoggingHelper
 {
@@ -20,8 +18,8 @@ public class LoggingHelper : ILoggingHelper
             .AddJsonFile("appsettings.json")
             .Build();
 
-        _logfileStartOfPath = settings["logfilepath"] ?? "";
-        _summaryLogfileStartOfPath = settings["summaryfilepath"] ?? "";
+        _logfileStartOfPath = settings["logFlePath"] ?? "";
+        _summaryLogfileStartOfPath = settings["summaryFilePath"] ?? "";
     }
 
     // Used to check if a log file with a named source has been created.
@@ -66,7 +64,6 @@ public class LoggingHelper : ILoggingHelper
         LogLine("transfer data =  " + opts.transfer_data);
         LogLine("create core =  " + opts.create_core);
         LogLine("create json =  " + opts.create_json);
-        LogLine("also do json files =  " + opts.also_do_files);
         LogLine("do statistics =  " + opts.do_statistics);
     }
 
@@ -81,21 +78,11 @@ public class LoggingHelper : ILoggingHelper
 
     public void LogStudyHeader(Options opts, string studyName)
     {
-        string dividerLine;
-        
-        //if (opts.harvest_all_test_data || opts.setup_expected_data_only)
-        //{
-        //    dividerLine = new string('-', 70);
-        //}
-        //else
-        //{
-           // dividerLine = harvest_type is 1 or 2 ? new string('=', 70) : new string('-', 70);
-        //}
-
+        string dividerLine = new string('-', 70);
         LogLine("");
-        //LogLine(dividerLine);
+        LogLine(dividerLine);
         LogLine(studyName);
-        //LogLine(dividerLine);
+        LogLine(dividerLine);
         LogLine("");
     }
 
@@ -270,8 +257,6 @@ public class LoggingHelper : ILoggingHelper
         // construct txt file with message
         // and place in pickup folder for
         // SMTP service (if possible - may need to change permissions on folder)
-
-
     }
 
 
@@ -280,19 +265,14 @@ public class LoggingHelper : ILoggingHelper
         // construct txt file with message
         // and place in pickup folder for
         // SMTP service (if possible - may need to change permissions on folder)
-
     }
-
     
     private string GetTableRecordCount(string db_conn, string schema, string table_name)
     {
         string sql_string = "select count(*) from " + schema + "." + table_name;
-
-        using (NpgsqlConnection conn = new NpgsqlConnection(db_conn))
-        {
-            int res = conn.ExecuteScalar<int>(sql_string);
-            return res.ToString() + " records found in " + schema + "." + table_name;
-        }
+        using NpgsqlConnection conn = new NpgsqlConnection(db_conn);
+        int res = conn.ExecuteScalar<int>(sql_string);
+        return res.ToString() + " records found in " + schema + "." + table_name;
     }
 }
 

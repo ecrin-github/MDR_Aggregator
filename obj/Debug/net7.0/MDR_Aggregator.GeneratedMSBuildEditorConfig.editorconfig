@@ -8,4 +8,4 @@ build_property.PlatformNeutralAssembly =
 build_property.EnforceExtendedAnalyzerRules = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = MDR_Aggregator
-build_property.ProjectDir = C:\Repos\github.com\scanhamman\MDR_Aggregator\
+build_property.ProjectDir = C:\Users\ecrinadmin\RiderProjects\MDR_Aggregator\
