@@ -36,10 +36,6 @@ public class Aggregator
 
                 _loggingHelper.LogHeader("Establishing aggregate schemas");
                 SchemaBuilder sb = new SchemaBuilder(dest_conn_string);
-                sb.DeleteStudyTables();
-                sb.DeleteObjectTables();
-                sb.DeleteLinkTables();
-
                 sb.BuildNewStudyTables();
                 sb.BuildNewObjectTables();
                 sb.BuildNewLinkTables();
@@ -138,10 +134,8 @@ public class Aggregator
 
                 CoreBuilder cb = new CoreBuilder(dest_conn_string);
                 _loggingHelper.LogHeader("Set up");
-                cb.DeleteCoreTables();
-                _loggingHelper.LogLine("Core tables dropped");
                 cb.BuildNewCoreTables();
-                _loggingHelper.LogLine("Core tables created");
+                _loggingHelper.LogLine("Core tables re-created");
 
                 // transfer data to core tables
                 CoreTransferBuilder ctb = new CoreTransferBuilder(dest_conn_string, _loggingHelper);

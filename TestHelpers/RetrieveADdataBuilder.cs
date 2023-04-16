@@ -23,7 +23,6 @@ class RetrieveADDataBuilder
         DeleteData("studies");
         DeleteData("study_identifiers");
         DeleteData("study_titles");
-        DeleteData("study_hashes");
 
         // these are database dependent
 
@@ -42,7 +41,6 @@ class RetrieveADDataBuilder
         DeleteData("data_objects");
         DeleteData("object_instances");
         DeleteData("object_titles");
-        DeleteData("object_hashes");
 
         // these are database dependent		
 
@@ -70,17 +68,21 @@ class RetrieveADDataBuilder
         adr.TransferStudies();
         adr.TransferStudyIdentifiers();
         adr.TransferStudyTitles();
-        adr.TransferStudyHashes();
 
         // these are database dependent
 
         if (_source.has_study_topics is true) adr.TransferStudyTopics();
+        if (_source.has_study_conditions is true) adr.TransferStudyConditions();
         if (_source.has_study_features is true) adr.TransferStudyFeatures();
-        if (_source.has_study_contributors is true) adr.TransferStudyContributors();
+        if (_source.has_study_people is true) adr.TransferStudyPeople();
+        if (_source.has_study_organisations is true) adr.TransferStudyOrganisations();
         if (_source.has_study_references is true) adr.TransferStudyReferences();
         if (_source.has_study_relationships is true) adr.TransferStudyRelationships();
         if (_source.has_study_links is true) adr.TransferStudyLinks();
         if (_source.has_study_ipd_available is true) adr.TransferStudyIPDAvaiable();
+        if (_source.has_study_countries is true) adr.TransferStudyCountries();
+        if (_source.has_study_locations is true) adr.TransferStudyLocations();
+        if (_source.has_study_iec is true) adr.TransferStudyIEC();
     }
 
 
@@ -91,7 +93,6 @@ class RetrieveADDataBuilder
         odr.TransferDataObjects();
         odr.TransferObjectInstances();
         odr.TransferObjectTitles();
-        odr.TransferObjectHashes();
 
         // these are database dependent		
 
@@ -102,7 +103,8 @@ class RetrieveADDataBuilder
 
         if (_source.has_object_pubmed_set is true)
         {
-            odr.TransferObjectContributors();
+            odr.TransferObjectPeople();
+            odr.TransferObjectOrganisations();
             odr.TransferObjectTopics();
             odr.TransferObjectComments();
             odr.TransferObjectDescriptions();

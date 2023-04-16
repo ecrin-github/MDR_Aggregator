@@ -4,8 +4,8 @@ namespace MDR_Aggregator;
 
 public class DBUtilities
 {
-    string connstring;
-    ILoggingHelper _loggingHelper;
+    readonly string connstring;
+    readonly ILoggingHelper _loggingHelper;
 
     public DBUtilities(string _connstring, ILoggingHelper logginghelper)
     {
@@ -15,46 +15,38 @@ public class DBUtilities
 
     public int ExecuteSQL(string sql_string)
     {
-        using (var conn = new NpgsqlConnection(connstring))
+        using var conn = new NpgsqlConnection(connstring);
+        try
         {
-            try
-            {
-                return conn.Execute(sql_string);
-            }
-            catch (Exception e)
-            {
-                _loggingHelper.LogError("In ExecuteSQL; " + e.Message + ", \nSQL was: " + sql_string);
-                return 0;
-            }
+            return conn.Execute(sql_string);
+        }
+        catch (Exception e)
+        {
+            _loggingHelper.LogError("In ExecuteSQL; " + e.Message + ", \nSQL was: " + sql_string);
+            return 0;
         }
     }
     
     public int GetMaxId(string schema_name, string table_name)
     {
         string sql_string = @"select max(id) from " + schema_name + "." + table_name;
-        using (var conn = new NpgsqlConnection(connstring))
-        {
-           return conn.ExecuteScalar<int>(sql_string);
-        }
+        using var conn = new NpgsqlConnection(connstring);
+        return conn.ExecuteScalar<int>(sql_string);
     }
 
 
     public int GetAggMinId(string full_table_name)
     {
         string sql_string = @"select min(id) from " + full_table_name;
-        using (var conn = new NpgsqlConnection(connstring))
-        {
-            return conn.ExecuteScalar<int>(sql_string);
-        }
+        using var conn = new NpgsqlConnection(connstring);
+        return conn.ExecuteScalar<int>(sql_string);
     }
 
     public int GetAggMaxId(string full_table_name)
     {
         string sql_string = @"select max(id) from " + full_table_name;
-        using (var conn = new NpgsqlConnection(connstring))
-        {
-            return conn.ExecuteScalar<int>(sql_string);
-        }
+        using var conn = new NpgsqlConnection(connstring);
+        return conn.ExecuteScalar<int>(sql_string);
     }
 
 
@@ -129,7 +121,7 @@ public class DBUtilities
     }
 
 
-    public int  ExecuteCoreTransferSQL(string sql_string, string full_table_name)
+    public int ExecuteCoreTransferSQL(string sql_string, string full_table_name)
     {
         try
         {

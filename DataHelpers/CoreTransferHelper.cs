@@ -2,16 +2,14 @@
 
 public class CoreDataTransferrer
 {
-    string _connString;
-    DBUtilities db;
-    ILoggingHelper _loggingHelper;
+    readonly DBUtilities db;
+    readonly ILoggingHelper _loggingHelper;
 
 
     public CoreDataTransferrer(string connString, ILoggingHelper logginghelper)
     {
         _loggingHelper = logginghelper;
-        _connString = connString;
-        db = new DBUtilities(_connString, _loggingHelper);
+        db = new DBUtilities(connString, _loggingHelper);
     }
 
     public int LoadCoreStudyData()

@@ -5,10 +5,9 @@ namespace MDR_Aggregator;
 
 public class ObjectDataTransferrer
 {
-
-    string _connString;
-    DBUtilities db;
-    ILoggingHelper _loggingHelper;
+    readonly string _connString;
+    readonly DBUtilities db;
+    readonly ILoggingHelper _loggingHelper;
 
     public ObjectDataTransferrer(string connString, ILoggingHelper logginghelper)
     {
@@ -19,9 +18,8 @@ public class ObjectDataTransferrer
 
     public void SetUpTempObjectIdsTables()
     {
-        using (var conn = new NpgsqlConnection(_connString))
-        {
-            string sql_string = @"DROP TABLE IF EXISTS nk.temp_object_ids;
+        using var conn = new NpgsqlConnection(_connString);
+        string sql_string = @"DROP TABLE IF EXISTS nk.temp_object_ids;
                   CREATE TABLE IF NOT EXISTS nk.temp_object_ids(
                     object_id                INT
                   , source_id                INT
@@ -32,40 +30,35 @@ public class ObjectDataTransferrer
                   , is_preferred_study       BOOLEAN
                   , datetime_of_data_fetch   TIMESTAMPTZ
                   ); ";
-            conn.Execute(sql_string);
+        conn.Execute(sql_string);
 
-            sql_string = @"DROP TABLE IF EXISTS nk.temp_objects_to_add;
+        sql_string = @"DROP TABLE IF EXISTS nk.temp_objects_to_add;
                   CREATE TABLE IF NOT EXISTS nk.temp_objects_to_add(
                     object_id                INT
                   , sd_oid                   VARCHAR
                   ); 
                   CREATE INDEX temp_objects_to_add_sd_oid on nk.temp_objects_to_add(sd_oid);";
-            conn.Execute(sql_string);
-        }
+        conn.Execute(sql_string);
     }
 
 
     public IEnumerable<ObjectId> FetchObjectIds(int source_id, string source_conn_string)
     {
-        using (var conn = new NpgsqlConnection(source_conn_string))
-        {
-            string sql_string = @"select " + source_id.ToString() + @" as source_id, " 
-                      + source_id.ToString() + @" as parent_study_source_id, 
+        using var conn = new NpgsqlConnection(source_conn_string);
+        string sql_string = @"select " + source_id.ToString() + @" as source_id, " 
+                            + source_id.ToString() + @" as parent_study_source_id, 
                       sd_oid, sd_sid as parent_study_sd_sid, datetime_of_data_fetch
                       from ad.data_objects";
 
-            return conn.Query<ObjectId>(sql_string);
-        }
+        return conn.Query<ObjectId>(sql_string);
     }
 
 
     public ulong StoreObjectIds(PostgreSQLCopyHelper<ObjectId> copyHelper, IEnumerable<ObjectId> entities)
     {
-        using (var conn = new NpgsqlConnection(_connString))
-        {
-            conn.Open();
-            return copyHelper.SaveAll(conn, entities);
-        }
+        using var conn = new NpgsqlConnection(_connString);
+        conn.Open();
+        return copyHelper.SaveAll(conn, entities);
     }
 
 
@@ -74,76 +67,69 @@ public class ObjectDataTransferrer
         // Update the object parent study_id using the 'correct'
         // value found in the all_ids_studies table
 
-        using (var conn = new NpgsqlConnection(_connString))
-        {
-            string sql_string = @"UPDATE nk.temp_object_ids t
+        using var conn = new NpgsqlConnection(_connString);
+        string sql_string = @"UPDATE nk.temp_object_ids t
                        SET parent_study_id = s.study_id, 
                        is_preferred_study = s.is_preferred
                        FROM nk.all_ids_studies s
                        WHERE t.parent_study_sd_sid = s.sd_sid
                        and t.parent_study_source_id = s.source_id;";
-            conn.Execute(sql_string);
+        conn.Execute(sql_string);
 
-            // Drop those link records that cannot be matched
+        // Drop those link records that cannot be matched
 
-            sql_string = @"DELETE FROM nk.temp_object_ids
+        sql_string = @"DELETE FROM nk.temp_object_ids
                          WHERE parent_study_id is null;";
-            conn.Execute(sql_string);
-        }
+        conn.Execute(sql_string);
     }
 
 
     public void CheckStudyObjectsForDuplicates(int source_id)
     {
-        // TO DO - very rare at the momentt
+        // TO DO - very rare at the moment
     }
 
 
     public void UpdateAllObjectIdsTable(int source_id)
     {
-        using (var conn = new NpgsqlConnection(_connString))
-        {
-            // Add the new object id records to the all Ids table
-            // For study based data, the assumption here is that within each source 
-            // the data object sd_oid is unique, (because they are each linked to different studies) 
-            // which means that the link is also unique.
-            // BUT FOR PUBMED and other data object based data this is not true
-            // therefore need to do the ResetIdsOfDuplicatedPMIDs later
+        using var conn = new NpgsqlConnection(_connString);
+        // Add the new object id records to the all Ids table
+        // For study based data, the assumption here is that within each source 
+        // the data object sd_oid is unique, (because they are each linked to different studies) 
+        // which means that the link is also unique.
+        // BUT FOR PUBMED and other data object based data this is not true
+        // therefore need to do the ResetIdsOfDuplicatedPMIDs later
 
-            string sql_string = @"INSERT INTO nk.all_ids_data_objects
+        string sql_string = @"INSERT INTO nk.all_ids_data_objects
                          (source_id, sd_oid, parent_study_source_id, parent_study_sd_sid,
                          parent_study_id, is_preferred_study, datetime_of_data_fetch)
                          select source_id, sd_oid, parent_study_source_id, parent_study_sd_sid,
                          parent_study_id, is_preferred_study, datetime_of_data_fetch
                          from nk.temp_object_ids";
-            conn.Execute(sql_string);
+        conn.Execute(sql_string);
 
-            // update the table with the object id (will always be the same as the 
-            // identity at the moment as there is no object-object checking
-            // If objects are amalgamated from different sources in the future
-            // the object-object check will need to be added at this stage
+        // update the table with the object id (will always be the same as the 
+        // identity at the moment as there is no object-object checking
+        // If objects are amalgamated from different sources in the future
+        // the object-object check will need to be added at this stage
 
-            sql_string = @"UPDATE nk.all_ids_data_objects
+        sql_string = @"UPDATE nk.all_ids_data_objects
                         SET object_id = id
                         WHERE source_id = " + source_id + @"
                         and object_id is null;";
-            conn.Execute(sql_string);
-
-        }
+        conn.Execute(sql_string);
     }
 
 
     public void FillObjectsToAddTable(int source_id)
     {
-        using (var conn = new NpgsqlConnection(_connString))
-        {
-            string sql_string = @"INSERT INTO nk.temp_objects_to_add
+        using var conn = new NpgsqlConnection(_connString);
+        string sql_string = @"INSERT INTO nk.temp_objects_to_add
                          (object_id, sd_oid)
                          SELECT distinct object_id, sd_oid 
                          FROM nk.all_ids_data_objects
                          WHERE source_id = " + source_id;
-            conn.Execute(sql_string);
-        }
+        conn.Execute(sql_string);
     }
 
 
@@ -380,12 +366,10 @@ public class ObjectDataTransferrer
 
     public void DropTempObjectIdsTable()
     {
-        using (var conn = new NpgsqlConnection(_connString))
-        {
-            string sql_string = @"DROP TABLE IF EXISTS nk.temp_object_ids;
+        using var conn = new NpgsqlConnection(_connString);
+        string sql_string = @"DROP TABLE IF EXISTS nk.temp_object_ids;
                       DROP TABLE IF EXISTS nk.temp_objects_to_add;";
-            conn.Execute(sql_string);
-        }
+        conn.Execute(sql_string);
     }
 
 }

@@ -33,7 +33,6 @@ public class TestingDataLayer : ITestingDataLayer
         _study_builder.create_table_study_relationships();
         _study_builder.create_table_study_links();
         _study_builder.create_table_ipd_available();
-        _study_builder.create_table_study_hashes();
 
         _loggingHelper.LogLine("Rebuilt test AD study tables");
 

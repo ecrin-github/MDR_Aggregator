@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MDR_Aggregator;
 
 // Set up file based configuration environment.
+
 string assemblyLocation = Assembly.GetExecutingAssembly().Location;
 string? basePath = Path.GetDirectoryName(assemblyLocation);
 if (string.IsNullOrWhiteSpace(basePath))
@@ -18,9 +19,7 @@ var configFiles = new ConfigurationBuilder()
     .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", true)
     .Build();
 
-// Set up the host for the app,
-// adding the services used in the system to support DI
-// and including Serilog
+// Set up the host for the app, adding the services used in the system to support DI
 
 IHost host = Host.CreateDefaultBuilder()
      .UseContentRoot(basePath)
@@ -30,7 +29,6 @@ IHost host = Host.CreateDefaultBuilder()
      })
      .ConfigureServices((hostContext, services) =>
      {
-         // Register services (or develop a comp root)
          services.AddSingleton<ICredentials, Credentials>();
          services.AddSingleton<ILoggingHelper, LoggingHelper>();
          services.AddSingleton<IMonDataLayer, MonDataLayer>();

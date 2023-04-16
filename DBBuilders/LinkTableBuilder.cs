@@ -4,24 +4,23 @@ namespace MDR_Aggregator;
 
 public class LinkTableBuilder
 {
-    string db_conn;
+    readonly string db_conn;
 
     public LinkTableBuilder(string _db_conn)
     {
         db_conn = _db_conn;
     }
-
-    public void drop_table(string table_name)
+    
+    private void ExecuteSQL(string sql_string)
     {
-        string sql_string = @"DROP TABLE IF EXISTS nk." + table_name;
         using var conn = new NpgsqlConnection(db_conn);
         conn.Execute(sql_string);
     }
 
-
     public void create_table_all_ids_studies()
     {
-        string sql_string = @"CREATE TABLE nk.all_ids_studies(
+        string sql_string = @"DROP TABLE IF EXISTS nk.all_ids_studies;
+        CREATE TABLE nk.all_ids_studies(
             id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 3000001 INCREMENT BY 1) PRIMARY KEY
           , study_id                 INT             NULL
           , source_id                INT             NULL
@@ -32,14 +31,14 @@ public class LinkTableBuilder
         CREATE INDEX study_all_ids_studyid ON nk.all_ids_studies(study_id);
         CREATE INDEX study_all_ids_sdsidsource ON nk.all_ids_studies(source_id, sd_sid);";
 
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_all_ids_data_objects()
     {
-        string sql_string = @"CREATE TABLE nk.all_ids_data_objects(
+        string sql_string = @"DROP TABLE IF EXISTS nk.all_ids_data_objects;
+        CREATE TABLE nk.all_ids_data_objects(
             id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 10000001 INCREMENT BY 1) PRIMARY KEY
           , object_id                INT             NULL
           , source_id                INT             NOT NULL
@@ -53,14 +52,14 @@ public class LinkTableBuilder
         CREATE INDEX object_all_ids_objectid ON nk.all_ids_data_objects(object_id);
         CREATE INDEX object_all_ids_sdidsource ON nk.all_ids_data_objects(source_id, sd_oid);";
 
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_all_links()
     {
-        string sql_string = @"CREATE TABLE nk.all_links(
+        string sql_string = @"DROP TABLE IF EXISTS nk.all_links;
+        CREATE TABLE nk.all_links(
             id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 10000001 INCREMENT BY 1) PRIMARY KEY
           , study_id                 INT             NULL
           , study_source_id          INT             NOT NULL
@@ -73,14 +72,14 @@ public class LinkTableBuilder
        CREATE INDEX all_links_objectid ON nk.all_links(object_id);
        CREATE INDEX all_links_studyid ON nk.all_links(study_id);";
 
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+       ExecuteSQL(sql_string);
     }
 
 
     public void create_table_linked_study_groups()
     {
-        string sql_string = @"CREATE TABLE nk.linked_study_groups(
+        string sql_string = @"DROP TABLE IF EXISTS nk.linked_study_groups;
+        CREATE TABLE nk.linked_study_groups(
             source_id                INT             NULL
           , sd_sid                   VARCHAR         NULL
           , relationship_id          INT             NULL
@@ -88,14 +87,14 @@ public class LinkTableBuilder
           , target_source_id         INT             NULL
         );";
 
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_study_object_links()
     {
-        string sql_string = @"CREATE TABLE nk.study_object_links(
+        string sql_string = @"DROP TABLE IF EXISTS nk.study_object_links;
+        CREATE TABLE nk.study_object_links(
             id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 10000001 INCREMENT BY 1) PRIMARY KEY
           , study_id                 INT             NOT NULL
           , object_id                INT             NOT NULL
@@ -103,28 +102,28 @@ public class LinkTableBuilder
     CREATE INDEX study_object_links_objectid ON nk.study_object_links(object_id);
     CREATE INDEX study_object_links_studyid ON nk.study_object_links(study_id);";
 
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_study_study_links()
     {
-        string sql_string = @"CREATE TABLE nk.study_study_links(
+        string sql_string = @"DROP TABLE IF EXISTS nk.study_study_links;
+        CREATE TABLE nk.study_study_links(
             source_id                INT             NULL
           , sd_sid                   VARCHAR         NULL
           , preferred_sd_sid         VARCHAR         NULL
           , preferred_source_id      INT             NULL
           );";
 
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_temp_study_ids()
     {
-        string sql_string = @"CREATE TABLE nk.temp_study_ids(
+        string sql_string = @"DROP TABLE IF EXISTS nk.temp_study_ids;
+        CREATE TABLE nk.temp_study_ids(
             study_id                 INT             NULL
           , source_id                INT             NULL
           , sd_sid                   VARCHAR         NULL
@@ -134,7 +133,6 @@ public class LinkTableBuilder
           , date_of_study_data       TIMESTAMPTZ     NULL
          );";
 
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        ExecuteSQL(sql_string);
     }
 }

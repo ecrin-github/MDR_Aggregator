@@ -114,6 +114,12 @@ public class Options
 
     [Option('S', "do statistics", Required = false, HelpText = "Summarises record numbers, of each sort, in different sources and in the summary and core tables")]
     public bool do_statistics { get; set; }
+    
+    [Option('X', "do indexes", Required = false, HelpText = "Re-establishes text indexes on title and topic fields, for searching")]
+    public bool do_indexes { get; set; }
+    
+    [Option('S', "do IEC data", Required = false, HelpText = "Aggregates the inclusion / exclusion data into a separate database ('iec')")]
+    public bool do_iec { get; set; }
 
     [Option('T', "use test data", Required = false, HelpText = "Carry out D, C, S and J but using test data only, in the test database")]
     public bool testing { get; set; }

@@ -4,25 +4,23 @@ namespace MDR_Aggregator;
 
 public class CoreTableBuilder
 {
-    string db_conn;
+    readonly string db_conn;
 
     public CoreTableBuilder(string _db_conn)
     {
         db_conn = _db_conn;
     }
-
-    public void drop_table(string table_name)
+  
+    private void ExecuteSQL(string sql_string)
     {
-        string sql_string = @"DROP TABLE IF EXISTS core." + table_name;
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        using var conn = new NpgsqlConnection(db_conn);
+        conn.Execute(sql_string);
     }
 
     public void create_table_studies()
     {
-        string sql_string = @"CREATE TABLE core.studies(
+        string sql_string = @"DROP TABLE IF EXISTS core.studies;
+        CREATE TABLE core.studies(
             id                     INT             NOT NULL PRIMARY KEY
           , display_title          VARCHAR         NULL
           , title_lang_code        VARCHAR         NULL
@@ -38,19 +36,18 @@ public class CoreTableBuilder
           , min_age_units_id       INT             NULL
           , max_age                INT             NULL
           , max_age_units_id       INT             NULL
+          , iec_level              INT             NULL
           , provenance_string      VARCHAR         NULL
         );";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_study_identifiers()
     {
-        string sql_string = @"CREATE TABLE core.study_identifiers(
+        string sql_string = @"DROP TABLE IF EXISTS core.study_identifiers;
+        CREATE TABLE core.study_identifiers(
             id                     INT             NOT NULL PRIMARY KEY
           , study_id               INT             NOT NULL
           , identifier_value       VARCHAR         NULL
@@ -63,16 +60,14 @@ public class CoreTableBuilder
         );
         CREATE INDEX study_identifiers_study_id ON core.study_identifiers(study_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_study_titles()
     {
-        string sql_string = @"CREATE TABLE core.study_titles(
+        string sql_string = @"DROP TABLE IF EXISTS core.study_titles;
+        CREATE TABLE core.study_titles(
             id                     INT             NOT NULL PRIMARY KEY
           , study_id               INT             NOT NULL
           , title_type_id          INT             NULL
@@ -84,21 +79,17 @@ public class CoreTableBuilder
         );
         CREATE INDEX study_titles_study_id ON core.study_titles(study_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
-    public void create_table_study_contributors()
+    public void create_table_study_people()
     {
-        string sql_string = @"CREATE TABLE core.study_contributors(
+        string sql_string = @"DROP TABLE IF EXISTS core.study_people;
+        CREATE TABLE core.study_people(
             id                     INT             NOT NULL PRIMARY KEY
           , study_id               INT             NOT NULL
           , contrib_type_id        INT             NULL
-          , is_individual          BOOLEAN         NULL
-          , person_id              INT             NULL
           , person_given_name      VARCHAR         NULL
           , person_family_name     VARCHAR         NULL
           , person_full_name       VARCHAR         NULL
@@ -108,40 +99,69 @@ public class CoreTableBuilder
           , organisation_name      VARCHAR         NULL
           , organisation_ror_id    VARCHAR         NULL
         );
-        CREATE INDEX study_contributors_study_id ON core.study_contributors(study_id);";
+        CREATE INDEX study_people_study_id ON core.study_people(study_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
+    public void create_table_study_organisations()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS core.study_organisations;
+        CREATE TABLE core.study_organisations(
+            id                     INT             NOT NULL PRIMARY KEY
+          , study_id               INT             NOT NULL
+          , contrib_type_id        INT             NULL
+          , organisation_id        INT             NULL
+          , organisation_name      VARCHAR         NULL
+          , organisation_ror_id    VARCHAR         NULL
+        );
+        CREATE INDEX study_organisations_study_id ON core.study_organisations(study_id);";
 
+        ExecuteSQL(sql_string);
+    }
+    
+    
     public void create_table_study_topics()
     {
-        string sql_string = @"CREATE TABLE core.study_topics(
+        string sql_string = @"DROP TABLE IF EXISTS core.study_topics;
+        CREATE TABLE core.study_topics(
             id                     INT             NOT NULL PRIMARY KEY
           , study_id               INT             NOT NULL
           , topic_type_id          INT             NULL
-          , mesh_coded             BOOLEAN         NULL
+          , original_value         VARCHAR         NULL
+          , original_ct_type_id    INT             NULL
+          , original_ct_code       VARCHAR         NULL                                    
           , mesh_code              VARCHAR         NULL
           , mesh_value             VARCHAR         NULL
-          , original_ct_id         INT             NULL
-          , original_ct_code       VARCHAR         NULL
-          , original_value         VARCHAR         NULL
         );
         CREATE INDEX study_topics_study_id ON core.study_topics(study_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
+    }
+    
+    
+    public void create_table_study_conditions()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS core.study_conditions;
+        CREATE TABLE core.study_conditions(
+            id                     INT             NOT NULL PRIMARY KEY
+          , study_id               INT             NOT NULL
+          , original_value         VARCHAR         NULL
+          , original_ct_type_id    INT             NULL
+          , original_ct_code       VARCHAR         NULL                 
+          , icd_code               VARCHAR         NULL
+          , icd_name               VARCHAR         NULL
+        );
+        CREATE INDEX study_conditions_study_id ON core.study_conditions(study_id);";
+
+        ExecuteSQL(sql_string);
     }
 
-
+    
     public void create_table_study_features()
     {
-        string sql_string = @"CREATE TABLE core.study_features(
+        string sql_string = @"DROP TABLE IF EXISTS core.study_features;
+        CREATE TABLE core.study_features(
             id                     INT             NOT NULL PRIMARY KEY
           , study_id               INT             NOT NULL
           , feature_type_id        INT             NULL
@@ -149,16 +169,14 @@ public class CoreTableBuilder
         );
         CREATE INDEX study_features_study_id ON core.study_features(study_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
-
+  
 
     public void create_table_study_relationships()
     {
-        string sql_string = @"CREATE TABLE core.study_relationships(
+        string sql_string = @"DROP TABLE IF EXISTS core.study_relationships;
+        CREATE TABLE core.study_relationships(
             id                     INT             NOT NULL PRIMARY KEY
           , study_id               INT             NOT NULL
           , relationship_type_id   INT             NULL
@@ -167,19 +185,55 @@ public class CoreTableBuilder
         CREATE INDEX study_relationships_study_id ON core.study_relationships(study_id);
         CREATE INDEX study_relationships_target_study_id ON core.study_relationships(target_study_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
+    
+    public void create_table_study_countries()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS core.study_countries;
+        CREATE TABLE core.study_countries(
+            id                     INT             NOT NULL PRIMARY KEY
+          , study_id               INT             NOT NULL
+          , country_id             INT             NULL
+          , country_name           VARCHAR         NULL
+          , status_id              INT             NULL
+        );
+        CREATE INDEX study_countries_study_id ON core.study_countries(study_id);";
 
+        ExecuteSQL(sql_string);
+    }
+    
+    
+    public void create_table_study_locations()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS core.study_locations;
+        CREATE TABLE core.study_locations(
+            id                     INT             NOT NULL PRIMARY KEY
+          , study_id               INT             NOT NULL
+          , facility_org_id        INT             NULL
+          , facility               VARCHAR         NULL
+          , facility_ror_id        VARCHAR         NULL
+          , city_id                INT             NULL
+          , city_name              VARCHAR         NULL
+          , country_id             INT             NULL
+          , country_name           VARCHAR         NULL
+          , status_id              INT             NULL
+        );
+        CREATE INDEX study_locations_study_id ON core.study_locations(study_id);";
+
+        ExecuteSQL(sql_string);
+    }
+    
+    
     public void create_table_data_objects()
     {
-        string sql_string = @"CREATE TABLE core.data_objects(
+        string sql_string = @"DROP TABLE IF EXISTS core.data_objects;
+        CREATE TABLE core.data_objects(
             id                     INT             NOT NULL PRIMARY KEY
-          , display_title          VARCHAR         NULL
+          , title                  VARCHAR         NULL
           , version                VARCHAR         NULL
+          , display_title          VARCHAR         NULL
           , doi                    VARCHAR         NULL 
           , doi_status_id          INT             NULL
           , publication_year       INT             NULL
@@ -199,16 +253,14 @@ public class CoreTableBuilder
           , provenance_string      VARCHAR         NULL
         );";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_datasets()
     {
-        string sql_string = @"CREATE TABLE core.object_datasets(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_datasets;
+        CREATE TABLE core.object_datasets(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , record_keys_type_id    INT             NULL 
@@ -230,16 +282,14 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_datasets_object_id ON core.object_datasets(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_dates()
     {
-        string sql_string = @"CREATE TABLE core.object_dates(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_dates;
+        CREATE TABLE core.object_dates(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , date_type_id           INT             NULL
@@ -255,19 +305,16 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_dates_object_id ON core.object_dates(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_instances()
     {
-        string sql_string = @"CREATE TABLE core.object_instances(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_instances;
+        CREATE TABLE core.object_instances(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
-          , instance_type_id       INT             NULL 
           , repository_org_id      INT             NULL
           , repository_org         VARCHAR         NULL
           , url                    VARCHAR         NULL
@@ -280,21 +327,17 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_instances_object_id ON core.object_instances(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
-    public void create_table_object_contributors()
+    public void create_table_object_people()
     {
-        string sql_string = @"CREATE TABLE core.object_contributors(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_people;
+        CREATE TABLE core.object_people(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , contrib_type_id        INT             NULL
-          , is_individual          BOOLEAN         NULL
-          , person_id              INT             NULL
           , person_given_name      VARCHAR         NULL
           , person_family_name     VARCHAR         NULL
           , person_full_name       VARCHAR         NULL
@@ -305,18 +348,33 @@ public class CoreTableBuilder
           , organisation_ror_id    VARCHAR         NULL
 
         );
-        CREATE INDEX object_contributors_object_id ON core.object_contributors(object_id);";
+        CREATE INDEX object_people_object_id ON core.object_people(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
+    public void create_table_object_organisations()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS core.object_organisations;
+        CREATE TABLE core.object_organisations(
+            id                     INT             NOT NULL PRIMARY KEY
+          , object_id              INT             NOT NULL
+          , contrib_type_id        INT             NULL
+          , organisation_id        INT             NULL
+          , organisation_name      VARCHAR         NULL
+          , organisation_ror_id    VARCHAR         NULL
 
+        );
+        CREATE INDEX object_organisations_object_id ON core.object_organisations(object_id);";
+
+        ExecuteSQL(sql_string);
+    }
+    
+    
     public void create_table_object_titles()
     {
-        string sql_string = @"CREATE TABLE core.object_titles(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_titles;
+        CREATE TABLE core.object_titles(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , title_type_id          INT             NULL
@@ -328,38 +386,33 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_titles_object_id ON core.object_titles(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_topics()
     {
-        string sql_string = @"CREATE TABLE core.object_topics(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_topics;
+        CREATE TABLE core.object_topics(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , topic_type_id          INT             NULL
-          , mesh_coded             BOOLEAN         NULL
+          , original_value         VARCHAR         NULL
+          , original_ct_type_id    INT             NULL
+          , original_ct_code       VARCHAR         NULL                                    
           , mesh_code              VARCHAR         NULL
           , mesh_value             VARCHAR         NULL
-          , original_ct_id         INT             NULL
-          , original_ct_code       VARCHAR         NULL
-          , original_value         VARCHAR         NULL
         );
         CREATE INDEX object_topics_object_id ON core.object_topics(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_descriptions()
     {
-        string sql_string = @"CREATE TABLE core.object_descriptions(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_descriptions;
+        CREATE TABLE core.object_descriptions(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , description_type_id    INT             NULL
@@ -369,16 +422,14 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_descriptions_object_id ON core.object_descriptions(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_identifiers()
     {
-        string sql_string = @"CREATE TABLE core.object_identifiers(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_identifiers;
+        CREATE TABLE core.object_identifiers(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , identifier_value       VARCHAR         NULL
@@ -390,16 +441,14 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_identifiers_object_id ON core.object_identifiers(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_relationships()
     {
-        string sql_string = @"CREATE TABLE core.object_relationships(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_relationships;
+        CREATE TABLE core.object_relationships(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , relationship_type_id   INT             NULL
@@ -407,16 +456,14 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_relationships_object_id ON core.object_relationships(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_object_rights()
     {
-        string sql_string = @"CREATE TABLE core.object_rights(
+        string sql_string = @"DROP TABLE IF EXISTS core.object_rights;
+        CREATE TABLE core.object_rights(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
           , rights_name            VARCHAR         NULL
@@ -425,16 +472,14 @@ public class CoreTableBuilder
         );
         CREATE INDEX object_rights_object_id ON core.object_rights(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 
 
     public void create_table_study_object_links()
     {
-        string sql_string = @"CREATE TABLE core.study_object_links(
+        string sql_string = @"DROP TABLE IF EXISTS core.study_object_links;
+        CREATE TABLE core.study_object_links(
             id                     INT             NOT NULL PRIMARY KEY
           , study_id               INT             NOT NULL
           , object_id              INT             NOT NULL
@@ -442,9 +487,6 @@ public class CoreTableBuilder
         CREATE INDEX study_object_links_studyid ON core.study_object_links(study_id);
         CREATE INDEX study_object_links_objectid ON core.study_object_links(object_id);";
 
-        using (var conn = new NpgsqlConnection(db_conn))
-        {
-            conn.Execute(sql_string);
-        }
+        ExecuteSQL(sql_string);
     }
 }

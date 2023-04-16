@@ -148,20 +148,27 @@ public class LoggingHelper : ILoggingHelper
             LogLine(StudyTableSummary(db_conn, schema, "study_identifiers"));
             LogLine(StudyTableSummary(db_conn, schema, "study_titles"));
 
-            // these are database dependent
+            // These are database dependent.
+            
             if (s.has_study_topics is true) LogLine(StudyTableSummary(db_conn, schema, "study_topics"));
             if (s.has_study_features is true) LogLine(StudyTableSummary(db_conn, schema, "study_features"));
             if (s.has_study_conditions is true) LogLine(StudyTableSummary(db_conn, schema, "study_conditions"));
-            if (s.has_study_iec is true) LogLine(StudyTableSummary(db_conn, schema, "study_iec"));
-            if (s.has_study_contributors is true) LogLine(StudyTableSummary(db_conn, schema, "study_contributors"));
+            
+            if (s.has_study_people is true) LogLine(StudyTableSummary(db_conn, schema, "study_people"));
+            if (s.has_study_organisations is true) LogLine(StudyTableSummary(db_conn, schema, "study_organisations"));
+            
             if (s.has_study_references is true) LogLine(StudyTableSummary(db_conn, schema, "study_references"));
             if (s.has_study_relationships is true)
                 LogLine(StudyTableSummary(db_conn, schema, "study_relationships"));
+            
             if (s.has_study_links is true) LogLine(StudyTableSummary(db_conn, schema, "study_links"));
             if (s.has_study_ipd_available is true)
                 LogLine(StudyTableSummary(db_conn, schema, "study_ipd_available"));
+            
             if (s.has_study_countries is true) LogLine(StudyTableSummary(db_conn, schema, "study_countries"));
             if (s.has_study_locations is true) LogLine(StudyTableSummary(db_conn, schema, "study_locations"));
+            
+            if (s.has_study_iec is true) LogLine(StudyTableSummary(db_conn, schema, "study_iec"));
         }
 
         LogHeader("object tables");
@@ -181,7 +188,8 @@ public class LoggingHelper : ILoggingHelper
         if (s.has_object_pubmed_set is true)
         {
             LogLine(ObjectTableSummary(db_conn, schema, "journal_details"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_contributors"));
+            LogLine(ObjectTableSummary(db_conn, schema, "object_people"));
+            LogLine(ObjectTableSummary(db_conn, schema, "object_organisations"));
             LogLine(ObjectTableSummary(db_conn, schema, "object_topics"));
             LogLine(ObjectTableSummary(db_conn, schema, "object_comments"));
             LogLine(ObjectTableSummary(db_conn, schema, "object_descriptions"));

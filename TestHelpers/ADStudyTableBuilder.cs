@@ -51,8 +51,6 @@ public class ADStudyTableBuilder
           , max_age                INT             NULL
           , max_age_units_id       INT             NULL
           , datetime_of_data_fetch TIMESTAMPTZ     NULL
-          , record_hash            CHAR(32)        NULL
-          , study_full_hash        CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -78,7 +76,6 @@ public class ADStudyTableBuilder
           , identifier_org_ror_id  VARCHAR         NULL
           , identifier_date        VARCHAR         NULL
           , identifier_link        VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -97,7 +94,6 @@ public class ADStudyTableBuilder
           , sd_sid                 VARCHAR         NOT NULL
           , relationship_type_id   INT             NULL
           , target_sd_sid          VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -119,7 +115,6 @@ public class ADStudyTableBuilder
           , citation               VARCHAR         NULL
           , doi                    VARCHAR         NULL	
           , comments               VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -142,7 +137,6 @@ public class ADStudyTableBuilder
           , lang_usage_id          INT             NOT NULL default 11
           , is_default             BOOLEAN         NULL
           , comments               VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -170,7 +164,6 @@ public class ADStudyTableBuilder
           , organisation_id        INT             NULL
           , organisation_name      VARCHAR         NULL
           , organisation_ror_id    VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -194,7 +187,6 @@ public class ADStudyTableBuilder
           , original_ct_id         INT             NULL
           , original_ct_code       VARCHAR         NULL
           , original_value         VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -213,7 +205,6 @@ public class ADStudyTableBuilder
           , sd_sid                 VARCHAR         NOT NULL
           , feature_type_id        INT             NULL
           , feature_value_id       INT             NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -232,7 +223,6 @@ public class ADStudyTableBuilder
           , sd_sid                 VARCHAR         NOT NULL
           , link_label             VARCHAR         NULL
           , link_url               VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -252,7 +242,6 @@ public class ADStudyTableBuilder
           , ipd_type               VARCHAR         NULL
           , ipd_url                VARCHAR         NULL
           , ipd_comment            VARCHAR         NULL
-          , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()
           , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
           , exported_on            TIMESTAMPTZ     NULL
@@ -262,22 +251,4 @@ public class ADStudyTableBuilder
         Execute_SQL(sql_string);
     }
 
-
-    public void create_table_study_hashes()
-    {
-        string sql_string = @"DROP TABLE IF EXISTS ad.study_hashes;
-        CREATE TABLE ad.study_hashes(
-            id                     INT             GENERATED ALWAYS AS IDENTITY PRIMARY KEY
-          , sd_sid                 VARCHAR         NOT NULL
-          , hash_type_id           INT             NULL
-          , composite_hash         CHAR(32)        NULL
-          , added_on               TIMESTAMPTZ     NOT NULL default now()
-          , last_edited_on         TIMESTAMPTZ     NOT NULL default now()
-          , exported_on            TIMESTAMPTZ     NULL
-        );
-        CREATE INDEX study_hashes_sd_sid ON ad.study_hashes(sd_sid);
-        CREATE INDEX study_hashes_composite_hash ON ad.study_hashes(composite_hash);";
-
-        Execute_SQL(sql_string);
-    }
 }

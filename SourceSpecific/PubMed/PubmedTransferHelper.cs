@@ -85,14 +85,12 @@ internal class PubmedTransferHelper
                 title_lang_code, brief_description, data_sharing_statement,
                 study_start_year, study_start_month, study_type_id,
                 study_status_id, study_enrolment, study_gender_elig_id, 
-                min_age, min_age_units_id, max_age, max_age_units_id, datetime_of_data_fetch,
-                record_hash, study_full_hash) 
+                min_age, min_age_units_id, max_age, max_age_units_id, datetime_of_data_fetch) 
                 SELECT sd_sid, display_title,
                 title_lang_code, brief_description, data_sharing_statement,
                 study_start_year, study_start_month, study_type_id, 
                 study_status_id, study_enrolment, study_gender_elig_id, 
-                min_age, min_age_units_id, max_age, max_age_units_id, datetime_of_data_fetch,
-                record_hash, study_full_hash 
+                min_age, min_age_units_id, max_age, max_age_units_id, datetime_of_data_fetch
                 FROM adcomp.studies
                 where source_id = " + source_id;
         conn.Execute(sql_string);
@@ -100,9 +98,9 @@ internal class PubmedTransferHelper
 
         sql_string = @"truncate table ad.study_references; 
                 INSERT INTO ad.study_references(sd_sid,
-                   pmid, citation, doi, comments, record_hash)
+                   pmid, citation, doi, comments)
                 SELECT sd_sid,
-                   pmid, citation, doi, comments, record_hash
+                   pmid, citation, doi, comments
                    FROM adcomp.study_references
                    where source_id = " + source_id.ToString();
         conn.Execute(sql_string);

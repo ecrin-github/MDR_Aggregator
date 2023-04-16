@@ -23,7 +23,8 @@ public class Source
     public bool? has_study_conditions { get; }
     public bool? has_study_features { get; }
     public bool? has_study_iec{ get; }
-    public bool? has_study_contributors { get; }
+    public bool? has_study_people{ get; }
+    public bool? has_study_organisations{ get; }
     public bool? has_study_references { get; }
     public bool? has_study_relationships { get; }
     public bool? has_study_countries { get; }
