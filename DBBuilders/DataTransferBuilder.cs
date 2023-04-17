@@ -131,9 +131,9 @@ public class DataTransferBuilder
                     string source_conn_string = credentials.GetConnectionString(source.database_name!, testing);
                     if (testing)
                     {
-                        pm_tr.TransferReferencesData((int)source.id!);
+                        pm_tr.TransferReferencesData(source.id);
                     }
-                    IEnumerable<PMIDLink> source_references = pm_tr.FetchSourceReferences((int)source.id!, source_conn_string);
+                    IEnumerable<PMIDLink> source_references = pm_tr.FetchSourceReferences(source.id, source_conn_string);
                     pm_tr.StorePMIDLinks(CopyHelpers.pmid_links_helper, source_references);
                 }
             }
@@ -168,7 +168,7 @@ public class DataTransferBuilder
             // Use min of ids to set all object ids the same for the same pmid.
             
             pm_tr.ResetIdsOfDuplicatedPMIDs();
-            _loggingHelper.LogLine("PMID Ids deduplicatedd");
+            _loggingHelper.LogLine("PMID Ids deduplicated");
 
             // Make new table of distinct pmids to add.
             

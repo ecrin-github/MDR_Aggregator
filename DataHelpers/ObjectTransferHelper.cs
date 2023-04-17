@@ -92,7 +92,6 @@ public class ObjectDataTransferrer
 
     public void UpdateAllObjectIdsTable(int source_id)
     {
-        using var conn = new NpgsqlConnection(_connString);
         // Add the new object id records to the all Ids table
         // For study based data, the assumption here is that within each source 
         // the data object sd_oid is unique, (because they are each linked to different studies) 
@@ -100,6 +99,7 @@ public class ObjectDataTransferrer
         // BUT FOR PUBMED and other data object based data this is not true
         // therefore need to do the ResetIdsOfDuplicatedPMIDs later
 
+        using var conn = new NpgsqlConnection(_connString);
         string sql_string = @"INSERT INTO nk.all_ids_data_objects
                          (source_id, sd_oid, parent_study_source_id, parent_study_sd_sid,
                          parent_study_id, is_preferred_study, datetime_of_data_fetch)
@@ -132,30 +132,54 @@ public class ObjectDataTransferrer
         conn.Execute(sql_string);
     }
 
-
+    private readonly Dictionary<string, string> objectFields = new() 
+    {
+        {"data_objects", @"id, title, version, display_title, doi, doi_status_id, publication_year,
+        object_class_id, object_type_id, managing_org_id, managing_org, managing_org_ror_id, 
+        lang_code, access_type_id, access_details, access_details_url, url_last_checked, 
+        eosc_category, add_study_contribs, add_study_topics"},
+        {"data_objects_source",@"s.title, s.version, s.display_title, s.doi, s.doi_status_id, s.publication_year,
+        s.object_class_id, s.object_type_id, s.managing_org_id, s.managing_org, s.managing_org_ror_id, 
+        s.lang_code, s.access_type_id, s.access_details, s.access_details_url, s.url_last_checked, 
+        s.eosc_category, s.add_study_contribs, s.add_study_topics"},
+        {"object_datasets", @"record_keys_type_id, record_keys_details, deident_type_id, 
+        deident_direct, deident_hipaa, deident_dates, deident_nonarr, deident_kanon, deident_details,
+        consent_type_id, consent_noncommercial, consent_geog_restrict,
+        consent_research_type, consent_genetic_only, consent_no_methods, consent_details" },
+        { "object_instances", @"repository_org_id, repository_org, repository_org_ror_id
+        url, url_accessible, url_last_checked, resource_type_id,
+        resource_size, resource_size_units, resource_comments" },
+        { "object_titles", @"title_type_id, title_text, lang_code, lang_usage_id, is_default, comments" },
+        { "object_dates", @"date_type_id, date_is_range, date_as_string, start_year, 
+        start_month, start_day, end_year, end_month, end_day, details" },
+        { "object_people", @" contrib_type_id, person_id, person_given_name, 
+        person_family_name, person_full_name, orcid_id, person_affiliation, organisation_id, 
+        organisation_name, organisation_ror_id" },
+        { "object_organisations", @"contrib_type_id, organisation_id, 
+        organisation_name, organisation_ror_id" },
+        { "object_topics", @"topic_type_id, original_value, original_ct_type_id,
+          original_ct_code, mesh_code, mesh_value" },
+        { "object_descriptions", @"description_type_id, label, description_text, lang_code" },
+        { "object_identifiers", @"identifier_value, identifier_type_id, 
+        identifier_org_id, identifier_org, identifier_org_ror_id, identifier_date" },
+        { "object_rights", @"rights_name, rights_uri, comments" },
+        { "object_relationships", @"relationship_type_id, target_sd_oid" }
+    };
+        
+        
     public int LoadDataObjects(string schema_name)
     {
-         string sql_string = @"INSERT INTO ob.data_objects(id,
-                display_title, version, doi, doi_status_id, publication_year,
-                object_class_id, object_type_id, 
-                managing_org_id, managing_org, managing_org_ror_id,
-                lang_code, access_type_id, access_details, access_details_url,
-                url_last_checked, eosc_category, add_study_contribs, 
-                add_study_topics)
-                SELECT t.object_id,
-                s.display_title, s.version, s.doi, s.doi_status_id, s.publication_year,
-                s.object_class_id, s.object_type_id, 
-                s.managing_org_id, s.managing_org, s.managing_org_ror_id,
-                s.lang_code, s.access_type_id, s.access_details, s.access_details_url,
-                s.url_last_checked, s.eosc_category, s.add_study_contribs, 
-                s.add_study_topics
+        string destFields = objectFields["data_objects"];
+        string srceFields = objectFields["data_objects_source"];
+        
+         string sql_string = $@"INSERT INTO ob.data_objects({destFields})
+                SELECT t.object_id, {srceFields}
                 FROM " + schema_name + @".data_objects s
                 INNER JOIN nk.temp_objects_to_add t
                 on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "data_objects", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " data_objects");
-
+        _loggingHelper.LogLine($"Loaded records - {res} data_objects");
         db.Update_SourceTable_ExportDate(schema_name, "data_objects");
         return res;
     }
@@ -163,126 +187,113 @@ public class ObjectDataTransferrer
 
     public void LoadObjectDatasets(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_datasets(object_id, 
-        record_keys_type_id, record_keys_details, 
-        deident_type_id, deident_direct, deident_hipaa,
-        deident_dates, deident_nonarr, deident_kanon, deident_details,
-        consent_type_id, consent_noncommercial, consent_geog_restrict,
-        consent_research_type, consent_genetic_only, consent_no_methods, consent_details)
-        SELECT t.object_id, 
-        record_keys_type_id, record_keys_details, 
-        deident_type_id, deident_direct, deident_hipaa,
-        deident_dates, deident_nonarr, deident_kanon, deident_details,
-        consent_type_id, consent_noncommercial, consent_geog_restrict,
-        consent_research_type, consent_genetic_only, consent_no_methods, consent_details
-        FROM " + schema_name + @".object_datasets s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_datasets"];
+        
+        string sql_string = $@"INSERT INTO ob.object_datasets(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_datasets s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_datasets", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_datasets");
-
+        _loggingHelper.LogLine($"Loaded records - {res} object datasets");
         db.Update_SourceTable_ExportDate(schema_name, "object_datasets");
     }
 
 
     public void LoadObjectInstances(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_instances(object_id,  
-        instance_type_id, repository_org_id, repository_org,
-        url, url_accessible, url_last_checked, resource_type_id,
-        resource_size, resource_size_units, resource_comments)
-        SELECT t.object_id,
-        instance_type_id, repository_org_id, repository_org,
-        url, url_accessible, url_last_checked, resource_type_id,
-        resource_size, resource_size_units, resource_comments
-        FROM " + schema_name + @".object_instances s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_instances"];
+        
+        string sql_string = $@"INSERT INTO ob.object_instances(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_instances s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_instances", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_instances");
-
-        db.Update_SourceTable_ExportDate(schema_name, "object_instances");
+        _loggingHelper.LogLine($"Loaded records - {res} object_instances");
+        db.Update_SourceTable_ExportDate(schema_name, "object instances");
     }
 
 
     public void LoadObjectTitles(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_titles(object_id, 
-        title_type_id, title_text, lang_code,
-        lang_usage_id, is_default, comments)
-        SELECT t.object_id, 
-        title_type_id, title_text, lang_code,
-        lang_usage_id, is_default, comments
-        FROM " + schema_name + @".object_titles s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_titles"];
+        
+        string sql_string = $@"INSERT INTO ob.object_titles(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_titles s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_titles", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_titles");
-
+        _loggingHelper.LogLine($"Loaded records - {res} object titles");
         db.Update_SourceTable_ExportDate(schema_name, "object_titles");
     }
 
 
     public void LoadObjectDates(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_dates(object_id, 
-        date_type_id, date_is_range, date_as_string, start_year, 
-        start_month, start_day, end_year, end_month, end_day, details)
-        SELECT t.object_id,
-        date_type_id, date_is_range, date_as_string, start_year, 
-        start_month, start_day, end_year, end_month, end_day, details
-        FROM " + schema_name + @".object_dates s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_dates"];
+        
+        string sql_string = $@"INSERT INTO ob.object_dates(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_dates s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_dates", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_dates");
-
+        _loggingHelper.LogLine($"Loaded records - {res} object dates");
         db.Update_SourceTable_ExportDate(schema_name, "object_dates");
     }
 
 
-    public void LoadObjectContributors(string schema_name)
+    public void LoadObjectPeople(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_contributors(object_id, 
-        contrib_type_id, is_individual, 
-        person_id, person_given_name, person_family_name, person_full_name,
-        orcid_id, person_affiliation, organisation_id, 
-        organisation_name, organisation_ror_id )
-        SELECT t.object_id,
-        contrib_type_id, is_individual, 
-        person_id, person_given_name, person_family_name, person_full_name,
-        orcid_id, person_affiliation, organisation_id, 
-        organisation_name, organisation_ror_id 
-        FROM " + schema_name + @".object_contributors s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_people"];
+        
+        string sql_string = $@"INSERT INTO ob.object_people(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_people s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
-        int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_contributors", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_contributors");
-
-        db.Update_SourceTable_ExportDate(schema_name, "object_contributors");
+        int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_people", "");
+        _loggingHelper.LogLine($"Loaded records - {res} object people");
+        db.Update_SourceTable_ExportDate(schema_name, "object_people");
     }
 
+    
+    public void LoadObjectOrganisations(string schema_name)
+    {
+        string fieldList = objectFields["object_organisations"];
+        
+        string sql_string = $@"INSERT INTO ob.object_organisations(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_organisations s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
+
+        int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_organisations", "");
+        _loggingHelper.LogLine($"Loaded records - {res} object organisations");
+
+        db.Update_SourceTable_ExportDate(schema_name, "object_organisations");
+    }
 
 
     public void LoadObjectTopics(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_topics(object_id, 
-        topic_type_id, mesh_coded, mesh_code, mesh_value, 
-        original_ct_id, original_ct_code, original_value)
-        SELECT t.object_id, 
-        topic_type_id, mesh_coded, mesh_code, mesh_value, 
-        original_ct_id, original_ct_code, original_value
-        FROM " + schema_name + @".object_topics s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_topics"];
+        
+        string sql_string = $@"INSERT INTO ob.object_topics(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_topics s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_topics", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_topics");
+        _loggingHelper.LogLine($"Loaded records - {res} object topics");
 
         db.Update_SourceTable_ExportDate(schema_name, "object_topics");
     }
@@ -290,38 +301,32 @@ public class ObjectDataTransferrer
 
     public void LoadObjectDescriptions(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_descriptions(object_id, 
-        description_type_id, label, description_text, lang_code)
-        SELECT t.object_id,
-        description_type_id, label, description_text, lang_code
-        FROM " + schema_name + @".object_descriptions s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_descriptions"];
+        
+        string sql_string = $@"INSERT INTO ob.object_descriptions(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_descriptions s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_descriptions", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_descriptions");
-
+        _loggingHelper.LogLine($"Loaded records - {res} object descriptions");
         db.Update_SourceTable_ExportDate(schema_name, "object_descriptions");
     }
 
 
     public void LoadObjectIdentifiers(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_identifiers(object_id,  
-        identifier_value, identifier_type_id, 
-        identifier_org_id, identifier_org, identifier_org_ror_id,
-        identifier_date)
-        SELECT t.object_id,
-        identifier_value, identifier_type_id, 
-        identifier_org_id, identifier_org, identifier_org_ror_id,
-        identifier_date
-        FROM " + schema_name + @".object_identifiers s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_identifiers"];
+        
+        string sql_string = $@"INSERT INTO ob.object_identifiers(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_identifiers s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_identifiers", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_identifiers");
-
+        _loggingHelper.LogLine($"Loaded records - {res} object identifiers");
         db.Update_SourceTable_ExportDate(schema_name, "object_identifiers");
     }
 
@@ -329,19 +334,18 @@ public class ObjectDataTransferrer
 
     public void LoadObjectRelationships(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_relationships(object_id,  
-        relationship_type_id)
-        SELECT t.object_id,
-        relationship_type_id
-        FROM " + schema_name + @".object_relationships s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_relationships"];
+        
+        string sql_string = $@"INSERT INTO ob.object_relationships(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_relationships s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         // NEED TO DO UPDATE OF TARGET SEPARATELY
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_relationships", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_relationships");
-
+        _loggingHelper.LogLine($"Loaded records - {res} object relationships");
         db.Update_SourceTable_ExportDate(schema_name, "object_relationships");
     }
 
@@ -349,17 +353,16 @@ public class ObjectDataTransferrer
 
     public void LoadObjectRights(string schema_name)
     {
-        string sql_string = @"INSERT INTO ob.object_rights(object_id,  
-        rights_name, rights_uri, comments)
-        SELECT t.object_id,
-        rights_name, rights_uri, comments
-        FROM " + schema_name + @".object_rights s
-                INNER JOIN nk.temp_objects_to_add t
-                on s.sd_oid = t.sd_oid ";
+        string fieldList = objectFields["object_rights"];
+        
+        string sql_string = $@"INSERT INTO ob.object_rights(object_id, ({fieldList})
+        SELECT t.object_id, {fieldList}
+        FROM {schema_name}.object_rights s
+        INNER JOIN nk.temp_objects_to_add t
+        on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, schema_name, "object_rights", "");
-        _loggingHelper.LogLine("Loaded records - " + res.ToString() + " object_rights");
-
+        _loggingHelper.LogLine($"Loaded records - {res} object rights");
         db.Update_SourceTable_ExportDate(schema_name, "object_rights");
     }
 

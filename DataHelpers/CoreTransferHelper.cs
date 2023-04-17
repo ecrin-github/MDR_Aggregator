@@ -3,293 +3,288 @@
 public class CoreDataTransferrer
 {
     readonly DBUtilities db;
-    readonly ILoggingHelper _loggingHelper;
-
 
     public CoreDataTransferrer(string connString, ILoggingHelper logginghelper)
     {
-        _loggingHelper = logginghelper;
-        db = new DBUtilities(connString, _loggingHelper);
+        db = new DBUtilities(connString, logginghelper);
     }
+    
+    private readonly Dictionary<string, string> addFields = new() 
+    {
+        { "studies", @"id, 
+                display_title, title_lang_code, brief_description, data_sharing_statement,
+                study_start_year, study_start_month, study_type_id, study_status_id,
+                study_enrolment, study_gender_elig_id, min_age, min_age_units_id,
+                max_age, max_age_units_id, iec_level" },
+        { "study_identifiers", @"id, study_id, identifier_value, identifier_type_id, 
+                identifier_org_id, identifier_org, identifier_org_ror_id,
+                identifier_date, identifier_link" },
+        { "study_titles", @"id, study_id, 
+                title_type_id, title_text, lang_code, 
+                lang_usage_id, is_default, comments" },
+        { "study_references", @"sd_sid, pmid, citation, doi, type_id, comments" },
+        { "study_people", @"id, study_id, contrib_type_id, person_given_name, person_family_name, 
+                person_full_name, orcid_id, person_affiliation, 
+                organisation_id, organisation_name, organisation_ror_id" },
+        { "study_organisations", @"id, study_id, contrib_type_id,  
+                organisation_id, organisation_name, organisation_ror_id" },
+        { "study_topics", @"id, study_id, 
+                topic_type_id, original_value, original_ct_type_id, 
+                original_ct_code, mesh_code, mesh_value" },
+        { "study_relationships", @"id, study_id, 
+                relationship_type_id, target_study_id" },
+        { "study_features", @"id, study_id, 
+                feature_type_id, feature_value_id" },
+        { "study_countries", @"id, study_id, country_id, country_name, status_id" },
+        { "study_locations", @"id, study_id, facility_org_id, facility, facility_ror_id,
+        city_id, city_name, country_id, country_name, status_id" },
+        { "study_conditions", @"id, study_id, original_value, original_ct_type_id, original_ct_code, 
+        icd_code, icd_name" },
+        { "study_iec", @"id, study_id, seq_num, iec_type_id, split_type, leader, indent_level,
+          sequence_string, iec_text" }
+    };
+    
 
     public int LoadCoreStudyData()
     {
-        string sql_string = @"INSERT INTO core.studies(id, 
-                display_title, title_lang_code, brief_description, data_sharing_statement,
-                study_start_year, study_start_month, study_type_id, study_status_id,
-                study_enrolment, study_gender_elig_id, min_age, min_age_units_id,
-                max_age, max_age_units_id)
-                SELECT id,
-                display_title, title_lang_code, brief_description, data_sharing_statement,
-                study_start_year, study_start_month, study_type_id, study_status_id,
-                study_enrolment, study_gender_elig_id, min_age, min_age_units_id,
-                max_age, max_age_units_id
+        string field_string = addFields["studies"];
+        string sql_string = $@"INSERT INTO core.studies({field_string})
+                SELECT {field_string}
                 FROM st.studies";
-
         return db.ExecuteCoreTransferSQL(sql_string, "st.studies");
     }
 
-
     public int LoadCoreStudyIdentifiers()
     {
-        string sql_string = @"INSERT INTO core.study_identifiers(id, study_id, 
-                identifier_value, identifier_type_id, 
-                identifier_org_id, identifier_org,
-                identifier_org_ror_id,
-                identifier_date, identifier_link)
-                SELECT id, study_id,
-                identifier_value, identifier_type_id, 
-                identifier_org_id, identifier_org,
-                identifier_org_ror_id,
-                identifier_date, identifier_link
+        string field_string = addFields["study_identifiers"];
+        string sql_string = $@"INSERT INTO core.study_identifiers({field_string})
+                SELECT {field_string}
                 FROM st.study_identifiers";
-
         return db.ExecuteCoreTransferSQL(sql_string, "st.study_identifiers");
     }
 
-
     public int LoadCoreStudyTitles()
     {
-        string sql_string = @"INSERT INTO core.study_titles(id, study_id, 
-                title_type_id, title_text, lang_code, 
-                lang_usage_id, is_default, comments)
-                SELECT id, study_id,
-                title_type_id, title_text, lang_code, 
-                lang_usage_id, is_default, comments 
+        string field_string = addFields["study_titles"];
+        string sql_string = $@"INSERT INTO core.study_titles({field_string})
+                SELECT {field_string}
                 FROM st.study_titles";
-
         return db.ExecuteCoreTransferSQL(sql_string, "st.study_titles");
     }
-
-
-    public int LoadCoreStudyContributors()
+    
+    public int LoadCoreStudyPeople()
     {
-        string sql_string = @"INSERT INTO core.study_contributors(id, study_id, 
-                contrib_type_id, is_individual, 
-                person_id, person_given_name, person_family_name, person_full_name,
-                orcid_id, person_affiliation, 
-                organisation_id, organisation_name, organisation_ror_id)
-                SELECT id, study_id,
-                contrib_type_id, is_individual, 
-                person_id, person_given_name, person_family_name, person_full_name,
-                orcid_id, person_affiliation, 
-                organisation_id, organisation_name, organisation_ror_id
-                FROM st.study_contributors";
-
-        return db.ExecuteCoreTransferSQL(sql_string, "st.study_contributors");
+        string field_string = addFields["study_people"];
+        string sql_string = $@"INSERT INTO core.study_people({field_string})
+                SELECT {field_string}
+                FROM st.study_people";
+        return db.ExecuteCoreTransferSQL(sql_string, "st.study_people");
     }
-
+    
+    public int LoadCoreStudyOrganisations()
+    {
+        string field_string = addFields["study_organisations"];
+        string sql_string = $@"INSERT INTO core.study_organisations({field_string})
+                SELECT {field_string}
+                FROM st.study_organisations";
+        return db.ExecuteCoreTransferSQL(sql_string, "st.study_organisations");
+    }
 
     public int LoadCoreStudyTopics()
     {
-        string sql_string = @"INSERT INTO core.study_topics(id, study_id, 
-                topic_type_id, mesh_coded, mesh_code, mesh_value, 
-                original_ct_id, original_ct_code, original_value)
-                SELECT id, study_id,
-                topic_type_id, mesh_coded, mesh_code, mesh_value, 
-                original_ct_id, original_ct_code, original_value
+        string field_string = addFields["study_topics"];
+        string sql_string = $@"INSERT INTO core.study_topics({field_string})
+                SELECT {field_string}
                 FROM st.study_topics";
-
         return db.ExecuteCoreTransferSQL(sql_string, "st.study_topics");
     }
 
-
     public int LoadCoreStudyFeatures()
     {
-        string sql_string = @"INSERT INTO core.study_features(id, study_id, 
-                feature_type_id, feature_value_id)
-                SELECT id, study_id,
-                feature_type_id, feature_value_id 
+        string field_string = addFields["study_features"];
+        string sql_string = $@"INSERT INTO core.study_features({field_string})
+                SELECT {field_string}
                 FROM st.study_features";
-
         return db.ExecuteCoreTransferSQL(sql_string, "st.study_features");
     }
 
-
     public int LoadCoreStudyRelationShips()
     {
-        string sql_string = @"INSERT INTO core.study_relationships(id, study_id, 
-                relationship_type_id, target_study_id)
-                SELECT id, study_id,
-                relationship_type_id, target_study_id
+        string field_string = addFields["study_relationships"];
+        string sql_string = $@"INSERT INTO core.study_relationships({field_string})
+                SELECT {field_string}
                 FROM st.study_relationships";
-
         return db.ExecuteCoreTransferSQL(sql_string, "st.study_relationships");
     }
 
+    public int LoadCoreStudyConditions()
+    {
+        string field_string = addFields["study_conditions"];
+        string sql_string = $@"INSERT INTO core.study_conditions({field_string})
+                SELECT {field_string}
+                FROM st.study_conditions";
+        return db.ExecuteCoreTransferSQL(sql_string, "st.study_conditions");
+    }
+    
+    public int LoadCoreStudyCountries()
+    {
+        string field_string = addFields["study_countries"];
+        string sql_string = $@"INSERT INTO core.study_countries({field_string})
+                SELECT {field_string}
+                FROM st.study_countries";
+        return db.ExecuteCoreTransferSQL(sql_string, "st.study_countries");
+    }
+    
+    public int LoadCoreStudyLocations()
+    {
+        string field_string = addFields["study_locations"];
+        string sql_string = $@"INSERT INTO core.study_locations({field_string})
+                SELECT {field_string}
+                FROM st.study_locations";
+        return db.ExecuteCoreTransferSQL(sql_string, "st.study_locations");
+    }
+    
+    private readonly Dictionary<string, string> objectFields = new() 
+    {
+        { "data_objects", @"id, title, version, display_title, 
+         doi, doi_status_id, publication_year, object_class_id, object_type_id, 
+         managing_org_id, managing_org, managing_org_ror_id, lang_code, access_type_id, 
+         access_details, access_details_url, url_last_checked, eosc_category, 
+         add_study_contribs, add_study_topics" },
+        { "object_datasets", @"id, object_id, record_keys_type_id, record_keys_details, 
+         deident_type_id, deident_direct, deident_hipaa, deident_dates, deident_nonarr, 
+         deident_kanon, deident_details, consent_type_id, consent_noncommercial, consent_geog_restrict,
+         consent_research_type, consent_genetic_only, consent_no_methods, consent_details" },
+        { "object_instances", @"id, object_id,  
+         instance_type_id, repository_org_id, repository_org, repository_org_ror_id,
+         url, url_accessible, url_last_checked, resource_type_id,
+         resource_size, resource_size_units, resource_comments" },
+        { "object_titles", @"d, object_id, title_type_id, title_text, lang_code,
+         lang_usage_id, is_default, comments" },
+        { "object_dates", @"sd_oid, date_type_id, date_is_range, date_as_string, start_year, 
+         start_month, start_day, end_year, end_month, end_day, details" },
+        { "object_people", @"id, object_id, contrib_type_id, person_given_name, person_family_name, 
+         person_full_name, orcid_id, person_affiliation, 
+         organisation_id, organisation_name, organisation_ror_id" },
+        { "object_organisations", @"id, object_id, 
+         contrib_type_id, organisation_id, organisation_name, organisation_ror_id" },
+        { "object_topics", @"id, object_id, topic_type_id, original_value, original_ct_type_id,
+         original_ct_code, mesh_code, mesh_value" },
+        { "object_comments", @"sd_oid, ref_type, ref_source, pmid, pmid_version, notes" },
+        { "object_descriptions", @"id, object_id, description_type_id, label, description_text, lang_code" },
+        { "object_identifiers", @"id, object_id, identifier_value, identifier_type_id, identifier_org_id, 
+         identifier_org, identifier_org_ror_id, identifier_date" },
+        { "object_rights", @"id, object_id, rights_name, rights_uri, comments" },
+        { "object_relationships", @"id, object_id, relationship_type_id, target_object_id" },
+        { "study_object_links", @"id, study_id, object_id" },
 
+    };
+    
     public int LoadCoreDataObjects()
     {
-        string sql_string = @"INSERT INTO core.data_objects(id,
-                display_title, version, doi, doi_status_id, publication_year,
-                object_class_id, object_type_id, managing_org_id, 
-                managing_org, managing_org_ror_id,
-                lang_code, access_type_id, access_details, access_details_url,
-                url_last_checked, eosc_category, add_study_contribs, 
-                add_study_topics)
-                SELECT id, 
-                display_title, version, doi, doi_status_id, publication_year,
-                object_class_id, object_type_id, managing_org_id, 
-                managing_org, managing_org_ror_id,
-                lang_code, access_type_id, access_details, access_details_url,
-                url_last_checked, eosc_category, add_study_contribs, 
-                add_study_topics
+        string field_string = objectFields["data_objects"];
+        string sql_string = $@"INSERT INTO core.data_objects({field_string})
+                SELECT {field_string}
                 FROM ob.data_objects";
-
         return db.ExecuteCoreTransferSQL(sql_string, "ob.data_objects");
-
     }
-
 
     public int LoadCoreObjectDatasets()
     {
-        string sql_string = @"INSERT INTO core.object_datasets(id, object_id, 
-        record_keys_type_id, record_keys_details, 
-        deident_type_id, deident_direct, deident_hipaa,
-        deident_dates, deident_nonarr, deident_kanon, deident_details,
-        consent_type_id, consent_noncommercial, consent_geog_restrict,
-        consent_research_type, consent_genetic_only, consent_no_methods, consent_details)
-        SELECT id, object_id, 
-        record_keys_type_id, record_keys_details, 
-        deident_type_id, deident_direct, deident_hipaa,
-        deident_dates, deident_nonarr, deident_kanon, deident_details,
-        consent_type_id, consent_noncommercial, consent_geog_restrict,
-        consent_research_type, consent_genetic_only, consent_no_methods, consent_details
-        FROM ob.object_datasets";
-
+        string field_string = objectFields["object_datasets"];
+        string sql_string = $@"INSERT INTO core.object_datasets({field_string})
+                SELECT {field_string}
+                FROM ob.object_datasets";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_datasets");
     }
 
-
     public int LoadCoreObjectInstances()
     {
-        string sql_string = @"INSERT INTO core.object_instances(id, object_id,  
-        instance_type_id, repository_org_id, repository_org,
-        url, url_accessible, url_last_checked, resource_type_id,
-        resource_size, resource_size_units, resource_comments)
-        SELECT id, object_id, 
-        instance_type_id, repository_org_id, repository_org,
-        url, url_accessible, url_last_checked, resource_type_id,
-        resource_size, resource_size_units, resource_comments
-        FROM ob.object_instances";
-
+        string field_string = objectFields["object_instances"];
+        string sql_string = $@"INSERT INTO core.object_instances({field_string})
+                SELECT {field_string}
+                FROM ob.object_instances";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_instances");
     }
 
-
     public int LoadCoreObjectTitles()
     {
-        string sql_string = @"INSERT INTO core.object_titles(id, object_id, 
-        title_type_id, title_text, lang_code,
-        lang_usage_id, is_default, comments)
-        SELECT id, object_id, 
-        title_type_id, title_text, lang_code,
-        lang_usage_id, is_default, comments
-        FROM ob.object_titles";
-
+        string field_string = objectFields["object_titles"];
+        string sql_string = $@"INSERT INTO core.object_titles({field_string})
+                SELECT {field_string}
+                FROM ob.object_titles";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_titles");
     }
 
-
     public int LoadCoreObjectDates()
     {
-        string sql_string = @"INSERT INTO core.object_dates(id, object_id,  
-        date_type_id, date_is_range, date_as_string, start_year, 
-        start_month, start_day, end_year, end_month, end_day, details)
-        SELECT id, object_id, 
-        date_type_id, date_is_range, date_as_string, start_year, 
-        start_month, start_day, end_year, end_month, end_day, details
-        FROM ob.object_dates";
-
+        string field_string = objectFields["object_dates"];
+        string sql_string = $@"INSERT INTO core.object_dates({field_string})
+                SELECT {field_string}
+                FROM ob.object_dates";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_dates");
     }
 
-
-    public int LoadCoreObjectContributors()
+    public int LoadCoreObjectPeople()
     {
-        string sql_string = @"INSERT INTO core.object_contributors(id, object_id, 
-        contrib_type_id, is_individual, 
-        person_id, person_given_name, 
-        person_family_name, person_full_name,
-        orcid_id, person_affiliation, 
-        organisation_id, organisation_name, organisation_ror_id)
-        SELECT id, object_id, 
-        contrib_type_id, is_individual, 
-        person_id, person_given_name, 
-        person_family_name, person_full_name,
-        orcid_id, person_affiliation, 
-        organisation_id, organisation_name, organisation_ror_id
-        FROM ob.object_contributors";
-
-        return db.ExecuteCoreTransferSQL(sql_string, "ob.object_contributors");
+        string field_string = objectFields["object_people"];
+        string sql_string = $@"INSERT INTO core.object_people({field_string})
+                SELECT {field_string}
+                FROM ob.object_people";
+        return db.ExecuteCoreTransferSQL(sql_string, "ob.object_people");
+    }
+    
+    public int LoadCoreObjectOrganisations()
+    {
+        string field_string = objectFields["object_organisations"];
+        string sql_string = $@"INSERT INTO core.object_organisations({field_string})
+                SELECT {field_string}
+                FROM ob.object_organisations";
+        return db.ExecuteCoreTransferSQL(sql_string, "ob.object_organisations");
     }
 
-
     public int LoadCoreObjectTopics()
-    {
-        string sql_string = @"INSERT INTO core.object_topics(id, object_id,  
-        topic_type_id, mesh_coded, mesh_code, mesh_value, 
-        original_ct_id, original_ct_code, original_value)
-        SELECT id, object_id, 
-        topic_type_id, mesh_coded, mesh_code, mesh_value, 
-        original_ct_id, original_ct_code, original_value
-        FROM ob.object_topics";
-
+    {string field_string = objectFields["object_topics"];
+        string sql_string = $@"INSERT INTO core.object_topics({field_string})
+                SELECT {field_string}
+                FROM ob.object_topics";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_topics");
     }
 
-
     public int LoadCoreObjectDescriptions()
-    {
-        string sql_string = @"INSERT INTO core.object_descriptions(id, object_id, 
-        description_type_id, label, description_text, lang_code)
-        SELECT id, object_id, 
-        description_type_id, label, description_text, lang_code
-        FROM ob.object_descriptions";
-
+    {string field_string = objectFields["object_descriptions"];
+        string sql_string = $@"INSERT INTO core.object_descriptions({field_string})
+                SELECT {field_string}
+                FROM ob.object_descriptions";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_descriptions");
     }
 
-
     public int LoadCoreObjectIdentifiers()
     {
-        string sql_string = @"INSERT INTO core.object_identifiers(id, object_id, 
-        identifier_value, identifier_type_id, identifier_org_id, 
-        identifier_org, identifier_org_ror_id,
-        identifier_date)
-        SELECT id, object_id, 
-        identifier_value, identifier_type_id, identifier_org_id,
-        identifier_org, identifier_org_ror_id,
-        identifier_date
-        FROM ob.object_identifiers";
-
+        string field_string = objectFields["object_identifiers"];
+        string sql_string = $@"INSERT INTO core.object_identifiers({field_string})
+                SELECT {field_string}
+                FROM ob.object_identifiers";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_identifiers");
     }
 
-
     public int LoadCoreObjectRelationships()
     {
-        string sql_string = @"INSERT INTO core.object_relationships(id, object_id,   
-        relationship_type_id, target_object_id)
-        SELECT id, object_id, 
-        relationship_type_id, target_object_id
-        FROM ob.object_relationships";
-
+        string field_string = objectFields["object_relationships"];
+        string sql_string = $@"INSERT INTO core.object_relationships({field_string})
+                SELECT {field_string}
+                FROM ob.object_relationships";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_relationships");
     }
 
-
     public int LoadCoreObjectRights()
     {
-        string sql_string = @"INSERT INTO core.object_rights(id, object_id,  
-        rights_name, rights_uri, comments)
-        SELECT id, object_id,
-        rights_name, rights_uri, comments
-        FROM ob.object_rights";
-
+        string field_string = objectFields["object_rights"];
+        string sql_string = $@"INSERT INTO core.object_rights({field_string})
+                SELECT {field_string}
+                FROM ob.object_rights";
         return db.ExecuteCoreTransferSQL(sql_string, "ob.object_rights");
     }
-
 
     public int LoadStudyObjectLinks()
     {
@@ -297,15 +292,13 @@ public class CoreDataTransferrer
         study_id, object_id)
         SELECT id, parent_study_id, object_id
         FROM nk.all_ids_data_objects";
-
         return db.ExecuteCoreTransferSQL(sql_string, "nk.all_ids_data_objects");
     }
 
 
     public void GenerateStudyProvenanceData()
     {
-        string sql_string = "";
-        sql_string = @"DROP TABLE IF EXISTS nk.temp_study_provenance;
+        string sql_string = @"DROP TABLE IF EXISTS nk.temp_study_provenance;
             CREATE table nk.temp_study_provenance
                  as
                  select s.study_id, 
@@ -337,8 +330,7 @@ public class CoreDataTransferrer
 
     public void GenerateObjectProvenanceData()
     {
-        string sql_string = "";
-        sql_string = @"DROP TABLE IF EXISTS nk.temp_object_provenance;
+        string sql_string = @"DROP TABLE IF EXISTS nk.temp_object_provenance;
             create table nk.temp_object_provenance
                  as
                  select s.object_id, 

@@ -27,12 +27,17 @@ class RetrieveADDataBuilder
         // these are database dependent
 
         if (_source.has_study_topics is true) DeleteData("study_topics");
+        if (_source.has_study_conditions is true) DeleteData("study_conditions");
         if (_source.has_study_features is true) DeleteData("study_features");
-        if (_source.has_study_contributors is true) DeleteData("study_contributors");
+        if (_source.has_study_people is true) DeleteData("study_people");
+        if (_source.has_study_organisations is true) DeleteData("study_organisations");
         if (_source.has_study_references is true) DeleteData("study_references");
         if (_source.has_study_relationships is true) DeleteData("study_relationships");
         if (_source.has_study_links is true) DeleteData("study_links");
         if (_source.has_study_ipd_available is true) DeleteData("study_ipd_available");
+        if (_source.has_study_countries is true) DeleteData("study_countries");
+        if (_source.has_study_locations is true) DeleteData("study_locations");
+        if (_source.has_study_iec is true) DeleteData("study_iec");
     }
 
 
@@ -70,6 +75,7 @@ class RetrieveADDataBuilder
         adr.TransferStudyTitles();
 
         // these are database dependent
+        /* Leave to do later once testing regime established
 
         if (_source.has_study_topics is true) adr.TransferStudyTopics();
         if (_source.has_study_conditions is true) adr.TransferStudyConditions();
@@ -83,6 +89,7 @@ class RetrieveADDataBuilder
         if (_source.has_study_countries is true) adr.TransferStudyCountries();
         if (_source.has_study_locations is true) adr.TransferStudyLocations();
         if (_source.has_study_iec is true) adr.TransferStudyIEC();
+        */
     }
 
 
@@ -101,6 +108,7 @@ class RetrieveADDataBuilder
         if (_source.has_object_relationships is true) odr.TransferObjectRelationships();
         if (_source.has_object_rights is true) odr.TransferObjectRights();
 
+        /* Leave to do later once testing regime established
         if (_source.has_object_pubmed_set is true)
         {
             odr.TransferObjectPeople();
@@ -112,6 +120,7 @@ class RetrieveADDataBuilder
             odr.TransferObjectDBLinks();
             odr.TransferObjectPublicationTypes();
         }
+        */
     }
 
 

@@ -73,7 +73,7 @@ public class StudyTableBuilder
             id                     INT             GENERATED ALWAYS AS IDENTITY (START WITH 20000001 INCREMENT BY 1) PRIMARY KEY
           , study_id               INT             NOT NULL
           , relationship_type_id   INT             NULL
-          , target_study_id        VARCHAR         NULL
+          , target_study_id        INT             NULL
           , aggregated_on          TIMESTAMPTZ     NOT NULL DEFAULT Now()
         );
         CREATE INDEX study_relationships_study_id ON st.study_relationships(study_id);
