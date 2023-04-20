@@ -128,10 +128,10 @@ public class ADObjectTableBuilder
         string sql_string = @"DROP TABLE IF EXISTS ad.object_instances;
         CREATE TABLE ad.object_instances(
             id                     INT             GENERATED ALWAYS AS IDENTITY PRIMARY KEY
-          , sd_oid                 VARCHAR        NULL
+          , sd_oid                 VARCHAR         NULL
           , instance_type_id       INT             NOT NULL  default 1
-          , repository_org_id      INT             NULL
-          , repository_org         VARCHAR         NULL
+          , system_id              INT             NULL
+          , system                 VARCHAR         NULL
           , url                    VARCHAR         NULL
           , url_accessible         BOOLEAN         NULL
           , url_last_checked       DATE            NULL
@@ -275,9 +275,9 @@ public class ADObjectTableBuilder
           , sd_oid                 VARCHAR        NULL
           , identifier_value       VARCHAR         NULL
           , identifier_type_id     INT             NULL
-          , identifier_org_id      INT             NULL
-          , identifier_org         VARCHAR         NULL
-          , identifier_org_ror_id  VARCHAR         NULL
+          , source_id              INT             NULL
+          , source                 VARCHAR         NULL
+          , source_ror_id          VARCHAR         NULL
           , identifier_date        VARCHAR         NULL
           , record_hash            CHAR(32)        NULL
           , added_on               TIMESTAMPTZ     NOT NULL default now()

@@ -52,9 +52,9 @@ public class CoreTableBuilder
           , study_id               INT             NOT NULL
           , identifier_value       VARCHAR         NULL
           , identifier_type_id     INT             NULL
-          , identifier_org_id      INT             NULL
-          , identifier_org         VARCHAR         NULL
-          , identifier_org_ror_id  VARCHAR         NULL
+          , source_id              INT             NULL
+          , source                 VARCHAR         NULL
+          , source_ror_id          VARCHAR         NULL
           , identifier_date        VARCHAR         NULL
           , identifier_link        VARCHAR         NULL
         );
@@ -315,8 +315,8 @@ public class CoreTableBuilder
         CREATE TABLE core.object_instances(
             id                     INT             NOT NULL PRIMARY KEY
           , object_id              INT             NOT NULL
-          , repository_org_id      INT             NULL
-          , repository_org         VARCHAR         NULL
+          , system_id              INT             NULL
+          , system                 VARCHAR         NULL
           , url                    VARCHAR         NULL
           , url_accessible         BOOLEAN         NULL
           , url_last_checked       DATE            NULL
@@ -434,9 +434,9 @@ public class CoreTableBuilder
           , object_id              INT             NOT NULL
           , identifier_value       VARCHAR         NULL
           , identifier_type_id     INT             NULL
-          , identifier_org_id      INT             NULL
-          , identifier_org         VARCHAR         NULL
-          , identifier_org_ror_id  VARCHAR         NULL
+          , source_id              INT             NULL
+          , source                 VARCHAR         NULL
+          , source_ror_id          VARCHAR         NULL
           , identifier_date        VARCHAR         NULL
         );
         CREATE INDEX object_identifiers_object_id ON core.object_identifiers(object_id);";

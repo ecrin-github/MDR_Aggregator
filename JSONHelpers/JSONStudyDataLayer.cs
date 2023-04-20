@@ -100,7 +100,7 @@ public class JSONStudyDataLayer
         study_identifier_query_string = @"select
             si.id, identifier_value,
             identifier_type_id, it.name as identifier_type,
-            identifier_org_id, identifier_org, identifier_org_ror_id,
+            source_id, source, source_ror_id,
             identifier_date, identifier_link
             from core.study_identifiers si
             left join context_lup.identifier_types it on si.identifier_type_id = it.id

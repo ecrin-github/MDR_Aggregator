@@ -109,9 +109,8 @@ public class ObjectTableBuilder
         CREATE TABLE ob.object_instances(
             id                     INT             GENERATED ALWAYS AS IDENTITY (START WITH 40000001 INCREMENT BY 1) PRIMARY KEY
           , object_id              INT             NOT NULL
-          , repository_org_id      INT             NULL
-          , repository_org         VARCHAR         NULL
-          , repository_org_ror_id  VARCHAR         NULL
+          , system_id              INT             NULL
+          , system                 VARCHAR         NULL
           , url                    VARCHAR         NULL
           , url_accessible         BOOLEAN         NULL
           , url_last_checked       DATE            NULL
@@ -235,9 +234,9 @@ public class ObjectTableBuilder
           , object_id              INT             NOT NULL
           , identifier_value       VARCHAR         NULL
           , identifier_type_id     INT             NULL
-          , identifier_org_id      INT             NULL
-          , identifier_org         VARCHAR         NULL
-          , identifier_org_ror_id  VARCHAR         NULL
+          , source_id      INT             NULL
+          , source         VARCHAR         NULL
+          , source_ror_id  VARCHAR         NULL
           , identifier_date        VARCHAR         NULL
           , aggregated_on          TIMESTAMPTZ     NOT NULL DEFAULT Now()
         );

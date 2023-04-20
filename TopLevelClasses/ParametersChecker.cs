@@ -43,7 +43,8 @@ internal class ParametersChecker
                 opts.create_json = true;
                 opts.do_statistics = true;
             }
-            else if (opts is { transfer_data: false, create_core: false, create_json: false, do_statistics: false })
+            else if (opts is { transfer_data: false, create_core: false, create_json: false, 
+                               do_statistics: false, do_iec: false, do_indexes: false })
             {
                 // If not testing need at least one of D, C, J or S to be true
 

@@ -127,9 +127,9 @@ class JSONObjectProcessor
                 Lookup? repo_org = null;
                 access_details? access = null;
                 resource_details? resource = null;
-                if (i.repository_org != null)
+                if (i.system != null)
                 {
-                    repo_org = new Lookup(i.repository_org_id, i.repository_org);
+                    repo_org = new Lookup(i.system_id, i.system);
                 }
                 if (i.url != null || i.url_accessible != null)
                 {
@@ -235,7 +235,7 @@ class JSONObjectProcessor
             {
                 object_identifiers.Add(new object_identifier(i.id, i.identifier_value, 
                                       new Lookup(i.identifier_type_id, i.identifier_type),
-                                      new Organisation(i.identifier_org_id, i.identifier_org, i.identifier_org_ror_id),
+                                      new Organisation(i.source_id, i.source, i.source_ror_id),
                                       i.identifier_date));
             }
         }

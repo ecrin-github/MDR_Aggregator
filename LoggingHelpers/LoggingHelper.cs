@@ -5,12 +5,13 @@ namespace MDR_Aggregator;
 
 public class LoggingHelper : ILoggingHelper
 {
-    private readonly string _logfileStartOfPath;
-    private readonly string _summaryLogfileStartOfPath;
-    private string _logfilePath = "";
-    private string _summaryLogfilePath = "";
+    private readonly string? _logfileStartOfPath;
+    private readonly string? _summaryLogfileStartOfPath;  
+    private readonly string _logfilePath;
+    private readonly string _summaryLogfilePath;
     private StreamWriter? _sw;
 
+    
     public LoggingHelper()
     {
         IConfigurationRoot settings = new ConfigurationBuilder()
@@ -18,46 +19,29 @@ public class LoggingHelper : ILoggingHelper
             .AddJsonFile("appsettings.json")
             .Build();
 
-        _logfileStartOfPath = settings["logFlePath"] ?? "";
-        _summaryLogfileStartOfPath = settings["summaryFilePath"] ?? "";
+        _logfileStartOfPath = settings["logFileStartOfPath"] ?? "";
+        _summaryLogfileStartOfPath = settings["summaryFileStartOfPath"] ?? "";
+        
+        string dtString = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture)
+            .Replace(":", "").Replace("T", " ");
+
+        string logFolderPath = Path.Combine(_logfileStartOfPath!, "aggs");
+        if (!Directory.Exists(logFolderPath))
+        {
+            Directory.CreateDirectory(logFolderPath);
+        }
+        
+        string logFileName = "AG " + dtString + ".log";
+        _logfilePath = Path.Combine(logFolderPath, logFileName);
+        _summaryLogfilePath = Path.Combine(_summaryLogfileStartOfPath!, logFileName);
+        _sw = new StreamWriter(_logfilePath, true, System.Text.Encoding.UTF8);
     }
 
     // Used to check if a log file with a named source has been created.
 
     public string LogFilePath => _logfilePath;
-
-    public void OpenLogFile(string databaseName)
-    {
-        string dt_string = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture)
-            .Replace(":", "").Replace("T", " ");
-
-        string log_folder_path = Path.Combine(_logfileStartOfPath, databaseName);
-        if (!Directory.Exists(log_folder_path))
-        {
-            Directory.CreateDirectory(log_folder_path);
-        }
-
-        string log_file_name = "HV " + databaseName + " " + dt_string + ".log";
-
-
-        _logfilePath = Path.Combine(log_folder_path, log_file_name);
-        _summaryLogfilePath = Path.Combine(_summaryLogfileStartOfPath, log_file_name);
-        _sw = new StreamWriter(_logfilePath, true, System.Text.Encoding.UTF8);
-    }
-
-
-    public void OpenNoSourceLogFile()
-    {
-        string dt_string = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture)
-            .Replace(":", "").Replace("T", " ");
-
-        string log_file_name = "HV Source not set " + dt_string + ".log";
-        _logfilePath = Path.Combine(_logfileStartOfPath, log_file_name);
-        _summaryLogfilePath = Path.Combine(_summaryLogfileStartOfPath, log_file_name);
-        _sw = new StreamWriter(_logfilePath, true, System.Text.Encoding.UTF8);
-    }
-
-
+   
+    
     public void LogCommandLineParameters(Options opts)
     {
         LogHeader("Setup");
@@ -65,6 +49,9 @@ public class LoggingHelper : ILoggingHelper
         LogLine("create core =  " + opts.create_core);
         LogLine("create json =  " + opts.create_json);
         LogLine("do statistics =  " + opts.do_statistics);
+        LogLine("do iec =  " + opts.do_iec);
+        LogLine("do indices =  " + opts.do_indexes);
+       
     }
 
 

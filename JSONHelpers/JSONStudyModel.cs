@@ -64,18 +64,18 @@ public class study_identifier
     public int id { get; set; }
     public string? identifier_value { get; set; }
     public Lookup? identifier_type { get; set; }
-    public Organisation? identifier_org { get; set; }
+    public Organisation? source { get; set; }
     public string? identifier_date { get; set; }
     public string? identifier_link { get; set; }
 
     public study_identifier(int _id, string? _identifier_value,
-        Lookup? _identifier_type, Organisation? _identifier_org,
+        Lookup? _identifier_type, Organisation? _source,
                        string? _identifier_date, string? _identifier_link)
     {
         id = _id;
         identifier_value = _identifier_value;
         identifier_type = _identifier_type;
-        identifier_org = _identifier_org;
+        source = _source;
         identifier_date = _identifier_date;
         identifier_link = _identifier_link;
     }
@@ -195,9 +195,9 @@ public class DBStudyIdentifier
     public string? identifier_value { get; set; }
     public int? identifier_type_id { get; set; }
     public string? identifier_type { get; set; }
-    public int? identifier_org_id { get; set; }
-    public string? identifier_org { get; set; }
-    public string? identifier_org_ror_id { get; set; }
+    public int? source_id { get; set; }
+    public string? source { get; set; }
+    public string? source_ror_id { get; set; }
     public string? identifier_date { get; set; }
     public string? identifier_link { get; set; }
 }

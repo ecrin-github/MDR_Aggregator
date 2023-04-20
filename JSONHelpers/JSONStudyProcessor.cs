@@ -82,7 +82,7 @@ public class JSONStudyProcessor
             {
                 study_identifiers.Add(new study_identifier(t.id, t.identifier_value,
                                       new Lookup(t.identifier_type_id, t.identifier_type),
-                                      new Organisation(t.identifier_org_id, t.identifier_org, t.identifier_org_ror_id),
+                                      new Organisation(t.source_id, t.source, t.source_ror_id),
                                       t.identifier_date, t.identifier_link));
             }
         }

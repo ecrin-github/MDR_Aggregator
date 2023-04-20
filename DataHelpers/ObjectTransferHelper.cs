@@ -146,9 +146,8 @@ public class ObjectDataTransferrer
         deident_direct, deident_hipaa, deident_dates, deident_nonarr, deident_kanon, deident_details,
         consent_type_id, consent_noncommercial, consent_geog_restrict,
         consent_research_type, consent_genetic_only, consent_no_methods, consent_details" },
-        { "object_instances", @"repository_org_id, repository_org, repository_org_ror_id
-        url, url_accessible, url_last_checked, resource_type_id,
-        resource_size, resource_size_units, resource_comments" },
+        { "object_instances", @"system_id, system, url, url_accessible, url_last_checked, 
+        resource_type_id, resource_size, resource_size_units, resource_comments" },
         { "object_titles", @"title_type_id, title_text, lang_code, lang_usage_id, is_default, comments" },
         { "object_dates", @"date_type_id, date_is_range, date_as_string, start_year, 
         start_month, start_day, end_year, end_month, end_day, details" },
@@ -161,7 +160,7 @@ public class ObjectDataTransferrer
           original_ct_code, mesh_code, mesh_value" },
         { "object_descriptions", @"description_type_id, label, description_text, lang_code" },
         { "object_identifiers", @"identifier_value, identifier_type_id, 
-        identifier_org_id, identifier_org, identifier_org_ror_id, identifier_date" },
+        source_id, source, source_ror_id, identifier_date" },
         { "object_rights", @"rights_name, rights_uri, comments" },
         { "object_relationships", @"relationship_type_id, target_sd_oid" }
     };

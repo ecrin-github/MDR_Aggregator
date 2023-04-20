@@ -45,11 +45,11 @@ public class ADStudyDataRetriever
     public void TransferStudyIdentifiers()
     {
         string sql_string = @"INSERT INTO ad.study_identifiers(sd_sid,
-        identifier_value, identifier_type_id, identifier_org_id, identifier_org_ror_id, 
-        identifier_org, identifier_date, identifier_link)
+        identifier_value, identifier_type_id, source_id, source_ror_id, 
+        source, identifier_date, identifier_link)
         SELECT sd_sid,
-        identifier_value, identifier_type_id, identifier_org_id, identifier_org_ror_id, 
-        identifier_org, identifier_date, identifier_link
+        identifier_value, identifier_type_id, source_id, source_ror_id, 
+        source, identifier_date, identifier_link
         FROM adcomp.study_identifiers
         where source_id = " + _source_id;
 

@@ -98,3 +98,4 @@ C:\Users\ecrinadmin\RiderProjects\MDR_Aggregator\obj\Debug\net7.0\refint\MDR_Agg
 C:\Users\ecrinadmin\RiderProjects\MDR_Aggregator\obj\Debug\net7.0\MDR_Aggregator.pdb
 C:\Users\ecrinadmin\RiderProjects\MDR_Aggregator\obj\Debug\net7.0\MDR_Aggregator.genruntimeconfig.cache
 C:\Users\ecrinadmin\RiderProjects\MDR_Aggregator\obj\Debug\net7.0\ref\MDR_Aggregator.dll
+C:\Users\ecrinadmin\RiderProjects\MDR_Aggregator\bin\Debug\net7.0\appsettings.json

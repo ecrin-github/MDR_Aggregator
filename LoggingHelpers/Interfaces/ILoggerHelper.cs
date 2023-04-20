@@ -4,9 +4,6 @@ public interface ILoggingHelper
 {
     string LogFilePath { get; }
 
-    void OpenLogFile(string database_name);
-    void OpenNoSourceLogFile();
-
     void LogLine(string message, string identifier = "");
     void LogHeader(string header_text);
     void LogError(string message);

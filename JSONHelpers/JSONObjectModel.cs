@@ -177,15 +177,15 @@ public class Consent
 public class object_instance
 {
     public int id { get; set; }
-    public Lookup? repository_org { get; set; }
+    public Lookup? system { get; set; }
     public access_details? access_details { get; set; }
     public resource_details? resource_details { get; set; }
 
-    public object_instance(int _id, Lookup? _repository_org,
+    public object_instance(int _id, Lookup? _system,
                     access_details? _access_details, resource_details? _resource_details)
     {
         id = _id;
-        repository_org = _repository_org;
+        system = _system;
         access_details = _access_details;
         resource_details = _resource_details;
     }
@@ -428,16 +428,16 @@ public class object_identifier
     public int id { get; set; }
     public string? identifier_value { get; set; }
     public Lookup? identifier_type { get; set; }
-    public Organisation? identifier_org { get; set; }
+    public Organisation? source { get; set; }
     public string? identifier_date { get; set; }
 
     public object_identifier(int _id, string? _identifier_value, 
-        Lookup? _identifier_type, Organisation? _identifier_org,
+        Lookup? _identifier_type, Organisation? _source,
                              string? _identifier_date)
     {
         id = _id;
         identifier_type = _identifier_type;
-        identifier_org = _identifier_org;
+        source = _source;
         identifier_value = _identifier_value;
         identifier_date = _identifier_date;
     }
@@ -551,8 +551,8 @@ public class DBObjectInstance
     public int id { get; set; }
     public int? instance_type_id { get; set; }
     public string? instance_type { get; set; }
-    public int? repository_org_id { get; set; }
-    public string? repository_org { get; set; }
+    public int? system_id { get; set; }
+    public string? system { get; set; }
     public string? url { get; set; }
     public bool? url_accessible { get; set; }
     public string? url_last_checked { get; set; }
@@ -600,9 +600,9 @@ public class DBObjectIdentifier
     public string? identifier_value { get; set; }
     public int? identifier_type_id { get; set; }
     public string? identifier_type { get; set; }
-    public int? identifier_org_id { get; set; }
-    public string? identifier_org { get; set; }
-    public string? identifier_org_ror_id { get; set; }
+    public int? source_id { get; set; }
+    public string? source { get; set; }
+    public string? source_ror_id { get; set; }
     public string? identifier_date { get; set; }
 }
 

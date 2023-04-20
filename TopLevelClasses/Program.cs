@@ -27,12 +27,11 @@ IHost host = Host.CreateDefaultBuilder()
      {
          builder.AddConfiguration(configFiles);
      })
-     .ConfigureServices((hostContext, services) =>
+     .ConfigureServices((services) =>
      {
          services.AddSingleton<ICredentials, Credentials>();
          services.AddSingleton<ILoggingHelper, LoggingHelper>();
          services.AddSingleton<IMonDataLayer, MonDataLayer>();
-         services.AddSingleton<ITestingDataLayer, TestingDataLayer>();
      })
      .Build();
 
@@ -66,11 +65,7 @@ catch (Exception e)
 {
     // If an error bubbles up to here there is an unexpected issue with the code.
     // A file should normally have been created (but just in case...).
-
-    if (loggingHelper.LogFilePath == "")
-    {
-        loggingHelper.OpenNoSourceLogFile();
-    }
+    
     loggingHelper.LogHeader("UNHANDLED EXCEPTION");
     loggingHelper.LogCodeError("MDR_Aggregator application aborted", e.Message, e.StackTrace);
     loggingHelper.CloseLog();

@@ -6,7 +6,7 @@ public class Aggregator
     private readonly IMonDataLayer _mon_repo;
     private readonly ICredentials _credentials;
     
-    private int agg_event_id;
+    private readonly int agg_event_id;
 
     public Aggregator(ILoggingHelper logginghelper, IMonDataLayer mon_repo)
     {
@@ -24,15 +24,15 @@ public class Aggregator
             _loggingHelper.LogCommandLineParameters(opts);
 
             // Set up the context DB as two sets of foreign tables as it is used in several places
-            // N.B. When testing mdr_conn_string points to the test database
-            // If not testing it points to the 'core' mdr database
+            // N.B. When testing mdr_conn_string points to the test database.
+            // If not testing it points to the 'aggs' aggregating database.
 
-            string dest_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
+            string dest_conn_string = _credentials.GetConnectionString("aggs", opts.testing);
             _mon_repo.SetUpTempContextFTWs(_credentials, dest_conn_string);
 
             if (opts.transfer_data)
             {
-                // In the mdr database, establish new tables for the three schemas st, ob, nk
+                // In the aggs database, establish new tables for the three schemas st, ob, nk
 
                 _loggingHelper.LogHeader("Establishing aggregate schemas");
                 SchemaBuilder sb = new SchemaBuilder(dest_conn_string);
@@ -47,8 +47,8 @@ public class Aggregator
                 // Derive a new table of inter-study relationships - First get a list of all
                 // the study sources and ensure it is sorted correctly.
 
-                IEnumerable<Source> sources = _mon_repo.RetrieveDataSources()
-                                           .OrderBy(s => s.preference_rating);
+                List<Source> sources = _mon_repo.RetrieveDataSources()
+                                           .OrderBy(s => s.preference_rating).ToList();
                 _loggingHelper.LogLine("Sources obtained");
 
                 // Then use the study link builder to create a record of all current study - study links
@@ -78,12 +78,12 @@ public class Aggregator
                     string source_conn_string = _credentials.GetConnectionString(source.database_name!, opts.testing);
                     source.db_conn = source_conn_string;
 
-                    // in normal non-testing environment schema name is the ad tables in a FTW - i.e. <db name>_ad
-                    // also use credentials here to get the connection string for the source database
-                    // In testing environment source schema name will simply be 'ad', and the ad table data
-                    // all has to be transferred from adcomp before each source transfer...
+                    // in normal (non-testing) environment, schema name references the ad tables in a FTW
+                    // - i.e. <db name>_ad. Credentials are here to get the connection string for the source
+                    // database. In a testing environment source schema name will simply be 'ad', and the
+                    // ad table data all has to be transferred from adcomp before each source transfer...
 
-                    string schema_name = "";
+                    string schema_name;
                     if (opts.testing)
                     {
                         schema_name = "ad";
@@ -94,7 +94,8 @@ public class Aggregator
                         schema_name = _mon_repo.SetUpTempFTW(_credentials, source.database_name!, dest_conn_string);
                     }
 
-                    DataTransferBuilder tb = new DataTransferBuilder(source, schema_name, dest_conn_string, _loggingHelper);
+                    DataTransferBuilder tb = new DataTransferBuilder(source, schema_name, 
+                                                                     dest_conn_string, _loggingHelper);
                     if (source.has_study_tables is true)
                     {
                         tb.ProcessStudyIds();
@@ -119,7 +120,8 @@ public class Aggregator
 
                 agg_event.num_total_studies = _mon_repo.GetAggregateRecNum("studies", "st", dest_conn_string);
                 agg_event.num_total_objects = _mon_repo.GetAggregateRecNum("data_objects", "ob", dest_conn_string);
-                agg_event.num_total_study_object_links = _mon_repo.GetAggregateRecNum("all_ids_data_objects", "nk", dest_conn_string);
+                agg_event.num_total_study_object_links = _mon_repo.GetAggregateRecNum("all_ids_data_objects", 
+                                                                                      "nk", dest_conn_string);
 
                 if (!opts.testing)
                 {
@@ -167,7 +169,61 @@ public class Aggregator
                 stb.GetSummaryStatistics();
             }
 
+            
+            if (opts.do_iec)
+            {
+                // Get connection string for destuination DB and re-establish IEC tables 
+                
+                string iecdest_conn_string = _credentials.GetConnectionString("aggs", opts.testing);
+                _loggingHelper.LogHeader("Establishing IEC tables");
+                //IECSchemaBuilder sb = new SchemaBuilder(dest_conn_string);
+                //sb.BuildNewIECTables();
+                _loggingHelper.LogLine("IEC tables recreated");
 
+                // construct the aggregation event record  (??)
+                AggregationEvent agg_event = new AggregationEvent(agg_event_id);
+                
+                // Loop through the study sources (in preference order)
+                // N.B. Study links table already obtained.
+                // In each case establish and then drop the source tables   
+                // in a foreign table wrapper
+
+                int num_studies_imported = 0;
+                int num_objects_imported = 0;
+                
+                List<Source> sources = _mon_repo.RetrieveDataSources()
+                    .OrderBy(s => s.preference_rating).ToList();
+                _loggingHelper.LogLine("Sources obtained");
+
+                foreach (Source source in sources)
+                {
+                    string source_conn_string = _credentials.GetConnectionString(source.database_name!, opts.testing);
+                    source.db_conn = source_conn_string;
+
+                    // in normal (non-testing) environment, schema name references the ad tables in a FTW
+                    // - i.e. <db name>_ad. Credentials are here to get the connection string for the source
+                    // database. In a testing environment source schema name will simply be 'ad', and the
+                    // ad table data all has to be transferred from adcomp before each source transfer...
+                   
+                    string schema_name = _mon_repo.SetUpTempFTW(_credentials, 
+                                              source.database_name!, dest_conn_string);
+                    
+                    //IECTransferBuilder iecb = new IECTransferBuilder(source, schema_name, 
+                    //                                 dest_conn_string, _loggingHelper);
+                    //if (source.has_study_tables is true)
+                    //{
+                    //    iecb.ProcessStudyIds();
+                    //    num_studies_imported += iecb.TransferStudyData();
+                    //}
+                    
+                    // update statistics about aggregation
+                    agg_event.num_studies_imported = num_studies_imported;
+                    _mon_repo.StoreAggregationEvent(agg_event);
+                }
+
+            }
+            
+            
             if (opts.create_json)
             {
                 string conn_string = _credentials.GetConnectionString("mdr", opts.testing);

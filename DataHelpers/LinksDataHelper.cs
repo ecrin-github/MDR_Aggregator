@@ -64,12 +64,12 @@ public class LinksDataHelper
         using var conn = new NpgsqlConnection(source_conn_string);
         string sql_string = @"select " + source_id.ToString() + @" as source_1, 
                 sd_sid as sd_sid_1, 
-                identifier_value as sd_sid_2, identifier_org_id as source_2
+                identifier_value as sd_sid_2, source_id as source_2
                 from ad.study_identifiers
                 where identifier_type_id = 11
-                and identifier_org_id > 100115
-                and (identifier_org_id < 100133 or identifier_org_id = 101989)
-                and identifier_org_id <> " + source_id.ToString();
+                and source_id > 100115
+                and (source_id < 100133 or source_id = 101989)
+                and source_id <> " + source_id.ToString();
         return conn.Query<StudyLink>(sql_string);
     }
 
@@ -730,10 +730,10 @@ public class LinksDataHelper
         using var conn = new NpgsqlConnection(_mdr_connString);
         string sql_string = @"truncate table ad.study_identifiers; 
                         INSERT into ad.study_identifiers (sd_sid, identifier_type_id, 
-                        identifier_value, identifier_org, identifier_org_id, identifier_org_ror_id,
+                        identifier_value, source, source_id, source_ror_id,
                         identifier_date, identifier_link)
                         SELECT sd_sid, identifier_type_id,
-                        identifier_value, identifier_org, identifier_org_id, identifier_org_ror_id,
+                        identifier_value, source, source_id, source_ror_id,
                         identifier_date, identifier_link 
                         from adcomp.study_identifiers
                         where source_id = " + source_id.ToString();

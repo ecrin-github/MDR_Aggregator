@@ -53,9 +53,9 @@ public class StudyTableBuilder
           , study_id               INT             NOT NULL
           , identifier_value       VARCHAR         NULL
           , identifier_type_id     INT             NULL
-          , identifier_org_id      INT             NULL
-          , identifier_org         VARCHAR         NULL
-          , identifier_org_ror_id  VARCHAR         NULL
+          , source_id      INT             NULL
+          , source         VARCHAR         NULL
+          , source_ror_id  VARCHAR         NULL
           , identifier_date        VARCHAR         NULL
           , identifier_link        VARCHAR         NULL
           , aggregated_on          TIMESTAMPTZ     NOT NULL DEFAULT Now()

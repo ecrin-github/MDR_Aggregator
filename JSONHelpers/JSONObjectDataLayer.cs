@@ -120,7 +120,7 @@ public class JSONObjectDataLayer
         // object instances
         object_instance_query_string = @"select
             oi.id, instance_type_id, it.name as instance_type,
-            repository_org_id, repository_org, url,
+            system_id, system, url,
             url_accessible, url_last_checked,
             resource_type_id, rt.name as resource_type,
             resource_size, resource_size_units, resource_comments as comments
@@ -209,8 +209,8 @@ public class JSONObjectDataLayer
         object_identifier_query_string = @"select
             oi.id, identifier_value, 
             identifier_type_id, it.name as identifier_type,
-            identifier_org_id, identifier_org, 
-            identifier_org_ror_id, identifier_date
+            source_id, source, 
+            source_ror_id, identifier_date
             from core.object_identifiers oi
             left join context_lup.identifier_types it on oi.identifier_type_id = it.id
             where object_id ";
