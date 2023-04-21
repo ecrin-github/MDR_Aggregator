@@ -23,7 +23,29 @@ public class StudyId
     public DateTime? datetime_of_data_fetch { get; set; }
 }
 
+public class ComplexStudy
+{
+    public int group_number { get; set; }
+    public int src_id { get; set; }
+    public string sid_id { get; set; }
 
+    public ComplexStudy(int groupNumber, int srcId, string sidId)
+    {
+        group_number = groupNumber;
+        src_id = srcId;
+        sid_id = sidId;
+    }
+}
+
+public class ComplexStudyRow
+{
+    public int group_source_id { get; set; }
+    public string group_sd_sid { get; set; }
+    public int member_source_id { get; set; }
+    public string member_sd_sid { get; set; }
+}
+
+/*
 public class ComplexKeyStudy
 {
     public int src_id { get; set; }
@@ -31,12 +53,13 @@ public class ComplexKeyStudy
     public bool considered { get; set; }
 }
 
+
 public class ComplexStudy
 {
     public int sourceid { get; set; }
     public string sdsid { get; set; }
 }
-
+*/
    
 public class ComplexLink
 {

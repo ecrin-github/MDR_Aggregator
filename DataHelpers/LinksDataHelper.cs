@@ -5,8 +5,8 @@ namespace MDR_Aggregator;
 
 public class LinksDataHelper
 {
-    readonly string _aggs_connString;
-    ILoggingHelper _loggingHelper;
+    private readonly string _aggs_connString;
+    private readonly ILoggingHelper _loggingHelper;
 
     public LinksDataHelper(string aggs_connString, ILoggingHelper loggingHelper)
     {
@@ -427,8 +427,8 @@ public class LinksDataHelper
     public void TransferLinksToSortedTable()
     {
         // Transfers the collected links so that the 'preferred side' is consistently located.
-        // A lower preference rating means 'more preferred' - i.e. should be used in preference.
-        // Lower rated source data should therefore be in the 'preferred' fields on the 'RHS' of the table,
+        // A lower preference rating means 'more preferred' - i.e. should be used first when aggregating data.
+        // Lower rated source data should therefore be in the 'preferred' fields on the right of the table,
         // and higher rated data should be on the left hand side.
 
         // In the case below the original link data matches what is required.
@@ -471,7 +471,7 @@ public class LinksDataHelper
         string sql_string = @"DROP TABLE IF EXISTS nk.temp_distinct_links;
                        CREATE TABLE nk.temp_distinct_links 
                        as SELECT distinct source_id, sd_sid, 
-                          preferred_sd_sid, preferred_source_id
+                          preferred_sd_sid, preferred_source_id, true as valid 
                           FROM nk.temp_study_links_sorted";
 
         conn.Execute(sql_string);
@@ -484,102 +484,84 @@ public class LinksDataHelper
                 DROP TABLE IF EXISTS nk.temp_study_links_sorted;";
         conn.Execute(sql_string);
     }
-
     
-    // Despite earlier cleaning there remains a small number of 
-    // study registry Ids that are referenced as'other Ids' but
-    // which are errors, which do not correspond to any real studies
-    // in the system. These need to be removed, on a source by source basiks.
-
+    
     public void ObtainStudyIds(int source_id, string source_conn_string, PostgreSQLCopyHelper<IdChecker> copyHelper)
     {
-        using (var conn = new NpgsqlConnection(_aggs_connString))
-        {
-            string sql_string = @"DROP TABLE IF EXISTS nk.temp_id_checker;
-                    CREATE TABLE nk.temp_id_checker
-                    (sd_sid VARCHAR) ";
-            conn.Execute(sql_string);
-        }
+        // Get a list of study ids from the source, so secondary ids can be checked against it.
+        
+        using var agg_conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"DROP TABLE IF EXISTS nk.temp_id_checker;
+                    CREATE TABLE nk.temp_id_checker (sd_sid VARCHAR) ";
+        agg_conn.Execute(sql_string);
 
-        IEnumerable<IdChecker> Ids;
+        using var srce_conn = new NpgsqlConnection(source_conn_string);
+        sql_string = @"select sd_sid from ad.studies";
+        IEnumerable<IdChecker> Ids = srce_conn.Query<IdChecker>(sql_string);
+        
+        agg_conn.Open();
+        copyHelper.SaveAll(agg_conn, Ids);
 
-        using (var conn = new NpgsqlConnection(source_conn_string))
-        {
-            string sql_string = @"select sd_sid 
-                    from ad.studies";
-            Ids = conn.Query<IdChecker>(sql_string);
-        }
-
-        using (var conn = new NpgsqlConnection(_aggs_connString))
-        {
-            conn.Open();
-            copyHelper.SaveAll(conn, Ids);
-        }
-
-        using (var conn = new NpgsqlConnection(_aggs_connString))
-        {
-            string sql_string = @"SELECT COUNT(*) FROM nk.temp_id_checker";
-            int res = conn.ExecuteScalar<int>(sql_string);
-            _loggingHelper.LogLine(source_id.ToString() + ": " + res.ToString() + " sd_sids found");
-        }
+        sql_string = @"SELECT COUNT(*) FROM nk.temp_id_checker";
+        int res = agg_conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"Source {source_id}: {res} sd_sids found");
     }
 
     public void CheckIdsAgainstSourceStudyIds(int source_id)
-        {
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-                string sql_string = $@"UPDATE nk.temp_distinct_links t
-                           SET valid = false 
-                           FROM 
-                              (SELECT k.sd_sid as sd_sid
-                               FROM  nk.temp_distinct_links k
-                               LEFT JOIN nk.temp_id_checker s
-                               ON k.sd_sid = s.sd_sid
-							   WHERE k.source_id = {source_id}
-							   AND s.sd_sid is null) invalids
-                           where t.sd_sid = invalids.sd_sid";
+    {
+        // Carry out the check on secondary ids and mark then as valid or invalid.
+        
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = $@"UPDATE nk.temp_distinct_links t
+               SET valid = false 
+                   FROM 
+                      (SELECT k.sd_sid as sd_sid
+                       FROM  nk.temp_distinct_links k
+                       LEFT JOIN nk.temp_id_checker s
+                       ON k.sd_sid = s.sd_sid
+					   WHERE k.source_id = {source_id}
+					   AND s.sd_sid is null) invalids
+                   where t.sd_sid = invalids.sd_sid";
 
-                int res1 = conn.Execute(sql_string);
-                _loggingHelper.LogLine($"{res1} set to invalid on sd_sid");
+        int res1 = conn.Execute(sql_string);
+        _loggingHelper.LogLine($"\t\t{res1} set to invalid on sd_sid");
 
-                sql_string = $@"UPDATE nk.temp_distinct_links t
-                           SET valid = false 
-                           FROM
-                              (SELECT k.preferred_sd_sid 
-                               FROM  nk.temp_distinct_links k
-                               LEFT JOIN nk.temp_id_checker s
-                               ON k.preferred_sd_sid = s.sd_sid
-							   WHERE k.preferred_source_id = {source_id}
-							   AND s.sd_sid is null) invalids
-                           where t.preferred_sd_sid = invalids.preferred_sd_sid";
+        sql_string = $@"UPDATE nk.temp_distinct_links t
+                 SET valid = false 
+                     FROM
+                        (SELECT k.preferred_sd_sid 
+                         FROM  nk.temp_distinct_links k
+                         LEFT JOIN nk.temp_id_checker s
+                         ON k.preferred_sd_sid = s.sd_sid
+					     WHERE k.preferred_source_id = {source_id}
+					     AND s.sd_sid is null) invalids
+                    where t.preferred_sd_sid = invalids.preferred_sd_sid";
 
-                int res2 = conn.Execute(sql_string);
-                _loggingHelper.LogLine($"{res2} set to invalid on preferred_sd_sid");
-            }
-        }
+        int res2 = conn.Execute(sql_string);
+        _loggingHelper.LogLine($"\t\t{res2} set to invalid on preferred_sd_sid");
+    }    
 
+    public void DeleteInvalidLinks()
+    {
+        // Delete the invalid secondary ids from the table.
+        
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"DELETE 
+                FROM nk.temp_distinct_links
+                WHERE valid = false";
+        int res = conn.Execute(sql_string);
+        _loggingHelper.LogLine($"{res} study-study links deleted because of an invalid secondary id");
 
-        public void DeleteInvalidLinks()
-        {
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-                string sql_string = @"DELETE 
-                    FROM nk.temp_distinct_links
-                    WHERE valid = false";
-                int res = conn.Execute(sql_string);
-                _loggingHelper.LogLine(res.ToString() + " study-study links deleted because of an invalid study id");
+        sql_string = @"DROP TABLE IF EXISTS nk.temp_id_checker;";
+        conn.Execute(sql_string);
 
-                sql_string = @"DROP TABLE IF EXISTS nk.temp_id_checker;";
-                conn.Execute(sql_string);
+        sql_string = @"ALTER TABLE nk.temp_distinct_links DROP COLUMN valid;";
+        conn.Execute(sql_string);
 
-                sql_string = @"ALTER TABLE nk.temp_distinct_links DROP COLUMN valid;";
-                conn.Execute(sql_string);
-
-                sql_string = @"SELECT COUNT(*) FROM nk.temp_distinct_links";
-                res = conn.ExecuteScalar<int>(sql_string);
-                _loggingHelper.LogLine(res.ToString() + " distinct study-study links remaining");
-            }
-        }
+        sql_string = @"SELECT COUNT(*) FROM nk.temp_distinct_links";
+        res = conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"{res} distinct study-study links remaining");
+    }
         
         
     /*
@@ -633,7 +615,7 @@ public class LinksDataHelper
     }
 
 
-    public void ExtractGroupedStudiess()
+    public void ExtractGroupedStudies()
     {
         using var conn = new NpgsqlConnection(_aggs_connString);
         
@@ -738,412 +720,325 @@ public class LinksDataHelper
     }
 */
 
-    // One set of relationships are not 'same study in a different registry'
-        // but multiple studies in a different registry.
-        // Such studies have a study relationship rather than being straight equivalents.
-        // There can be multiple studies in the 'preferred' registry
-        // or in the existing studies registry - each group being equivalent to
-        // a registry entry that represents a single study, or sometimes a 
-        // single project / programme, or grant
+    // A subset of inter-study linkages do not reflect 'the same study in a different registry',
+    // link type, but are one-to-many linkages instead. These linkages need to be stored 
+    // explicitly in the study relationships table, and must be removed from the current process,
+    // which is only concerned with individual studies having multiple registry Ids.
+    // The multiple studies in the 1 to n relationship often represent a linked project, programme,
+    // or grant, that is registered elsewhere as a single study.
 
-        public void ProcessGroupedStudies()
-        {
-            Identify1ToNGroupedStudies();
-            IdentifyNToNGroupedStudies();
-            Extract1ToNGroupedStudies();
-            ExtractNToNGroupedStudyData();
-            RationaliseNToNGroupedStudyData();
-            StoreNToNGroupedStudyData();
-            DeleteGroupedStudyLinkRecords();
-        }
+    public void ProcessGroupedStudies()
+    {
+        // The following steps are required to identify and remove the 1-to-many linked studies.
+        
+        Identify1ToNGroupedStudies();
+        IdentifyNToNGroupedStudies();
+        Extract1ToNGroupedStudies();
+        ExtractNToNGroupedStudyData();
+        DeleteGroupedStudyLinkRecords();
+    }
 
-        private void Identify1ToNGroupedStudies()
-        {
-            string sql_string;
+    private void Identify1ToNGroupedStudies()
+    {
+        // First create a table to store the rows that involve studies with multiple matches in the
+        // SAME (other) source - which is the defining characteristic of the 1-to-many studies
+        
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"DROP TABLE IF EXISTS nk.temp_multilinked_studies;
+            CREATE TABLE nk.temp_multilinked_studies(
+                  group_source_id int
+                , group_sd_sid varchar
+                , member_sd_sid varchar
+                , member_source_id int
+                , source_side varchar
+                , complex int DEFAULT 0
+            )";
 
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-                // create a table that takes the rows that involve
-                // studies with multiple matches in the same source
+        conn.Execute(sql_string);
 
-                sql_string = @"DROP TABLE IF EXISTS nk.temp_linked_studies;
-                CREATE TABLE nk.temp_linked_studies(
-                      group_source_id int
-                    , group_sd_sid varchar
-                    , member_sd_sid varchar
-                    , member_source_id int
-                    , source_side varchar
-                    , complex int DEFAULT 0
-                )";
+        // Groups can occur with either the preferred or the least preferred registry entry having multiple
+        // matches. First identify and transfer when the non preferred side is the group and the preferred side
+        // is comprised of the grouped studies.
 
-                conn.Execute(sql_string);
+        sql_string = @"INSERT into nk.temp_multilinked_studies
+            (group_source_id, group_sd_sid, 
+             member_source_id, member_sd_sid,
+             source_side)
+             SELECT k.source_id, k.sd_sid, 
+             k.preferred_source_id, k.preferred_sd_sid, 'L'
+             from nk.temp_distinct_links k 
+             inner join 
+                  (SELECT source_id, sd_sid
+                   FROM nk.temp_distinct_links 
+                   group by source_id, sd_sid, preferred_source_id
+                   HAVING count(sd_sid) > 1) lhs_groups
+             ON k.source_id = lhs_groups.source_id
+             AND k.sd_sid = lhs_groups.sd_sid";
 
-                // The source_id side is the group and the preferred side 
-                // is comprised of the grouped studies.
+        conn.Execute(sql_string);
 
-                sql_string = @"INSERT into nk.temp_linked_studies
-                (group_source_id, group_sd_sid, 
-                 member_source_id, member_sd_sid,
-                 source_side)
-                 SELECT k.source_id, k.sd_sid, 
-                 k.preferred_source_id, k.preferred_sd_sid, 'L'
-                 from nk.temp_distinct_links k 
-                 inner join 
-                      (SELECT source_id, sd_sid
-                       FROM nk.temp_distinct_links 
-                       group by source_id, sd_sid, preferred_source_id
-                       HAVING count(sd_sid) > 1) lhs_groups
-                 ON k.source_id = lhs_groups.source_id
-                 AND k.sd_sid = lhs_groups.sd_sid";
+        // Then identify and transfer when the preferred_source_id side is the group and the
+        // non-preferred side is comprised of grouped studies.
+        
+        sql_string = @"INSERT into nk.temp_multilinked_studies
+            (group_source_id, group_sd_sid, 
+             member_source_id, member_sd_sid,
+             source_side)
+             SELECT k.preferred_source_id, k.preferred_sd_sid, 
+             k.source_id, k.sd_sid, 'R' from
+             nk.temp_distinct_links k
+             inner join 
+                  (SELECT preferred_source_id, preferred_sd_sid
+                   FROM nk.temp_distinct_links 
+                   group by preferred_source_id, preferred_sd_sid, source_id
+                   HAVING count(preferred_sd_sid) > 1) rhs_groups
+            ON k.preferred_source_id = rhs_groups.preferred_source_id
+            AND k.preferred_sd_sid = rhs_groups.preferred_sd_sid";
 
-                conn.Execute(sql_string);
+        conn.Execute(sql_string);
+    }
 
-                // The preferred_source_id side is the group and the 
-                // non-prefrred side is comprised of grouped studies
+    private void IdentifyNToNGroupedStudies()
+    {
+        // There are also some studies in more complex groupings, that have a 
+        // One-To-Many relationship of registry Ids but with overlapping groups...
+        //       A --- B
+        //       A --- C
+        //       D --- C
+        // The actual relationship between the studies in these groupings is unclear, and they need to be 
+        // identified and given a general 'is related' link (to all the other members fo the group).
+        // These studies will occur in 'both sides' of the temp_multilinked_studies table, i.e. both
+        // A and C will be grouping studies, and could look as though they are each grouping the other.
+        //      A groups B
+        //        groups C
+        //      C groups A
+        //        groups D 
+       
+        // A 'complexity' score is set for studies involved in these complex relationships. The two studies that
+        // 'group each other' (the A-C and C-A links above) are initially given a score of 2. The first SQL
+        // statement identifies them by selecting any study that appears as both a grouping and a member study,
+        // but as a mix of 'L' and 'R' sourced entries. (In a more normal cascade of linked study groups,
+        // studies can also appear as groupers and members, but will always have a consistent 'direction', 
+        // i.e. will all either be 'L' or 'R'). The second SQL statement then gives the other 'members'
+        // associated with those studies (with both considered as grouping studies) a score of 4, with the original
+        // studies adding this to their original 2. Thus, using the example above, A and c end up with a score
+        // of 6, B and D with a score of 4.
+    
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"Update nk.temp_multilinked_studies ks1
+            SET complex = ks1.complex + 2
+            FROM nk.temp_multilinked_studies ks2
+            WHERE ks1.member_source_id = ks2.group_source_id
+            AND ks1.member_sd_sid = ks2.group_sd_sid
+            AND ks1.source_side <> ks2.source_side";
 
-                sql_string = @"INSERT into nk.temp_linked_studies
-                (group_source_id, group_sd_sid, 
-                 member_source_id, member_sd_sid,
-                 source_side)
-                 SELECT k.preferred_source_id, k.preferred_sd_sid, 
-                 k.source_id, k.sd_sid, 'R' from
-                 nk.temp_distinct_links k
-                 inner join 
-                      (SELECT preferred_source_id, preferred_sd_sid
-                       FROM nk.temp_distinct_links 
-                       group by preferred_source_id, preferred_sd_sid, source_id
-                       HAVING count(preferred_sd_sid) > 1) rhs_groups
-                ON k.preferred_source_id = rhs_groups.preferred_source_id
-                AND k.preferred_sd_sid = rhs_groups.preferred_sd_sid";
+        conn.Execute(sql_string);
 
-                conn.Execute(sql_string);
-            }
-        }
+        sql_string = @"Update nk.temp_multilinked_studies ks1
+            SET complex = ks1.complex + 4
+            FROM nk.temp_multilinked_studies ks2
+            WHERE ks1.group_source_id = ks2.group_source_id
+            AND ks1.group_sd_sid = ks2.group_sd_sid
+            AND ks2.complex = 2";
 
-
-        private void IdentifyNToNGroupedStudies()
-        {
-            string sql_string;
-
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-                // There are some studies in more complex groupings, that have a 
-                // One-To_Many relationship with overlapping groups...
-                //       A --- B
-                //       A --- C
-                //       D --- C
-                // These studies will occur in 'both sides' of the grouping sets, i.e. both
-                // A and C will be grouping studies, and could look as though they are each
-                // grouping the other. The studies in these groupings need to be identified and
-                // given a general 'is related' link, because the real relationship is very unclear
-
-                sql_string = @"Update nk.temp_linked_studies ks1
-                SET complex = ks1.complex + 2
-                FROM nk.temp_linked_studies ks2
-                WHERE ks1.member_source_id = ks2.group_source_id
-                AND ks1.member_sd_sid = ks2.group_sd_sid
-                AND ks1.source_side <> ks2.source_side";
-
-                conn.Execute(sql_string);
-
-                sql_string = @"Update nk.temp_linked_studies ks1
-                SET complex = ks1.complex + 4
-                FROM nk.temp_linked_studies ks2
-                WHERE ks1.group_source_id = ks2.group_source_id
-                AND ks1.group_sd_sid = ks2.group_sd_sid
-                AND ks2.complex = 2";
-
-                conn.Execute(sql_string);
-            }
-        }
+        conn.Execute(sql_string);
+    }
 
 
-        private void Extract1ToNGroupedStudies()
-        {
-            string sql_string;
+    private void Extract1ToNGroupedStudies()
+    {
+        // Entries that are not 'complex' can be placed into the permanent linked_study_groups table.
+        // The 4 possible study relationships are:
+        // 25	Includes target as one of a group of non-registered studies 
+        // This study includes<the target study>.That study is not registered independently, 
+        // but instead shares this registry entry with one or more other non-registered studies.
+        // 26	Non registered but included within a registered study group 
+        // This study is registered as <the target study>, along with one or more other studies
+        // that share the same registry entry and id.
+        // 28	Includes target as one of a group of registered studies 
+        // This study includes <the target study>, which is registered elsewhere along with one 
+        // or more other registered studies, forming a group that collectively equates to this study.
+        // 29	Registered and is included elsewhere in group 
+        // This study is also registered, along with one or more other studies that together form an
+        // equivalent group, as <the target study>.
+        
+        // N.B. Non registered studies only occur at the moment in BioLINCC (101900) or Yoda (101901)
+        
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"INSERT INTO nk.linked_study_groups
+                         (source_id, sd_sid, relationship_id,
+                         target_sd_sid, target_source_id)
+                         select group_source_id, group_sd_sid,
+                         case when group_source_id = 101900
+                              or group_source_id = 101901 then 25
+                         else 28 end, 
+                         member_sd_sid, member_source_id
+                         from nk.temp_multilinked_studies
+                         where complex = 0;";
 
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-                // For the entries that are not 'complex'...
+        int res1 = conn.Execute(sql_string);
+        _loggingHelper.LogLine($"{res1} relationship records added as part of 1 to n study relationships");
 
-                // Put this data into the permanent linked_study_groups table
-                // The study relationships are 
-                // 25	Includes target as one of a group of non-registered studies 
-                // This study includes<the target study>.That study is not registered independently, 
-                // but instead shares this registry entry with one or more other non-registered studies.
-                // 26	Non registered but included within a registered study group 
-                // This study is registered as <the target study>, along with one or more other studies
-                // that share the same registry entry and id.
-                // 28	Includes target as one of a group of registered studies 
-                // This study includes <the target study>, which is registered elsewhere along with one 
-                // or more other registered studies, forming a group that collectively equates to this study.
-                // 29	Registered and is included elsewhere in group 
-                // This study is also registered, along with one or more other studies that together form an
-                // equivalent group, as <the target study>.
+        sql_string = @"INSERT INTO nk.linked_study_groups
+                         (source_id, sd_sid, relationship_id,
+                         target_sd_sid, target_source_id)
+                         select member_source_id, member_sd_sid,
+                         case when member_source_id = 101900
+                              or member_source_id = 101901 then 26
+                         else 29 end, 
+                         group_sd_sid, group_source_id
+                         from nk.temp_multilinked_studies
+                         where complex = 0;";
 
-                sql_string = @"INSERT INTO nk.linked_study_groups
-                             (source_id, sd_sid, relationship_id,
-                             target_sd_sid, target_source_id)
-                             select group_source_id, group_sd_sid,
-                             case when group_source_id = 101900
-                                  or group_source_id = 101901 then 25
-                             else 28 end, 
-                             member_sd_sid, member_source_id
-                             from nk.temp_linked_studies
-                             where complex = 0;";
-
-                int res1 = conn.Execute(sql_string);
-                _loggingHelper.LogLine(res1.ToString() + " relationship records added as part of 1 to n study relationships");
-
-                sql_string = @"INSERT INTO nk.linked_study_groups
-                             (source_id, sd_sid, relationship_id,
-                             target_sd_sid, target_source_id)
-                             select member_source_id, member_sd_sid,
-                             case when member_source_id = 101900
-                                  or member_source_id = 101901 then 26
-                             else 29 end, 
-                             group_sd_sid, group_source_id
-                             from nk.temp_linked_studies
-                             where complex = 0;";
-
-                int res2 = conn.Execute(sql_string);
-                _loggingHelper.LogLine(res2.ToString() + " relationship records added as part of n to 1 study relationships");
-
-            }
-        }
+        int res2 = conn.Execute(sql_string);
+        _loggingHelper.LogLine($"{res2} relationship records added as part of n to 1 study relationships");
+    }
 
 
         private void ExtractNToNGroupedStudyData()
         {
-            string sql_string;
+            // The 'complex' cases still need to be dealt with. If the individual studies
+            // involved in each of these complex groups can be identified, they can all be linked 
+            // to each of the others in the group.
+            
+            // The strategy is to examine each pair of the linked 'complex' studies in turn. 
+            // Each pair is obviously in the same group (beginning with the first). If a succeeding 
+            // pair has either member already in a group, both studies will be in the same group.
+            // If neither is in a group, they begin as the nucleus of a new group. There will be many 
+            // repeated allocations but these can be resolved by a 'select distinct' at the end.
+            
+            // Create a List of entities to hold the study's source id, sd sid and group number. Set the 
+            // 'next_group_number' to start at 1 and increment it as necessary.
 
-            using (var conn = new NpgsqlConnection(_aggs_connString))
+            List<ComplexStudy> complex_studies = new();
+            using var conn = new NpgsqlConnection(_aggs_connString);
+            string sql_string = @"select group_source_id, group_sd_sid, 
+                                  member_source_id, member_sd_sid 
+                                  from nk.temp_multilinked_studies 
+                                  where complex > 0";
+            List<ComplexStudyRow> complex_rows = conn.Query<ComplexStudyRow>(sql_string).ToList();
+            if (complex_rows.Any())
             {
-                // still got the 'complex' cases to deal with
-                // create the table that brings all the complex grouped linked studies together
-
-                sql_string = @"drop table if exists nk.temp_multi_links;
-                create table nk.temp_multi_links as
-		        select s1.group_source_id as s1groupsource, s1.group_sd_sid as s1groupsdsid, 
-		        s1.member_source_id as s1membersource, s1.member_sd_sid as s1membersdsid, 
-		        s1.complex as s1complex, 
-		        s2.group_source_id as s2groupsource, s2.group_sd_sid as s2groupsdsid, 
-		        s2.member_source_id as s2membersource, s2.member_sd_sid as s2membersdsid, 
-		        s2.complex as s2complex
-		        from nk.temp_linked_studies s1
-		        left join  
-		        nk.temp_linked_studies s2
-		        on s1.member_sd_sid = s2.group_sd_sid
-                where s1.complex > 0
-		        order by s1.group_sd_sid, s1.complex desc, s2.complex desc ";
-
-                conn.Execute(sql_string);
-
-                // then create the table that lists all the possible combinations of the studies
-                // grouped per the original s1 study
-                // The union process eliminates some distinctions, but there is still an overlap
-                // between the same combinations occuring against different 's1' root studies.
-
-                sql_string = @"drop table if exists nk.temp_list_studies;
-		        create table nk.temp_list_studies as 
-		        select * from
-		        (select s1groupsource as src_id, s1groupsdsid as sid_id, s1groupsource as sourceid, s1groupsdsid as sdsid
-		        from nk.temp_multi_links
-		        union
-		        select s1groupsource, s1groupsdsid, s1membersource, s1membersdsid
-		        from nk.temp_multi_links
-		        union
-		        select s1groupsource, s1groupsdsid, s2groupsource, s2groupsdsid
-		        from nk.temp_multi_links
-		        where s2groupsource is not null
-		        union
-		        select  s1groupsource, s1groupsdsid, s2membersource, s2membersdsid
-		        from nk.temp_multi_links
-		        where s2groupsource is not null) tot
-		        order by src_id, sid_id, sourceid, sdsid; ";
-
-                conn.Execute(sql_string);
-            }
-        }
-
-
-        private void RationaliseNToNGroupedStudyData()
-        {
-            string sql_string;
-
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-                // First task is to get all entries in related key study lists to the same (first of the group) key study list
-                sql_string = @"select distinct src_id, sid_id, false from nk.temp_list_studies order by src_id, sid_id";
-                IEnumerable<ComplexKeyStudy> key_studies = conn.Query<ComplexKeyStudy>(sql_string);
-
-                int current_key_src_id = 0, new_key_src_id = 0, current_src_id = 0;
-                string current_key_sid_id = "", new_key_sid_id = "", current_sid_id = "";
-
-                foreach (ComplexKeyStudy ks in key_studies)
+                int next_group_num = 1;
+                foreach (var r in complex_rows)
                 {
-                    // do the studies linked to this key study include an earlier key study?
-                    // if so all the studies linked to this key study should have their key study
-                    // details replaced by those of the  earlier key study
-
-                    current_key_src_id = ks.src_id;
-                    current_key_sid_id = ks.sid_id;
-
-                    // get the studies related to the current key study 
-
-                    sql_string = $@"select sourceid, sdsid 
-                                   from nk.temp_list_studies 
-                                   where src_id = {current_key_src_id}
-                                   and sid_id = '{current_key_sid_id}'
-                                   order by sourceid, sdsid";
-                    IEnumerable<ComplexStudy> studies = conn.Query<ComplexStudy>(sql_string);
-                    bool match_found = false;
-
-                    // go through each of those studies 
-
-                    foreach (ComplexStudy s in studies)
+                    if (complex_studies.Count == 0)    // first record
                     {
-                        if (!match_found)  // if still looking
+                        complex_studies.Add( new ComplexStudy(1, r.group_source_id, r.group_sd_sid));
+                        complex_studies.Add( new ComplexStudy(1, r.member_source_id, r.member_sd_sid));
+                    }
+                    else
+                    {
+                        // is the grouping study already listed in a group?
+                        // Check the grouping study first, then the member study.
+                        
+                        int group_num = 0;
+                        foreach (var cs in complex_studies)
                         {
-                            current_src_id = s.sourceid;
-                            current_sid_id = s.sdsid;
-
-                            foreach (ComplexKeyStudy kks in key_studies)
+                            if (r.group_source_id == cs.src_id && r.group_sd_sid == cs.sid_id)
                             {
-                                if (kks.considered == true)   // for the previous 'considered' key studies only...
+                                group_num = cs.group_number;
+                                break;
+                            }
+                        }
+                        if (group_num == 0)
+                        {
+                            foreach (var cs in complex_studies)
+                            {
+                                if (r.member_source_id == cs.src_id && r.member_sd_sid == cs.sid_id)
                                 {
-                                    // does the current study entry matrch any of those?
-                                    // If so record the details and break out of the loop
-
-                                    if (kks.src_id == current_src_id && kks.sid_id == current_sid_id)
-                                    {
-                                        match_found = true;
-                                        new_key_src_id = kks.src_id;
-                                        new_key_sid_id = kks.sid_id;
-                                        break;
-                                    }
+                                    group_num = cs.group_number;
+                                    break;
                                 }
                             }
                         }
-                    }
-
-                    if (match_found)
-                    {
-                        // This is a partial or complete repeat of the existing group. Update the table
-                        sql_string = $@"UPDATE nk.temp_list_studies 
-                                   set src_id = {new_key_src_id}, 
-                                   sid_id = '{new_key_sid_id}'
-                                   where src_id = {current_key_src_id} 
-                                   and sid_id = '{current_key_sid_id}'";
-                        conn.Execute(sql_string);
-                    }
-
-                    // if no match and is a 'new group'  - can be left as it is
-
-                    ks.considered = true;  // signal this key study as 'considered'
-                }
-
-                // Lots of duplicates now so use SQL to selct distinct
-                sql_string = @"DROP TABLE if exists nk.temp_list_studies2;
-                CREATE TABLE nk.temp_list_studies2 as 
-                SELECT distinct * from nk.temp_list_studies order by src_id, sid_id, sourceid, sdsid;
-		        DROP TABLE if exists nk.temp_list_studies;
-                ALTER TABLE nk.temp_list_studies2 rename to temp_list_studies ";
-
-                conn.Execute(sql_string);
-
-            }
-        }
-
-
-        private void StoreNToNGroupedStudyData()
-        {
-            string sql_string;
-
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-
-                // Now the table has a single set of complex groups of studies
-                // and each group can be treated in isolation
-                sql_string = @"select distinct src_id, sid_id from nk.temp_list_studies order by src_id, sid_id";
-                IEnumerable<ComplexKeyStudy> key_studies = conn.Query<ComplexKeyStudy>(sql_string);
-
-                List<ComplexLink> links = new List<ComplexLink>();
-                foreach (ComplexKeyStudy ks in key_studies)
-                {
-                    // get the studies related to the current key study 
-
-                    sql_string = @"select sourceid, sdsid 
-                                   from nk.temp_list_studies 
-                                   where src_id = " + ks.src_id.ToString() + @" 
-                                   and sid_id = '" + ks.sid_id + @"'
-                                   order by sourceid, sdsid";
-
-                    List<ComplexStudy> studies = conn.Query<ComplexStudy>(sql_string).AsList<ComplexStudy>();
-
-                    // get first study and add an object to List of links
-                    // where target iterates over the rest of the studies in the list
-                    // add the reverse relationship also. Take the next study - and repeat
-                    // until the penultimate study - has just one pairing, with the last study
-
-                    int studynum = studies.Count;
-                    for (int i = 0; i < studynum - 1; i++)
-                    {
-                        ComplexStudy s = studies[i];
-                        for (int j = i + 1; j < studynum; j++)
+                        if (group_num == 0)
                         {
-                            ComplexStudy t = studies[j];
-                            links.Add(new ComplexLink(s.sourceid, s.sdsid, 30, t.sourceid, t.sdsid));
-                            links.Add(new ComplexLink(t.sourceid, t.sdsid, 30, s.sourceid, s.sdsid));
+                            // not found - create a new group
+                            next_group_num++;
+                            group_num = next_group_num;
                         }
+                        complex_studies.Add( new ComplexStudy(group_num, r.group_source_id, r.group_sd_sid));
+                        complex_studies.Add( new ComplexStudy(group_num, r.member_source_id, r.member_sd_sid));
+                    }
+                }
+                
+                // Almost certainly lots of duplicates so use Linq to select distinct
+                // and obtain maximum group number.
+                
+                List<ComplexStudy> complex_studies2 = complex_studies.Select(i => i)
+                                                    .Distinct().OrderBy(i => i.group_number)
+                                                    .ToList();
+                
+                // Each group can now be identified and treated separately 
+                List<ComplexLink> links = new();
+                for (int g = 1; g <= next_group_num; g++)
+                {
+                    List<ComplexStudy> study_group =
+                        complex_studies2.Select(i => i).Where(i => i.group_number == g).ToList();
+                    
+                    if (study_group.Any())
+                    {
+                        // Get first study and add an object to List of links where target iterates over
+                        // the rest of the studies in the list - add the reverse relationship also. Repeat
+                        // until the penultimate study - which has just one pairing, with the last study.
+
+                        int studynum = study_group.Count;
+                        for (int i = 0; i < studynum - 1; i++)
+                        {
+                            ComplexStudy s = study_group[i];
+                            for (int j = i + 1; j < studynum; j++)
+                            {
+                                ComplexStudy t = study_group[j];
+                                links.Add(new ComplexLink(s.src_id, s.sid_id, 30, t.src_id, t.sid_id));
+                                links.Add(new ComplexLink(t.src_id, t.sid_id, 30, s.src_id, s.sid_id));
+                            }
+                        }
+                        
                     }
                 }
 
-                // store list of relationships, between all possible pairs
-
-                conn.Open();
-                CopyHelpers.complex_links_helper.SaveAll(conn, links);
-                _loggingHelper.LogLine(links.Count.ToString() + " relationship records added as part of n to n study relationships");
-
+                if (links.Count > 0)
+                {
+                    CopyHelpers.complex_links_helper.SaveAll(conn, links);
+                    string feedback = $"{links.Count} relationship records added as part of n to n study relationships";
+                    _loggingHelper.LogLine(feedback);
+                }
             }
         }
 
 
         private void DeleteGroupedStudyLinkRecords()
         {
-            string sql_string; 
-            using (var conn = new NpgsqlConnection(_aggs_connString))
-            {
-                // Now need to delete these grouped records from the links table...
-
-                sql_string = @"DELETE FROM nk.temp_distinct_links k
-                               USING nk.temp_linked_studies g
+            // The grouped records then need to be deleted from the links table...
+            
+            using var conn = new NpgsqlConnection(_aggs_connString);
+            string sql_string = @"DELETE FROM nk.temp_distinct_links k
+                               USING nk.temp_multilinked_studies g
                                WHERE k.source_id = g.group_source_id
                                and k.sd_sid = g.group_sd_sid
                                and k.preferred_source_id = g.member_source_id
                                and g.source_side = 'L';";
-                int res1 = conn.Execute(sql_string);
+            int res1 = conn.Execute(sql_string);
 
-                sql_string = @"DELETE FROM nk.temp_distinct_links k
-                               USING nk.temp_linked_studies g
+            sql_string = @"DELETE FROM nk.temp_distinct_links k
+                               USING nk.temp_multilinked_studies g
                                WHERE k.preferred_source_id = g.group_source_id
                                and k.preferred_sd_sid = g.group_sd_sid
                                and k.source_id = g.member_source_id
                                and g.source_side = 'R';";
-                int res2 = conn.Execute(sql_string);
-                _loggingHelper.LogLine((res1 + res2).ToString() + " study-study links extracted as grouped (1 to n, n to n) records");
+            int res2 = conn.Execute(sql_string);
+            _loggingHelper.LogLine($"{res1 + res2} study-study links extracted as grouped (1 to n, n to n) records");
 
-                sql_string = @"DROP TABLE IF EXISTS nk.temp_grouping_studies;
-                DROP TABLE IF EXISTS nk.temp_list_studies;
+            sql_string = @"DROP TABLE IF EXISTS nk.temp_multilinked_studies;
+                DROP TABLE IF EXISTS nk.temp_complex_multi_links;
                 DROP TABLE IF EXISTS nk.temp_multi_links;
-                DROP TABLE IF EXISTS nk.temp_linked_studies";
-                conn.Execute(sql_string);
+                DROP TABLE IF EXISTS nk.temp_group_list";
+            conn.Execute(sql_string);
 
-                sql_string = @"SELECT COUNT(*) FROM nk.temp_distinct_links";
-                int res = conn.ExecuteScalar<int>(sql_string);
-                _loggingHelper.LogLine(res.ToString() + " distinct study-study links remaining");
-
-            }
+            sql_string = @"SELECT COUNT(*) FROM nk.temp_distinct_links";
+            int res = conn.ExecuteScalar<int>(sql_string);
+            _loggingHelper.LogLine(res.ToString() + " distinct study-study links remaining");
         }
 
         /*

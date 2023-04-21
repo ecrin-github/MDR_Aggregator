@@ -31,16 +31,15 @@ public class StudyLinkBuilder
             {
                 // need to populate the ad tables in a test situation with the relevant data,
                 // as the source_conn_string will always point to 'test' -
-                // at least get the study identifiers data - but needs further consideration.
+                // at least get the study identifiers data - but this needs further consideration.
                 
                 slh.TransferTestIdentifiers(source.id);
             }
-
-            // Fetch the study-study links and store them in the initial Collector table
-            // (assuming the source has study data).
-            
-            if (source.has_study_tables is true)
+            else if (source.has_study_tables is true)
             {
+                // Fetch the study-study links and store them in the initial Collector table
+                // (assuming the source has study data).
+                
                 string source_conn_string = _credentials.GetConnectionString(source.database_name!, _testing);
                 IEnumerable<StudyLink> links = slh.FetchLinks(source.id, source_conn_string);
                 ulong num = slh.StoreLinksInTempTable(CopyHelpers.links_helper, links);
@@ -88,7 +87,7 @@ public class StudyLinkBuilder
         slh.TransferLinksToSortedTable();
         slh.CreateDistinctSourceLinksTable();
 
-        // Despite earlier cleaning there remains a small number of study registry Ids that are
+        // Despite earlier cleaning there remains a small number of secondary registry Ids that are
         // referenced as 'other Ids' but which are errors, i.e. which do not correspond to any real studies
         // in the system. These need to be removed, on a source by source basis.
 
@@ -96,7 +95,7 @@ public class StudyLinkBuilder
         {
             if (_testing)
             {
-                // do something - slh.TransferTestIdentifiers(source.id);
+                // do anything? - slh.TransferTestIdentifiers(source.id);
             }
 
             if (source.has_study_tables is true)
@@ -126,7 +125,7 @@ public class StudyLinkBuilder
         slh.CascadeLinks();
                         
         // Again, identify and remove studies that have links to more than 1 study in another registry.
-        // A small number (about 30) are formed by the cascade process above
+        // Repeated because a small number (about 30) are formed by the cascade process above
 
         slh.ProcessGroupedStudies();
 
