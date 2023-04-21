@@ -31,7 +31,7 @@ public class JSONHelper
 
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
-        LoopThroughStudyRecords(repo, min_id, max_id, offset);
+        LoopThroughOAStudyRecords(repo, min_id, max_id, offset);
     }
 
 
@@ -53,11 +53,11 @@ public class JSONHelper
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
 
-        LoopThroughObjectRecords(repo, min_id, max_id, offset);
+        LoopThroughOAObjectRecords(repo, min_id, max_id, offset);
     }
 
 
-    public void LoopThroughStudyRecords(JSONStudyDataLayer repo, int min_id, int max_id, int offset)
+    public void LoopThroughOAStudyRecords(JSONStudyDataLayer repo, int min_id, int max_id, int offset)
     {
         JSONStudyProcessor processor = new JSONStudyProcessor(repo);
 
@@ -97,7 +97,7 @@ public class JSONHelper
     }
 
 
-    public void LoopThroughObjectRecords(JSONObjectDataLayer repo, int min_id, int max_id, int offset)
+    public void LoopThroughOAObjectRecords(JSONObjectDataLayer repo, int min_id, int max_id, int offset)
     {
         JSONObjectProcessor processor = new JSONObjectProcessor(repo, _loggingHelper);
 

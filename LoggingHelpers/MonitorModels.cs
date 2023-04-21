@@ -50,17 +50,23 @@ public class SourceSummary
     public int study_recs { get; set; }
     public int study_identifiers_recs { get; set; }
     public int study_titles_recs { get; set; }
-    public int study_contributors_recs { get; set; }
+    public int study_people_recs { get; set; }
+    public int study_organisations_recs { get; set; }
     public int study_topics_recs { get; set; }
+    public int study_conditions_recs { get; set; }
     public int study_features_recs { get; set; }
     public int study_references_recs { get; set; }
+    public int study_countries_recs { get; set; }
+    public int study_locations_recs { get; set; }
     public int study_relationships_recs { get; set; }
+    
     public int data_object_recs { get; set; }
     public int object_datasets_recs { get; set; }
     public int object_instances_recs { get; set; }
     public int object_titles_recs { get; set; }
     public int object_dates_recs { get; set; }
-    public int object_contributors_recs { get; set; }
+    public int object_people_recs { get; set; }
+    public int object_organisations_recs { get; set; }
     public int object_topics_recs { get; set; }
     public int object_identifiers_recs { get; set; }
     public int object_descriptions_recs { get; set; }
@@ -85,9 +91,13 @@ public class AggregationSummary
     public int study_recs { get; set; }
     public int study_identifiers_recs { get; set; }
     public int study_titles_recs { get; set; }
-    public int study_contributors_recs { get; set; }
+    public int study_people_recs { get; set; }
+    public int study_organisations_recs { get; set; }
     public int study_topics_recs { get; set; }
+    public int study_conditions_recs { get; set; }
     public int study_features_recs { get; set; }
+    public int study_countries_recs { get; set; }
+    public int study_locations_recs { get; set; }
     public int study_relationships_recs { get; set; }
 
     public int data_object_recs { get; set; }
@@ -95,7 +105,8 @@ public class AggregationSummary
     public int object_instances_recs { get; set; }
     public int object_titles_recs { get; set; }
     public int object_dates_recs { get; set; }
-    public int object_contributors_recs { get; set; }
+    public int object_people_recs { get; set; }
+    public int object_organisations_recs { get; set; }
     public int object_topics_recs { get; set; }
     public int object_identifiers_recs { get; set; }
     public int object_descriptions_recs { get; set; }

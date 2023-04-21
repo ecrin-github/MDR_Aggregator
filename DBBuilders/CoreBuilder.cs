@@ -4,12 +4,11 @@ public class CoreBuilder
 {
     private readonly CoreTableBuilder core_tablebuilder;
 
-    public CoreBuilder(string _connString)
+    public CoreBuilder(string _connString, ILoggingHelper loggingHelper)
     {
-        core_tablebuilder = new CoreTableBuilder(_connString);
+        core_tablebuilder = new CoreTableBuilder(_connString, loggingHelper);
     }
    
-
     public void BuildNewCoreTables()
     {
         core_tablebuilder.create_table_studies();
@@ -23,6 +22,7 @@ public class CoreBuilder
         core_tablebuilder.create_table_study_countries();
         core_tablebuilder.create_table_study_locations();
         core_tablebuilder.create_table_study_relationships();
+        core_tablebuilder.create_table_study_search();
         
         core_tablebuilder.create_table_data_objects();
         core_tablebuilder.create_table_object_instances();

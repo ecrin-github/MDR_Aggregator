@@ -5,16 +5,26 @@ namespace MDR_Aggregator;
 public class CoreTableBuilder
 {
     readonly string db_conn;
+    ILoggingHelper _loggingHelper;
 
-    public CoreTableBuilder(string _db_conn)
+    public CoreTableBuilder(string _db_conn, ILoggingHelper loggingHelper)
     {
         db_conn = _db_conn;
+        _loggingHelper = loggingHelper;
     }
   
-    private void ExecuteSQL(string sql_string)
+    private int ExecuteSQL(string sql_string)
     {
         using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        try
+        {
+            return conn.Execute(sql_string);
+        }
+        catch (Exception e)
+        {
+            _loggingHelper.LogError("In ExecuteSQL; " + e.Message + ", \nSQL was: " + sql_string);
+            return 0;
+        }
     }
 
     public void create_table_studies()
@@ -489,4 +499,58 @@ public class CoreTableBuilder
 
         ExecuteSQL(sql_string);
     }
+    
+    public void create_table_study_search()
+        {
+            string sql_string = @"DROP TABLE IF EXISTS core.study_search;
+            CREATE TABLE core.study_search(
+                id                     INT             NOT NULL PRIMARY KEY
+              , display_title          VARCHAR         NULL
+              , title_lexemes          VARCHAR         NULL
+              , topic_lexemes          VARCHAR         NULL
+              , study_start_year       INT             NULL
+              , study_start_month      INT             NULL
+              , study_type_id          INT             NULL DEFAULT 0
+              , study_status_id        INT             NULL DEFAULT 0
+              , study_gender_elig_id   INT             NULL DEFAULT 915
+              , min_age                INT             NULL
+              , min_age_units_id       INT             NULL DEFAULT 0
+              , max_age                INT             NULL
+              , max_age_units_id       INT             NULL DEFAULT 0
+              , phase_value            INT             NULL DEFAULT 140
+              , purpose_value          INT             NULL DEFAULT 215
+              , allocation_value       INT             NULL DEFAULT 325
+              , intervention_value     INT             NULL DEFAULT 445
+              , masking_value          INT             NULL DEFAULT 525
+              , obsmodel_value         INT             NULL DEFAULT 635
+              , timepersp_value        INT             NULL DEFAULT 720
+              , biospec_value          INT             NULL DEFAULT 815
+              , has_reg_entry          BOOL            NULL
+              , has_reg_results        BOOL            NULL
+              , has_article            BOOL            NULL
+              , has_protocol           BOOL            NULL
+              , has_overview           BOOL            NULL
+              , has_pif                BOOL            NULL
+              , has_ecrfs              BOOL            NULL
+              , has_manual             BOOL            NULL
+              , has_sap                BOOL            NULL
+              , has_csr                BOOL            NULL
+              , has_data_desc          BOOL            NULL
+              , has_ipd                BOOL            NULL
+              , has_agg_data           BOOL            NULL
+              , has_other_studyres     BOOL            NULL
+              , has_conf_material      BOOL            NULL
+              , has_other_article      BOOL            NULL
+              , has_chapter            BOOL            NULL
+              , has_other_info         BOOL            NULL
+              , has_website            BOOL            NULL
+              , has_software           BOOL            NULL
+              , has_other              BOOL            NULL
+ 
+           );
+           CREATE INDEX study_search_id ON core.study_search(id);";
+
+           ExecuteSQL(sql_string);
+
+        }
 }

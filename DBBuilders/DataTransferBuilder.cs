@@ -26,7 +26,7 @@ public class DataTransferBuilder
         ob_tr = new ObjectDataTransferrer(_dest_conn_string, _loggingHelper);
     }
 
-
+    
     public void ProcessStudyIds()
     {
         // Get the new study data as a set of study records using the ad database as the source.
@@ -42,12 +42,24 @@ public class DataTransferBuilder
         // Do the check of the temp table ids against the study_study links. Change the table to reflect
         // the 'preferred' Ids. Back load the correct study ids into the temporary table.
 
+        // Match existing studies, then do the check of the temp table ids against the study_study links.
+        // Change the table to mark the 'preferred' Ids and back load the correct study ids into the temporary table.
+
+        st_tr.MatchExistingStudyIds();
+        st_tr.IdentifyNewLinkedStudyIds();
+        st_tr.AddNewStudyIds(source_id);
+        _loggingHelper.LogLine("Study Ids checked");
+        st_tr.CreateTempStudyIdTables(source_id);
+        _loggingHelper.LogLine("Study Ids processed");
+        
+        /*
         st_tr.CheckStudyLinks();
         _loggingHelper.LogLine("Study Ids checked");
         st_tr.UpdateAllStudyIdsTable(source_id);
         _loggingHelper.LogLine("Study Ids processed");
+        */
     }
-
+    
 
     public int TransferStudyData()
     {
@@ -68,7 +80,7 @@ public class DataTransferBuilder
         return study_number;
     }
 
-
+    
     public void ProcessStudyObjectIds()
     {
         // Set up temp tables and fill the first with the sd_oids, parent sd_sids,
@@ -83,23 +95,26 @@ public class DataTransferBuilder
 
         // Update the object parent ids against the all_ids_studies table.
 
-        ob_tr.UpdateObjectsWithStudyIds(source_id);
+        ob_tr.MatchExistingObjectIds(source_id);
+        ob_tr.UpdateNewObjectsWithStudyIds(source_id);
+        ob_tr.AddNewObjectsToIdentifiersTable(source_id);
 
         // Carry out a check for (currently very rare) duplicate objects (i.e. that have been imported
         // before with the data from another source). [RARE - TO IMPLEMENT]
         
-        ob_tr.CheckStudyObjectsForDuplicates(source_id);
-
-        // Update all objects ids table and derive a small table that lists the object Ids for all objects
-        
-        ob_tr.UpdateAllObjectIdsTable(source_id);
+        ob_tr.CheckNewObjectsForDuplicateTitles(source_id);
+        ob_tr.CheckNewObjectsForDuplicateURLs(source_id, _schema_name);
+        ob_tr.CompleteNewObjectsStatuses(source_id);
         _loggingHelper.LogLine("Object Ids updated");
 
-        ob_tr.FillObjectsToAddTable(source_id);
+        // Update all objects ids table and derive a small table that lists the object Ids for all objects,
+        // and one that lists the ids of possible duplicate objects, to check.
+
+        ob_tr.FillObjectsToAddTables(source_id);
         _loggingHelper.LogLine("Object Ids processed");
     }
 
-
+    
     public void ProcessStandaloneObjectIds(IEnumerable<Source> sources, ICredentials credentials, bool testing)
     {
         ob_tr.SetUpTempObjectIdsTables();
@@ -114,29 +129,58 @@ public class DataTransferBuilder
             // in the ad tables needs to be used. This needs to be combined with the references in those sources 
             // that contain study_reference tables.
 
-            PubmedTransferHelper pm_tr = new PubmedTransferHelper(_schema_name, _dest_conn_string);
-            pm_tr.SetupTempPMIDTable();
-            pm_tr.SetupDistinctPMIDTable();
+            PubmedTransferHelper pm_tr = new PubmedTransferHelper(_schema_name, _dest_conn_string, _loggingHelper);
+            pm_tr.SetupTempPMIDTables();
             
             IEnumerable<PMIDLink> bank_object_ids = pm_tr.FetchBankPMIDs();
-            pm_tr.StorePMIDLinks(CopyHelpers.pmid_links_helper, bank_object_ids);
-            _loggingHelper.LogLine("PMID bank object Ids obtained");
-
-            // Loop through the study databases that hold study_reference tables, i.e. with pmid ids.
+            ulong res = pm_tr.StorePMIDLinks(CopyHelpers.pmid_links_helper, bank_object_ids);
+            _loggingHelper.LogLine(res.ToString() + " study Ids obtained from PMID 'bank' data");
             
-            foreach (Source source in sources)
-            {
-                if (source.has_study_references is true)
-                {
-                    string source_conn_string = credentials.GetConnectionString(source.database_name!, testing);
-                    if (testing)
-                    {
-                        pm_tr.TransferReferencesData(source.id);
-                    }
-                    IEnumerable<PMIDLink> source_references = pm_tr.FetchSourceReferences(source.id, source_conn_string);
-                    pm_tr.StorePMIDLinks(CopyHelpers.pmid_links_helper, source_references);
-                }
-            }
+            // study ids referenced in PubMed data often poorly formed and need cleaning
+
+            pm_tr.CleanPMIDsdsidData();
+            _loggingHelper.LogLine("Study Ids in 'Bank' PMID records cleaned");
+            
+            // This needs to be combined with the pmid references from those sources that contain them.
+            // A table of DB references data was created during pubmed data download, (mn.dbrefs_all).
+            // This holds all known trial registry sourced references, most of which have PMIDs. There is no 
+            // to recapture it - it should always reflect the state of the DBs during the most recent download.
+            
+            // *************************
+            // suitable code here to transfer the data from this table
+            // *************************
+            
+            // Transfer data to 'standard' data_object_identifiers table.
+            // and insert the 'correct' study_ids against the sd_sid
+            // (all are known as studies already added)
+
+            pm_tr.TransferPMIDLinksToTempObjectIds();
+            pm_tr.UpdateTempObjectIdsWithStudyDetails();  
+
+            // Duplication of PMIDs is from
+            // a) The same study-PMID combination in both trial registry record and Pubmed record
+            // b) The same study-PMID combination in different versions of the study record
+            // c) The same PMID beiung used for multiple studies
+            // To remove a) and b) a select distinct is done on the current set of unmatched PMID-Study combinations
+
+            pm_tr.FillDistinctTempObjectsTable();
+
+            // Table now has all study id - PMID combinations
+            // Match against existing records here and update status and date-time of data fetch
+
+            pm_tr.MatchExistingPMIDLinks();
+
+            // New, unmatched combinations of PMID and studies may have PMIDs completely new to the system, or 
+            // new PMID - study combinations for existing PMIDs
+
+            pm_tr.IdentifyNewPMIDLinks();
+            pm_tr.AddNewPMIDStudyLinks();
+            pm_tr.AddCompletelyNewPMIDs();
+            pm_tr.IdentifyPMIDDataForImport(source_id);
+
+            pm_tr.DropTempPMIDTables();
+            
+            /*
             _loggingHelper.LogLine("PMID source object Ids obtained");
 
             pm_tr.FillDistinctPMIDsTable();
@@ -174,17 +218,20 @@ public class DataTransferBuilder
             
             ob_tr.FillObjectsToAddTable(source_id);
             _loggingHelper.LogLine("PMID Ids processed");
+            */
         }
     }
 
 
     public int TransferObjectData()
     {
-        // Add new records where status indicates they are new
+        // Add new records where status indicates they are new.
+        
         int object_number = ob_tr.LoadDataObjects(_schema_name);
         if (_source.has_object_datasets is true) ob_tr.LoadObjectDatasets(_schema_name);
         ob_tr.LoadObjectInstances(_schema_name);
         ob_tr.LoadObjectTitles(_schema_name);
+        
         if (_source.has_object_dates is true) ob_tr.LoadObjectDates(_schema_name);
         if (_source.has_object_rights is true) ob_tr.LoadObjectRights(_schema_name);
         if (_source.has_object_relationships is true) ob_tr.LoadObjectRelationships(_schema_name);

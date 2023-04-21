@@ -37,6 +37,7 @@ internal class ParametersChecker
             {
                 // No particular requirement here - can drop straight through to run the program
                 // but set the other parameters as true so all functions are tested.
+                // Need to think about involvement of do_iec and do_indexes,
 
                 opts.transfer_data = true;
                 opts.create_core = true;
@@ -58,7 +59,6 @@ internal class ParametersChecker
 
         catch (Exception e)
         {
-            //_loggingHelper.OpenNoSourceLogFile();
             _loggingHelper.LogHeader("INVALID PARAMETERS");
             _loggingHelper.LogCommandLineParameters(opts);
             _loggingHelper.LogCodeError("MDR_Aggregator application aborted", e.Message, e.StackTrace ?? "");

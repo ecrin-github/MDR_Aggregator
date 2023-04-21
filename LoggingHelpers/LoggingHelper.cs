@@ -108,7 +108,12 @@ public class LoggingHelper : ILoggingHelper
         Transmit("");
     }
 
-
+    public void SpacedInformation(string header_text)
+    {
+        LogLine("");
+        LogLine(header_text);
+    }
+    
     public void LogParseError(string header, string errorNum, string errorType)
     {
         string dt_prefix = DateTime.Now.ToShortDateString() + " : " + DateTime.Now.ToShortTimeString() + " :   ";
@@ -116,7 +121,7 @@ public class LoggingHelper : ILoggingHelper
         Transmit(error_message);
     }
 
-
+/*
     public void LogTableStatistics(Source s, string schema)
     {
         // Gets and logs record count for each table in the sd schema of the database
@@ -186,7 +191,7 @@ public class LoggingHelper : ILoggingHelper
         }
     }
 
-
+*/
     public void CloseLog()
     {
         if (_sw is not null)
@@ -211,7 +216,7 @@ public class LoggingHelper : ILoggingHelper
         Console.WriteLine(message);
     }
 
-
+/*
     private string StudyTableSummary(string dbConn, string schema, string tableName, bool includeSource = true)
     {
         using NpgsqlConnection conn = new(dbConn);
@@ -246,7 +251,7 @@ public class LoggingHelper : ILoggingHelper
             return $"{res} records found in {schema}.{tableName}";
         }
     }
-
+*/
     public void SendEmail(string errorMessageText)
     {
         // construct txt file with message
@@ -262,6 +267,7 @@ public class LoggingHelper : ILoggingHelper
         // SMTP service (if possible - may need to change permissions on folder)
     }
     
+    /*
     private string GetTableRecordCount(string db_conn, string schema, string table_name)
     {
         string sql_string = "select count(*) from " + schema + "." + table_name;
@@ -269,5 +275,6 @@ public class LoggingHelper : ILoggingHelper
         int res = conn.ExecuteScalar<int>(sql_string);
         return res.ToString() + " records found in " + schema + "." + table_name;
     }
+    */
 }
 

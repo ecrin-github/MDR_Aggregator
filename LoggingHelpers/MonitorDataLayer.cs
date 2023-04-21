@@ -11,13 +11,14 @@ public class MonDataLayer : IMonDataLayer
     private readonly string monConnString;
     private Source? source;
 
-    public MonDataLayer(ICredentials credentials)
+    public MonDataLayer(LoggingHelper loggingHelper, ICredentials credentials)
     {
         _credentials = credentials;
         monConnString = credentials.GetConnectionString("mon", false);
     }
 
     public ICredentials Credentials => _credentials;
+    public Source SourceParameters => source;
     
     public Source FetchSourceParameters(int source_id)
     {
@@ -157,15 +158,16 @@ public class MonDataLayer : IMonDataLayer
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);
         string sql_string = "select max(id) from sf.aggregation_events ";
-        int last_id = Conn.ExecuteScalar<int?>(sql_string) ?? 100000;
-        return last_id + 1;
+        int? last_id = Conn.ExecuteScalar<int?>(sql_string);
+        return (last_id == null) ? 100001 : (int)last_id + 1;
     }
 
     public int GetLastAggEventId()
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);
         string sql_string = "select max(id) from sf.aggregation_events ";
-        return Conn.ExecuteScalar<int?>(sql_string) ?? 0;
+        int? last_id = Conn.ExecuteScalar<int?>(sql_string);
+        return (int)last_id;
     }
 
 
@@ -180,12 +182,14 @@ public class MonDataLayer : IMonDataLayer
     public IEnumerable<Source> RetrieveDataSources()
     {
         string sql_string = @"select id, preference_rating, database_name, 
-                              has_study_tables,	has_study_topics, has_study_features,
-                              has_study_contributors, has_study_references, has_study_relationships,
+                              has_study_tables,	has_study_topics, has_study_conditions, has_study_features,
+                              has_study_people, has_study_organisations, 
+                              has_study_references, has_study_relationships,
+                              has_study_countries, has_study_locations,
                               has_object_datasets, has_object_dates, has_object_rights,
                               has_object_relationships, has_object_pubmed_set 
                             from sf.source_parameters
-                            where id > 100115 and id < 900000
+                            where is_current_agg_source = true
                             order by preference_rating;";
 
         using var conn = new NpgsqlConnection(monConnString);
@@ -205,6 +209,7 @@ public class MonDataLayer : IMonDataLayer
 
     public int GetRecNum(string table_name, string source_conn_string)
     {
+        /*
         string test_string = "SELECT to_regclass('ad." + table_name + "')::varchar";
         string table_exists;
         using (var conn = new NpgsqlConnection(source_conn_string))
@@ -215,7 +220,7 @@ public class MonDataLayer : IMonDataLayer
         {
             return 0;
         }
-        
+        */
         string sql_string = "SELECT count(*) from ad." + table_name;
         int? rec_num;
         using (var conn = new NpgsqlConnection(source_conn_string))
@@ -323,17 +328,17 @@ public class MonDataLayer : IMonDataLayer
     public List<StudyStudyLinkData> GetStudyStudyLinkData2(int aggregation_event_id, string dest_conn_string)
     {
         string sql_string = @"SELECT 
-                k.preferred_source_id as source_id, 
-                d2.default_name as source_name,
-                k.source_id as other_source_id,
-                d1.default_name as other_source_name,
-                count(sd_sid) as number_in_other_source
-                from nk.study_study_links k
-                inner join context_ctx.data_sources d1
-                on k.source_id = d1.id
-                inner join context_ctx.data_sources d2
-                on k.preferred_source_id = d2.id
-                group by preferred_source_id, source_id, d2.default_name, d1.default_name;;";
+                    k.preferred_source_id as source_id, 
+                    d2.repo_name as source_name,
+                    k.source_id as other_source_id,
+                    d1.repo_name as other_source_name,
+                    count(sd_sid) as number_in_other_source
+                    from nk.study_study_links k
+                    inner join mon_sf.source_parameters d1
+                    on k.source_id = d1.id
+                    inner join mon_sf.source_parameters d2
+                    on k.preferred_source_id = d2.id
+                    group by preferred_source_id, source_id, d2.repo_name, d1.repo_name;";
 
         using var conn = new NpgsqlConnection(dest_conn_string);
         return conn.Query<StudyStudyLinkData>(sql_string).ToList();
