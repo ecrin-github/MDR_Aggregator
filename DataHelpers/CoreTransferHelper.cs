@@ -140,7 +140,7 @@ public class CoreDataTransferrer
         string sql_string = $@"INSERT INTO core.study_locations({field_string})
                 SELECT {field_string}
                 FROM st.study_locations";
-        return db.ExecuteCoreTransferSQL(sql_string, "st.study_locations");
+        return db.ExecuteCoreTransferSQL(sql_string, " where ", "st.study_locations");
     }
     
     private readonly Dictionary<string, string> objectFields = new() 
@@ -245,7 +245,7 @@ public class CoreDataTransferrer
     {string field_string = objectFields["object_topics"];
         string sql_string = $@"INSERT INTO core.object_topics({field_string})
                 SELECT {field_string}
-                FROM ob.object_topics";
+                FROM ob.object_topics ";
         return db.ExecuteCoreTransferSQL(sql_string, " where ", "ob.object_topics");
     }
 
@@ -253,7 +253,7 @@ public class CoreDataTransferrer
     {string field_string = objectFields["object_descriptions"];
         string sql_string = $@"INSERT INTO core.object_descriptions({field_string})
                 SELECT {field_string}
-                FROM ob.object_descriptions";
+                FROM ob.object_descriptions ";
         return db.ExecuteCoreTransferSQL(sql_string, " where ", "ob.object_descriptions");
     }
 
@@ -262,7 +262,7 @@ public class CoreDataTransferrer
         string field_string = objectFields["object_identifiers"];
         string sql_string = $@"INSERT INTO core.object_identifiers({field_string})
                 SELECT {field_string}
-                FROM ob.object_identifiers";
+                FROM ob.object_identifiers ";
         return db.ExecuteCoreTransferSQL(sql_string, " where ", "ob.object_identifiers");
     }
 
@@ -271,7 +271,7 @@ public class CoreDataTransferrer
         string field_string = objectFields["object_relationships"];
         string sql_string = $@"INSERT INTO core.object_relationships({field_string})
                 SELECT {field_string}
-                FROM ob.object_relationships";
+                FROM ob.object_relationships ";
         return db.ExecuteCoreTransferSQL(sql_string, " where ", "ob.object_relationships");
     }
 
@@ -280,16 +280,19 @@ public class CoreDataTransferrer
         string field_string = objectFields["object_rights"];
         string sql_string = $@"INSERT INTO core.object_rights({field_string})
                 SELECT {field_string}
-                FROM ob.object_rights";
+                FROM ob.object_rights ";
         return db.ExecuteCoreTransferSQL(sql_string, " where ", "ob.object_rights");
     }
 
+    
     public int LoadStudyObjectLinks()
     {
         string sql_string = @"INSERT INTO core.study_object_links(id, 
-        study_id, object_id)
-        SELECT id, parent_study_id, object_id
-        FROM nk.all_ids_data_objects";
+            study_id, object_id)
+            SELECT  id, parent_study_id, object_id
+            FROM nk.data_object_ids
+            where is_valid_link = true ";
+
         return db.ExecuteCoreTransferSQL(sql_string, " and ", "nk.data_object_ids");
     }
 

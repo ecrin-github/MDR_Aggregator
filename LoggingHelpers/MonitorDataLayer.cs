@@ -11,14 +11,13 @@ public class MonDataLayer : IMonDataLayer
     private readonly string monConnString;
     private Source? source;
 
-    public MonDataLayer(LoggingHelper loggingHelper, ICredentials credentials)
+    public MonDataLayer(ICredentials credentials)
     {
         _credentials = credentials;
         monConnString = credentials.GetConnectionString("mon", false);
     }
 
     public ICredentials Credentials => _credentials;
-    public Source SourceParameters => source;
     
     public Source FetchSourceParameters(int source_id)
     {
@@ -167,7 +166,7 @@ public class MonDataLayer : IMonDataLayer
         using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);
         string sql_string = "select max(id) from sf.aggregation_events ";
         int? last_id = Conn.ExecuteScalar<int?>(sql_string);
-        return (int)last_id;
+        return last_id ?? 0;
     }
 
 

@@ -1,16 +1,11 @@
-﻿using Dapper;
-using Microsoft.Extensions.Configuration;
-using Npgsql;
+﻿using Microsoft.Extensions.Configuration;
 namespace MDR_Aggregator;
 
 public class LoggingHelper : ILoggingHelper
 {
-    private readonly string? _logfileStartOfPath;
-    private readonly string? _summaryLogfileStartOfPath;  
     private readonly string _logfilePath;
     private readonly string _summaryLogfilePath;
-    private StreamWriter? _sw;
-
+    private readonly StreamWriter? _sw;
     
     public LoggingHelper()
     {
@@ -19,13 +14,13 @@ public class LoggingHelper : ILoggingHelper
             .AddJsonFile("appsettings.json")
             .Build();
 
-        _logfileStartOfPath = settings["logFileStartOfPath"] ?? "";
-        _summaryLogfileStartOfPath = settings["summaryFileStartOfPath"] ?? "";
+        string logfileStartOfPath = settings["logFileStartOfPath"] ?? "";
+        string summaryLogfileStartOfPath = settings["summaryFileStartOfPath"] ?? "";
         
         string dtString = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture)
             .Replace(":", "").Replace("T", " ");
 
-        string logFolderPath = Path.Combine(_logfileStartOfPath!, "aggs");
+        string logFolderPath = Path.Combine(logfileStartOfPath, "aggs");
         if (!Directory.Exists(logFolderPath))
         {
             Directory.CreateDirectory(logFolderPath);
@@ -33,7 +28,7 @@ public class LoggingHelper : ILoggingHelper
         
         string logFileName = "AG " + dtString + ".log";
         _logfilePath = Path.Combine(logFolderPath, logFileName);
-        _summaryLogfilePath = Path.Combine(_summaryLogfileStartOfPath!, logFileName);
+        _summaryLogfilePath = Path.Combine(summaryLogfileStartOfPath, logFileName);
         _sw = new StreamWriter(_logfilePath, true, System.Text.Encoding.UTF8);
     }
 
@@ -63,12 +58,12 @@ public class LoggingHelper : ILoggingHelper
     }
 
 
-    public void LogStudyHeader(Options opts, string studyName)
+    public void LogStudyHeader(string leadText, string studyName)
     {
         string dividerLine = new string('-', 70);
         LogLine("");
         LogLine(dividerLine);
-        LogLine(studyName);
+        LogLine($"{leadText} {studyName} data".ToUpper());
         LogLine(dividerLine);
         LogLine("");
     }

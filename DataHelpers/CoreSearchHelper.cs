@@ -26,7 +26,7 @@ public class CoreSearchHelper
                               min_age, min_age_units_id, max_age, max_age_units_id
                               from core.studies ";
 
-        return db.ExecuteCoreTransferSQL(sql_string, "where" , "core.studies", "study_search");
+        return db.ExecuteCoreTransferSQL(sql_string, "where" , "study_search");
     }
 
     public void SetupSearchMinMaxes() 
@@ -273,7 +273,6 @@ public class CoreSearchHelper
              DROP MAPPING FOR float, sfloat;";
 
         db.ExecuteSQL(sql_string);
-
     }
 
 
@@ -298,7 +297,6 @@ public class CoreSearchHelper
 
                ALTER TEXT SEARCH CONFIGURATION core.mdr_english_config2
                DROP MAPPING FOR int, uint, float, sfloat;";
-
         db.ExecuteSQL(sql_string);
 
     }
@@ -325,14 +323,13 @@ public class CoreSearchHelper
         , lex_string VARCHAR
         , lexemes VARCHAR
         );";
-
         db.ExecuteSQL(sql_string);
         
         sql_string = @"INSERT INTO core.temp_titles
         (id, study_id, lang_code, title)
-        SELECT id, study_id, lang_code, lower(title_text) from core.study_titles ";
-
-        return db.ExecuteCoreTransferSQL(sql_string, "where", "core.study_titles", "temp_titles");
+        SELECT id, study_id, lang_code, lower(title_text) 
+        from core.study_titles ";
+        return db.ExecuteCoreTransferSQL(sql_string, "where", "titles for search");
 
     }
 
@@ -346,7 +343,6 @@ public class CoreSearchHelper
                                     to_tsvector('core.mdr_english_config', title)
                                ), 
                          ' ') ";
-
         return db.SearchUpdateSQL(sql_string, "temp_titles lex_string",
                                        min_titles_id, max_titles_id);
 
@@ -359,7 +355,6 @@ public class CoreSearchHelper
         string sql_string = @"insert into core.temp_titles_by_study(study_id, lex_string)
                      select study_id, string_agg(lex_string, ' ')
                      from core.temp_titles s ";
-
         return db.SearchStudyUpdateSQL(sql_string, "temp_titles_by_study",
                                        min_studies_id, max_studies_id);
     }
@@ -372,7 +367,6 @@ public class CoreSearchHelper
         set title_lexemes = to_tsvector('core.mdr_english_config2', s.lex_string)
         from core.temp_titles_by_study s 
         where ss.id = s.study_id ";
-
         return db.TransferSearchDataByStudy(sql_string, "temp_titles_by_study",
                                        min_studies_id, max_studies_id);
     }
@@ -415,7 +409,7 @@ public class CoreSearchHelper
         SELECT id, study_id, lower(mesh_value), lower(original_value)
         from core.study_topics ";
 
-        return db.ExecuteCoreTransferSQL(sql_string, "where", "core.study_topics", "temp_topics");
+        return db.ExecuteCoreTransferSQL(sql_string, "where", "topics for search");
     }
 
 
@@ -428,23 +422,18 @@ public class CoreSearchHelper
                                     to_tsvector('core.mdr_english_config', original_value ||' '|| coalesce(mesh_value, ''))
                                ), 
                          ' ') ";
-
         return db.SearchUpdateSQL(sql_string, "temp_topics lex_string",
                                        min_topics_id, max_topics_id);
     }
-
 
     public int GenerateTopicDataByStudy()
     {
         string sql_string = @"insert into core.temp_topics_by_study(study_id, lex_string)
                      select study_id, string_agg(lex_string, ' ')
                      from core.temp_topics s ";
-
-
         return db.SearchStudyUpdateSQL(sql_string, "temp_topics_by_study",
                                            min_studies_id, max_studies_id);
     }
-
 
     public int TransferTopicDataByStudy()
     {
@@ -463,14 +452,12 @@ public class CoreSearchHelper
         return 0;
     }
 
-
     public void DropTempSearchTables()
     {
         string sql_string = @"DROP TABLE IF EXISTS core.temp_titles;
                        DROP TABLE IF EXISTS core.temp_titles;
                        DROP TABLE IF EXISTS core.temp_titles_by_study;
                        DROP TABLE IF EXISTS core.temp_topics_by_study;";
-
         db.ExecuteSQL(sql_string);
     }
 

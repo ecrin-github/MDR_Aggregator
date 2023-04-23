@@ -4,8 +4,8 @@ namespace MDR_Aggregator;
 
 public class CoreTableBuilder
 {
-    readonly string db_conn;
-    ILoggingHelper _loggingHelper;
+    private readonly string db_conn;
+    private readonly ILoggingHelper _loggingHelper;
 
     public CoreTableBuilder(string _db_conn, ILoggingHelper loggingHelper)
     {

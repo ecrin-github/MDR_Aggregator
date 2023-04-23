@@ -134,27 +134,10 @@ public class StudyLinkBuilder
         slh.TransferNewLinksToDataTable();
         slh.UpdateLinksWithStudyIds();
         slh.DropTempTables();
-        
-        /*
-        slh.IdentifyGroupedStudies();
-        slh.ExtractGroupedStudiess();
-        slh.DeleteGroupedStudyLinkRecords();
-
-        // Cascade 'preferred' studies so that the most preferred always appears on the RHS.
-        // Identify and repair missing cascade steps then 're-cascade' links.
-
-        slh.ManageIncompleteLinks();
-        slh.CascadeLinksInDistinctLinksTable();
-
-        // Transfer the (distinct) resultant set into the main links table and tidy up.
-        
-        slh.TransferNewLinksToDataTable();
-        slh.DropTempTables();
-        */
     }
 
 
-    public void CreateStudyGroupRecords()
+    public void AddStudyStudyRelationshipRecords()
     {
         // Adds the study relationship records previously created.
         // But first use the study_all_ids to insert the correct study Ids for the linked sources / sd_sids.

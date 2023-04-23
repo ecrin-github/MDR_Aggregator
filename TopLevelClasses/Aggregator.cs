@@ -96,6 +96,7 @@ public class Aggregator
                         schema_name = _mon_repo.SetUpTempFTW(_credentials, source.database_name!, agg_conn_string);
                     }
 
+                    _loggingHelper.LogStudyHeader("Aggregating", source.database_name!);
                     DataTransferBuilder tb = new DataTransferBuilder(source, schema_name, 
                                                                      agg_conn_string, _loggingHelper);
                     if (source.has_study_tables is true)
@@ -108,7 +109,7 @@ public class Aggregator
                     }
                     else
                     {
-                        tb.ProcessStandaloneObjectIds(sources, _credentials, opts.testing); // for now, just PubMed
+                        tb.ProcessStandaloneObjectIds(); // for now, just PubMed
                     }
                     _loggingHelper.LogHeader("Transfer object data");
                     num_objects_imported += tb.TransferObjectData();
@@ -117,7 +118,7 @@ public class Aggregator
 
                 // Also use the study groups data to insert additional study_relationship records.
                 
-                slb.CreateStudyGroupRecords();
+                slb.AddStudyStudyRelationshipRecords();
 
                 // Update aggregation event record.
 
@@ -207,7 +208,6 @@ public class Aggregator
                 // in a foreign table wrapper
 
                 int num_studies_imported = 0;
-                int num_objects_imported = 0;
                 
                 List<Source> sources = _mon_repo.RetrieveDataSources()
                     .OrderBy(s => s.preference_rating).ToList();

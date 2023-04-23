@@ -22,6 +22,7 @@
     <Compile Remove="TopLevelClasses\Interfaces\IParametersChecker.cs" />
     <Compile Remove="TopLevelClasses\Interfaces\IAggregator.cs" />
     <Compile Remove="LoggingHelpers\Interfaces\ISource.cs" />
+    <Compile Remove="DataHelpers\DatabaseDataLayer.cs" />
   </ItemGroup>
 
   <ItemGroup>

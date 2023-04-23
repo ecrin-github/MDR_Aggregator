@@ -9,7 +9,6 @@ public interface ILoggingHelper
     void LogParseError(string header, string errorNum, string errorType);
     void CloseLog();
     void LogCommandLineParameters(Options opts);
-    void SpacedInformation(string header_text);
-
+    void LogStudyHeader(string leadText, string studyName);
 }
 

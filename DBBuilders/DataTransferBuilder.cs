@@ -33,14 +33,7 @@ public class DataTransferBuilder
         // Set up a temporary table that holds the sd_sid for all studies, and then fill it.
 
         st_tr.SetUpTempStudyIdsTable();
-        IEnumerable<StudyId> study_ids = st_tr.FetchStudyIds(source_id, _source_conn_string);
-        _loggingHelper.LogLine("Study Ids obtained");
-        
-        st_tr.StoreStudyIds(CopyHelpers.study_ids_helper, study_ids);
-        _loggingHelper.LogLine("Study Ids stored");
-
-        // Do the check of the temp table ids against the study_study links. Change the table to reflect
-        // the 'preferred' Ids. Back load the correct study ids into the temporary table.
+        st_tr.FetchStudyIds(_source.id, _source_conn_string);
 
         // Match existing studies, then do the check of the temp table ids against the study_study links.
         // Change the table to mark the 'preferred' Ids and back load the correct study ids into the temporary table.
@@ -48,16 +41,8 @@ public class DataTransferBuilder
         st_tr.MatchExistingStudyIds();
         st_tr.IdentifyNewLinkedStudyIds();
         st_tr.AddNewStudyIds(source_id);
-        _loggingHelper.LogLine("Study Ids checked");
         st_tr.CreateTempStudyIdTables(source_id);
-        _loggingHelper.LogLine("Study Ids processed");
-        
-        /*
-        st_tr.CheckStudyLinks();
-        _loggingHelper.LogLine("Study Ids checked");
-        st_tr.UpdateAllStudyIdsTable(source_id);
-        _loggingHelper.LogLine("Study Ids processed");
-        */
+        _loggingHelper.LogLine("Study Ids matched or added new");
     }
     
 
@@ -87,11 +72,8 @@ public class DataTransferBuilder
         // dates of data fetch, of the objects in the source database.
 
         ob_tr.SetUpTempObjectIdsTables();
-        IEnumerable<ObjectId> object_ids = ob_tr.FetchObjectIds(source_id, _source_conn_string);
+        ob_tr.FetchObjectIds(_source.id, _source_conn_string);
         _loggingHelper.LogLine("Object Ids obtained");
-        
-        ob_tr.StoreObjectIds(CopyHelpers.object_ids_helper, object_ids);
-        _loggingHelper.LogLine("Object Ids stored");
 
         // Update the object parent ids against the all_ids_studies table.
 
@@ -113,9 +95,9 @@ public class DataTransferBuilder
         ob_tr.FillObjectsToAddTables(source_id);
         _loggingHelper.LogLine("Object Ids processed");
     }
-
+ 
     
-    public void ProcessStandaloneObjectIds(IEnumerable<Source> sources, ICredentials credentials, bool testing)
+    public void ProcessStandaloneObjectIds()
     {
         ob_tr.SetUpTempObjectIdsTables();
 
@@ -133,8 +115,8 @@ public class DataTransferBuilder
             pm_tr.SetupTempPMIDTables();
             
             IEnumerable<PMIDLink> bank_object_ids = pm_tr.FetchBankPMIDs();
-            ulong res = pm_tr.StorePMIDLinks(CopyHelpers.pmid_links_helper, bank_object_ids);
-            _loggingHelper.LogLine(res.ToString() + " study Ids obtained from PMID 'bank' data");
+            pm_tr.StorePMIDLinks(CopyHelpers.pmid_links_helper, bank_object_ids);
+            _loggingHelper.LogLine("{res} study Ids obtained from PMID 'bank' data");
             
             // study ids referenced in PubMed data often poorly formed and need cleaning
 
@@ -145,22 +127,20 @@ public class DataTransferBuilder
             // A table of DB references data was created during pubmed data download, (mn.dbrefs_all).
             // This holds all known trial registry sourced references, most of which have PMIDs. There is no 
             // to recapture it - it should always reflect the state of the DBs during the most recent download.
+
+            IEnumerable<PMIDLink> source_object_ids = pm_tr.FetchSourceReferences();
+            pm_tr.StorePMIDLinks(CopyHelpers.pmid_links_helper, source_object_ids);
             
-            // *************************
-            // suitable code here to transfer the data from this table
-            // *************************
-            
-            // Transfer data to 'standard' data_object_identifiers table.
-            // and insert the 'correct' study_ids against the sd_sid
-            // (all are known as studies already added)
+            // Transfer data to 'standard' data_object_identifiers table and insert the 
+            // 'correct' study_ids against the sd_sid (all are known as studies already added).
 
             pm_tr.TransferPMIDLinksToTempObjectIds();
             pm_tr.UpdateTempObjectIdsWithStudyDetails();  
 
             // Duplication of PMIDs is from
             // a) The same study-PMID combination in both trial registry record and Pubmed record
-            // b) The same study-PMID combination in different versions of the study record
-            // c) The same PMID beiung used for multiple studies
+            // b) The same study-PMID combination in different versions of the study records
+            // c) The same PMID being used for multiple studies
             // To remove a) and b) a select distinct is done on the current set of unmatched PMID-Study combinations
 
             pm_tr.FillDistinctTempObjectsTable();
@@ -171,7 +151,7 @@ public class DataTransferBuilder
             pm_tr.MatchExistingPMIDLinks();
 
             // New, unmatched combinations of PMID and studies may have PMIDs completely new to the system, or 
-            // new PMID - study combinations for existing PMIDs
+            // new PMID-study combinations for existing PMIDs
 
             pm_tr.IdentifyNewPMIDLinks();
             pm_tr.AddNewPMIDStudyLinks();
@@ -179,46 +159,6 @@ public class DataTransferBuilder
             pm_tr.IdentifyPMIDDataForImport(source_id);
 
             pm_tr.DropTempPMIDTables();
-            
-            /*
-            _loggingHelper.LogLine("PMID source object Ids obtained");
-
-            pm_tr.FillDistinctPMIDsTable();
-            pm_tr.DropTempPMIDTable();
-
-            // Try and tidy some of the worst data anomalies before updating the data to the permanent tables.
-
-            pm_tr.CleanPMIDsdsidData1();
-            pm_tr.CleanPMIDsdsidData2();
-            pm_tr.CleanPMIDsdsidData3();
-            pm_tr.CleanPMIDsdsidData4();
-            _loggingHelper.LogLine("PMID Ids cleaned");
-
-            // Transfer data to all_ids_data_objects table.
-
-            pm_tr.TransferPMIDLinksToObjectIds();
-            ob_tr.UpdateObjectsWithStudyIds(source_id);
-            _loggingHelper.LogLine("Object Ids matched to study ids");
-
-            // Use study-study link table to get preferred sd_sid then drop any duplicates from study-pmid table.
-            
-            pm_tr.InputPreferredSDSIDS();
-
-            // add in study-pmid links to all_ids_objects.
-            
-            ob_tr.UpdateAllObjectIdsTable(source_id);
-            _loggingHelper.LogLine("PMID Ids added to table");
-
-            // Use min of ids to set all object ids the same for the same pmid.
-            
-            pm_tr.ResetIdsOfDuplicatedPMIDs();
-            _loggingHelper.LogLine("PMID Ids deduplicated");
-
-            // Make new table of distinct pmids to add.
-            
-            ob_tr.FillObjectsToAddTable(source_id);
-            _loggingHelper.LogLine("PMID Ids processed");
-            */
         }
     }
 
