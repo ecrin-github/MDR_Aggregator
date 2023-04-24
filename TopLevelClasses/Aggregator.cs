@@ -42,13 +42,14 @@ public class Aggregator
                 sb.BuildNewObjectTables();
                 sb.BuildNewLinkTables();
                 _loggingHelper.LogLine("Study, object and link aggregate tables recreated");
-
+                _loggingHelper.LogLine("");
+                
                 // construct the aggregation event record
                 AggregationEvent agg_event = new AggregationEvent(agg_event_id);
 
                 // Derive a new table of inter-study relationships - First get a list of all
                 // the study sources and ensure it is sorted correctly.
-
+              
                 List<Source> sources = _mon_repo.RetrieveDataSources()
                                            .OrderBy(s => s.preference_rating).ToList();
                 _loggingHelper.LogLine("Sources obtained");
@@ -56,15 +57,17 @@ public class Aggregator
                 // Then use the study link builder to create a record of all current study - study links
 
                 StudyLinkBuilder slb = new StudyLinkBuilder(_loggingHelper, _credentials, 
-                                                            agg_conn_string, opts.testing);
+                                                          agg_conn_string, opts.testing);
                 slb.CollectStudyStudyLinks(sources);
+                _loggingHelper.LogLine("");
                 slb.CheckStudyStudyLinks(sources);
+                _loggingHelper.LogLine("");
                 slb.ProcessStudyStudyLinks();
                 _loggingHelper.LogLine("Study-study links identified");
+                _loggingHelper.LogLine("");
 
                 // Start the data transfer process. Loop through the study sources
                 // (in preference order). In each case establish and then drop the
-                // source tables as a foreign table wrapper
 
                 _loggingHelper.LogHeader("Data Transfer");
                 int num_studies_imported = 0;
@@ -85,27 +88,29 @@ public class Aggregator
                     // database. In a testing environment source schema name will simply be 'ad', and the
                     // ad table data all has to be transferred from adcomp before each source transfer...to revise!
 
-                    string schema_name;
+                    string ftw_schema_name;
                     if (opts.testing)
                     {
-                        schema_name = "ad";
+                        ftw_schema_name = "ad";
                         //_test_repo.TransferADTableData(source);
                     }
                     else
                     {
-                        schema_name = _mon_repo.SetUpTempFTW(_credentials, source.database_name!, agg_conn_string);
+                        ftw_schema_name = _mon_repo.SetUpTempFTW(_credentials, source.database_name!, agg_conn_string);
                     }
 
                     _loggingHelper.LogStudyHeader("Aggregating", source.database_name!);
-                    DataTransferBuilder tb = new DataTransferBuilder(source, schema_name, 
+                    DataTransferBuilder tb = new DataTransferBuilder(source, ftw_schema_name, 
                                                                      agg_conn_string, _loggingHelper);
                     if (source.has_study_tables is true)
                     {
+                        
                         _loggingHelper.LogHeader("Process study Ids");
                         tb.ProcessStudyIds();
                         _loggingHelper.LogHeader("Transfer study data");
                         num_studies_imported += tb.TransferStudyData();
                         tb.ProcessStudyObjectIds();
+                       
                     }
                     else
                     {
@@ -141,15 +146,17 @@ public class Aggregator
             if (opts.create_core)
             {
                 // Create core tables.
-                
+
                 CoreBuilder cb = new CoreBuilder(core_conn_string, _loggingHelper);
                 _loggingHelper.LogHeader("Recreating core tables");
                 cb.BuildNewCoreTables();
                 _loggingHelper.LogLine("Core tables recreated");
 
-                // Transfer data to core tables.
-                
+                // Transfer data to core tables. Needs the aggs tables to be set up as an FTW
+
                 CoreTransferBuilder ctb = new CoreTransferBuilder(core_conn_string, _loggingHelper);
+                _mon_repo.SetUpTempAggsFTW(_credentials, core_conn_string);
+
                 _loggingHelper.LogHeader("Transferring study data");
                 ctb.TransferCoreStudyData();
                 _loggingHelper.LogHeader("Transferring object data");
@@ -157,13 +164,18 @@ public class Aggregator
                 _loggingHelper.LogHeader("Transferring link data");
                 ctb.TransferCoreLinkData();
 
+                _mon_repo.DropTempAggsFTW(core_conn_string);
+
                 // Generate data provenance strings. Need an additional temporary FTW link to mon.
 
                 _loggingHelper.LogHeader("Generating provenance data");
                 _mon_repo.SetUpTempFTW(_credentials, "mon", core_conn_string);
                 ctb.GenerateProvenanceData();
                 _mon_repo.DropTempFTW("mon", core_conn_string);
-                
+            }
+            
+            if (opts.do_indexes)
+            {
                 // Set up study search data.
 
                 CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
@@ -238,7 +250,6 @@ public class Aggregator
                     agg_event.num_studies_imported = num_studies_imported;
                     _mon_repo.StoreAggregationEvent(agg_event);
                 }
-
             }
             
             

@@ -75,6 +75,7 @@ public class LoggingHelper : ILoggingHelper
         string header = dt_prefix + "**** " + message.ToUpper().ToUpper() + " ****";
         Transmit("");
         Transmit(header);
+        Transmit("");
     }
 
 

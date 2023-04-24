@@ -87,5 +87,6 @@ public class PMIDLink
     public string sd_oid { get; set; } = null!;
     public int parent_study_source_id { get; set; }
     public string parent_study_sd_sid { get; set; } = null!;
+    public int type_id { get; set; }
     public DateTime? datetime_of_data_fetch { get; set; }
 }

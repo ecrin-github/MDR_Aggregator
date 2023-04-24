@@ -3,7 +3,7 @@
   "profiles": {
     "MDR_Aggregator": {
       "commandName": "Project",
-      "commandLineArgs": "-D ",
+      "commandLineArgs": "-C ",
       "environmentVariables": {
         
       }

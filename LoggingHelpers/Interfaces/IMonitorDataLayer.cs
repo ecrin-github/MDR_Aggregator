@@ -9,7 +9,10 @@ public interface IMonDataLayer
     
     void SetUpTempContextFTWs(ICredentials credentials, string connString);
     void DropTempContextFTWs(string connString);
-
+    
+    void SetUpTempAggsFTW(ICredentials _credentials, string core_conn_string);
+    void DropTempAggsFTW(string core_conn_string);
+    
     string SetUpTempFTW(ICredentials credentials, string database_name, string dest_conn_string);
     void DropTempFTW(string database_name, string dest_conn_string);
 

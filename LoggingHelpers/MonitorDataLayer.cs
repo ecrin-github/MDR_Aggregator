@@ -152,7 +152,69 @@ public class MonDataLayer : IMonDataLayer
     }
 
 
+    public void SetUpTempAggsFTW(ICredentials credentials, string dbConnString)
+    {
+        using var conn = new NpgsqlConnection(dbConnString);
+        string username = credentials.Username;
+        string password = credentials.Password;     
+            
+        string sql_string = @"CREATE EXTENSION IF NOT EXISTS postgres_fdw
+                                 schema core;";
+        conn.Execute(sql_string);
 
+        sql_string = @"CREATE SERVER IF NOT EXISTS aggs  FOREIGN DATA WRAPPER postgres_fdw
+                         OPTIONS (host 'localhost', dbname 'aggs');";
+        conn.Execute(sql_string);
+
+        sql_string = @"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
+                 SERVER aggs OPTIONS (user '" + username + "', password '" + password + "');";
+        conn.Execute(sql_string);
+        string schema_name;
+        
+        schema_name = "aggs_st";
+        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
+             CREATE SCHEMA " + schema_name + @";
+             IMPORT FOREIGN SCHEMA sf
+             FROM SERVER aggs INTO " + schema_name + ";";
+        conn.Execute(sql_string);
+        
+        schema_name = "aggs_ob";
+        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
+             CREATE SCHEMA " + schema_name + @";
+             IMPORT FOREIGN SCHEMA sf
+             FROM SERVER aggs INTO " + schema_name + ";";
+        conn.Execute(sql_string);
+        
+        schema_name = "aggs_nk";
+        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
+             CREATE SCHEMA " + schema_name + @";
+             IMPORT FOREIGN SCHEMA sf
+             FROM SERVER aggs INTO " + schema_name + ";";
+        conn.Execute(sql_string);
+    }
+
+    public void DropTempAggsFTW(string dbConnString)
+    {
+        using var conn = new NpgsqlConnection(dbConnString);
+        
+        string sql_string = @"DROP USER MAPPING IF EXISTS FOR CURRENT_USER
+                 SERVER aggs;";
+        conn.Execute(sql_string);
+
+        sql_string = @"DROP SERVER IF EXISTS aggs CASCADE;";
+        conn.Execute(sql_string);
+
+        sql_string = @"DROP SCHEMA IF EXISTS aggs_st;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"DROP SCHEMA IF EXISTS aggs_ob;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"DROP SCHEMA IF EXISTS aggs_nk;";
+        conn.Execute(sql_string);
+    }
+    
+    
     public int GetNextAggEventId()
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);

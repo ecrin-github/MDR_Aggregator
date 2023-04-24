@@ -48,6 +48,7 @@ public static class CopyHelpers
              .MapVarchar("sd_oid", x => x.sd_oid)
              .MapInteger("parent_study_source_id", x => x.parent_study_source_id)
              .MapVarchar("parent_study_sd_sid", x => x.parent_study_sd_sid)
+             .MapInteger("type_id", x => x.type_id)
              .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
 
     public static readonly PostgreSQLCopyHelper<AggregationObjectNum> object_numbers_helper =

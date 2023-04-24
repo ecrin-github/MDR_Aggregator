@@ -2,18 +2,14 @@
 
 public class CoreSearchHelper
 {
-    string _connString;
-    DBUtilities db;
-    ILoggingHelper _loggingHelper;
+    private readonly DBUtilities db;
     int min_studies_id, max_studies_id;
     int min_titles_id, max_titles_id;
     int min_topics_id, max_topics_id;
 
     public CoreSearchHelper(string connString, ILoggingHelper loggingHelper)
     {
-        _loggingHelper = loggingHelper;
-        _connString = connString;
-        db = new DBUtilities(_connString, _loggingHelper);
+        db = new DBUtilities(connString, loggingHelper);
     }
     
     public int GenerateStudySearchData()

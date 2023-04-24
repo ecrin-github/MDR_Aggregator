@@ -28,9 +28,9 @@ public class DBUtilities
         }
     }
     
-    public int GetMaxId(string schema_name, string table_name)
+    public int GetMaxId(string ftw_schema_name, string table_name)
     {
-        string sql_string = $@"select max(id) from {schema_name}.{table_name}";
+        string sql_string = $@"select max(id) from {ftw_schema_name}.{table_name}";
         using var conn = new NpgsqlConnection(connstring);
         return conn.ExecuteScalar<int>(sql_string);
     }
@@ -61,7 +61,8 @@ public class DBUtilities
 
 
     public int Update_UsingTempTable(string index_table_name, string updated_table_name, 
-                                     string sql_string, string conditional, int batch_size)
+                                     string sql_string, string conditional, int batch_size, 
+                                     string feedback_addition)
     {
         try
         {
@@ -75,14 +76,14 @@ public class DBUtilities
                     string batch_sql_string = sql_string + $" t.id >= {r} and t.id < {r + batch_size} ";
                     updated += ExecuteSQL(batch_sql_string);
                     int e = r + batch_size < max_id ? r + batch_size - 1 : max_id;
-                    string feedback = $"Updated {updated_table_name}, ids {r} to {e}";
+                    string feedback = $"Updating {updated_table_name}{feedback_addition}, ids {r} to {e}";
                     _loggingHelper.LogLine(feedback);
                 }
             }
             else
             {
                 updated = ExecuteSQL(sql_string);
-                _loggingHelper.LogLine($"Updated {updated_table_name} as a single batch");
+                _loggingHelper.LogLine($"Updating {updated_table_name}{feedback_addition} as a single batch");
             }
             return updated;
         } 
@@ -93,13 +94,13 @@ public class DBUtilities
         }
     }
 
-    public int ExecuteTransferSQL(string sql_string, string schema_name, string table_name, 
+    public int ExecuteTransferSQL(string sql_string, string ftw_schema_name, string table_name, 
                                   string qualifier, string context)
     {
         try
         {
             int transferred = 0;
-            int max_id = GetMaxId(schema_name, table_name);
+            int max_id = GetMaxId(ftw_schema_name, table_name);
             int rec_batch = 50000;
             // int rec_batch = 10000;  // for testing 
             if (max_id > rec_batch)
@@ -110,21 +111,21 @@ public class DBUtilities
                     string batch_sql_string = sql_string + $" s.id >= {r} and s.id < {r + rec_batch} ";
                     transferred += ExecuteSQL(batch_sql_string);
                     int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Transferred {schema_name}.{table_name} ({context}) data, ids {r} to {e}";
+                    string feedback = $"Transferred {ftw_schema_name}.{table_name} ({context}) data, ids {r} to {e}";
                     _loggingHelper.LogLine(feedback);
                 }
             }
             else
             {
                 transferred = ExecuteSQL(sql_string);
-                _loggingHelper.LogLine($"Transferred {schema_name}.{table_name} ({context}) data, as a single batch");
+                _loggingHelper.LogLine($"Transferred {ftw_schema_name}.{table_name} ({context}) data, as a single batch");
             }
             return transferred;
         }
         catch (Exception e)
         {
             string feedback =
-                $"In data transfer ({schema_name}.{table_name} ({context})) to aggregate table: {e.Message}";
+                $"In data transfer ({ftw_schema_name}.{table_name} ({context})) to aggregate table: {e.Message}";
             _loggingHelper.LogError(feedback);
             return 0;
         }
@@ -149,7 +150,7 @@ public class DBUtilities
         catch (Exception e)
         {
             string res = e.Message;
-            _loggingHelper.LogError("In study search update (" + data_type + "): " + res);
+            _loggingHelper.LogError($"In study search update ({data_type}): {res}");
             return 0;
         }
     }
@@ -170,8 +171,8 @@ public class DBUtilities
                         where " + where_string;
             ExecuteSQL(setup_sql);
 
-            string sql_string = @"UPDATE core.study_search ss
-                        SET has_" + object_type + @" = true
+            string sql_string = $@"UPDATE core.study_search ss
+                        SET has_{object_type} = true
                         FROM core.temp_searchobjects d
                         WHERE ss.id = d.study_id ";
 
