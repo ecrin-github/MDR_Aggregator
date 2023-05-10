@@ -119,7 +119,7 @@ public class Options
     [Option('X', "do indexes", Required = false, HelpText = "Re-establishes text indexes on title and topic fields, for searching")]
     public bool do_indexes { get; set; }
     
-    [Option('S', "do IEC data", Required = false, HelpText = "Aggregates the inclusion / exclusion data into a separate database ('iec')")]
+    [Option('I', "do IEC data", Required = false, HelpText = "Aggregates the inclusion / exclusion data into a separate database ('iec')")]
     public bool do_iec { get; set; }
 
     [Option('T', "use test data", Required = false, HelpText = "Carry out D, C, S and J but using test data only, in the test database")]

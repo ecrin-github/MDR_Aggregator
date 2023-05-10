@@ -34,14 +34,17 @@ public static class CopyHelpers
              .MapVarchar("sd_sid", x => x.sd_sid)
              .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
 
+    
     public static readonly PostgreSQLCopyHelper<ObjectId> object_ids_helper =
          new PostgreSQLCopyHelper<ObjectId>("nk", "temp_object_ids")
              .MapInteger("source_id", x => x.source_id)
-             .MapVarchar("sd_oid", x => x.sd_oid)
              .MapInteger("parent_study_source_id", x => x.parent_study_source_id)
+             .MapVarchar("sd_oid", x => x.sd_oid)
+             .MapInteger("object_type_id", x => x.object_type_id)
+             .MapVarchar("title", x => x.title)
              .MapVarchar("parent_study_sd_sid", x => x.parent_study_sd_sid)
              .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
-
+    
     public static readonly PostgreSQLCopyHelper<PMIDLink> pmid_links_helper =
          new PostgreSQLCopyHelper<PMIDLink>("nk", "temp_pmids")
              .MapInteger("source_id", x => x.source_id)

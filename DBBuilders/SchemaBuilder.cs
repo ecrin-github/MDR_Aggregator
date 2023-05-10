@@ -56,12 +56,8 @@ public class SchemaBuilder
 
     public void BuildNewLinkTables()
     {
-        //link_tablebuilder.create_table_all_ids_data_objects();
-        //link_tablebuilder.create_table_all_ids_studies();
-        //link_tablebuilder.create_table_all_links();
         link_tablebuilder.create_table_linked_study_groups();
         link_tablebuilder.create_table_study_object_links();
         link_tablebuilder.create_table_study_study_links();
-        //link_tablebuilder.create_table_temp_study_ids();
     }
 }

@@ -158,7 +158,7 @@ public class ObjectDataTransferrer
 
     public void UpdateNewObjectsWithStudyIds(int source_id)
     {
-        // For the new objects...where match_status still 0...
+        // For the new objects...where match_status in temp table still 0...
         // Update the object parent study_id using the 'correct' value found in the study_ids table
 
         string sql_string = $@"UPDATE nk.temp_object_ids t
@@ -285,7 +285,7 @@ public class ObjectDataTransferrer
 
         sql_string = @"Update nk.data_object_ids doi
         set object_id = old_object_id, is_preferred_object = false, 
-        is_valid_link = false, match_status = 2
+        is_valid_link = false, match_status = 4
         from nk.dup_objects_by_type_and_title dup
         where doi.match_status is null
         and doi.id = dup.id;";
@@ -327,7 +327,7 @@ public class ObjectDataTransferrer
 
         sql_string = @"Update nk.data_object_ids doi
         set object_id = old_object_id, is_preferred_object = false, 
-        is_valid_link = false, match_status = 2
+        is_valid_link = false, match_status = 4
         from nk.dup_objects_by_url dup
         where doi.match_status is null
         and doi.id = dup.id;";
@@ -460,13 +460,13 @@ public class ObjectDataTransferrer
                 on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name,  "data_objects", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} data_objects");
+        _loggingHelper.LogLine($"Loaded {res} data_objects");
         _loggingHelper.LogLine("");
         return res;
     }
 
 
-    public void LoadObjectDatasets(string ftw_schema_name)
+    public int LoadObjectDatasets(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_datasets"];
         string srceFields = objectSourceFields["object_datasets"];
@@ -478,12 +478,13 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_datasets", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object datasets");
+        _loggingHelper.LogLine($"Loaded {res} object datasets");
         _loggingHelper.LogLine("");
+        return res;
     }
 
 
-    public void LoadObjectInstances(string ftw_schema_name)
+    public int LoadObjectInstances(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_instances"];
         string srceFields = objectSourceFields["object_instances"];
@@ -496,60 +497,58 @@ public class ObjectDataTransferrer
         INNER JOIN nk.temp_objects_to_add t
         on s.sd_oid = t.sd_oid ";
 
-        int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_instances", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object_instances");
-   
-        if (num_to_check > 0)
-        {
-            // add any additional instances (i.e. that have a URL not already present)
-            // from objects linked to non-preferred versions of studies...
-
-            // source data is the instance data associated with these
-            // particular objects
-
-            sql_string = $@"DROP TABLE IF EXISTS nk.source_data;
-                           CREATE TABLE nk.source_data as 
-                           SELECT es.object_id, d.* 
-                           FROM {ftw_schema_name}.object_instances d
-                           INNER JOIN nk.temp_objects_to_check es
-                           ON d.sd_oid = es.sd_oid";
-            db.ExecuteSQL(sql_string);
-
-            // destination data (to check against) is the current set of URLs
-            // in the existing instance data for these objects
-
-            sql_string = @"DROP TABLE IF EXISTS nk.existing_data;
-                           CREATE TABLE nk.existing_data as 
-                           SELECT k.sd_oid, 
-                           c.object_id, c.url
-                           FROM ob.object_instances c
-                           INNER JOIN nk.temp_objects_to_check k
-                           ON c.object_id = k.object_id;";
-            db.ExecuteSQL(sql_string);
-
-            // for urls which are new to the study - i.e. do not appear io the RHS
-            // of a LEFT JOIN on oid and url, add the instance data as a new record
-
-            sql_string = $@"INSERT INTO ob.object_instances(object_id, {destFields})
-                           SELECT s.object_id, {srceFields}
-                           FROM nk.source_data s
-                           LEFT JOIN nk.existing_data e
-                           ON s.sd_oid = e.sd_oid
-                           and lower(s.url) = lower(e.url)
-                           WHERE e.object_id is null ";
-
-            res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_instances", " and ", "existing objects");
-            _loggingHelper.LogLine($"Transferred {res} object instances, from 'non-preferred' objects");
-            _loggingHelper.LogLine("");
-        }
-        else
+        int res1 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_instances", " where ", "new objects");
+        _loggingHelper.LogLine($"Loaded {res1} object_instances");
+        
+        if (num_to_check == 0)
         {
             _loggingHelper.LogLine("");
+            return res1;
         }
+        
+        // Add any additional instances (i.e. that have a URL not already present)
+        // from objects linked to non-preferred versions of studies...
+        // Source data is the instance data associated with these particular objects
+
+        sql_string = $@"DROP TABLE IF EXISTS nk.source_data;
+                       CREATE TABLE nk.source_data as 
+                       SELECT es.object_id, d.* 
+                       FROM {ftw_schema_name}.object_instances d
+                       INNER JOIN nk.temp_objects_to_check es
+                       ON d.sd_oid = es.sd_oid";
+        db.ExecuteSQL(sql_string);
+
+        // Destination data (to check against) is the current set of URLs
+        // in the existing instance data for these objects
+
+        sql_string = @"DROP TABLE IF EXISTS nk.existing_data;
+                       CREATE TABLE nk.existing_data as 
+                       SELECT k.sd_oid, 
+                       c.object_id, c.url
+                       FROM ob.object_instances c
+                       INNER JOIN nk.temp_objects_to_check k
+                       ON c.object_id = k.object_id;";
+        db.ExecuteSQL(sql_string);
+
+        // for urls which are new to the study - i.e. do not appear io the RHS
+        // of a LEFT JOIN on oid and url, add the instance data as a new record
+
+        sql_string = $@"INSERT INTO ob.object_instances(object_id, {destFields})
+                       SELECT s.object_id, {srceFields}
+                       FROM nk.source_data s
+                       LEFT JOIN nk.existing_data e
+                       ON s.sd_oid = e.sd_oid
+                       and lower(s.url) = lower(e.url)
+                       WHERE e.object_id is null ";
+
+        int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_instances", " and ", "existing objects");
+        _loggingHelper.LogLine($"Transferred {res2} object instances, from 'non-preferred' objects");
+        _loggingHelper.LogLine("");
+        return res1 + res2;
     }
 
 
-    public void LoadObjectTitles(string ftw_schema_name)
+    public int LoadObjectTitles(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_titles"];
         string srceFields = objectSourceFields["object_titles"];
@@ -560,11 +559,15 @@ public class ObjectDataTransferrer
         INNER JOIN nk.temp_objects_to_add t
         on s.sd_oid = t.sd_oid ";
 
-        int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_titles", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object titles");
+        int res1 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_titles", " where ", "new objects");
+        _loggingHelper.LogLine($"Loaded {res1} object titles");
         
-        if (num_to_check > 0)
+        if (num_to_check == 0)
         {
+            _loggingHelper.LogLine("");
+            return res1;
+        }
+
             // add any additional titles 
 
             sql_string = $@"DROP TABLE IF EXISTS nk.source_data;
@@ -575,7 +578,8 @@ public class ObjectDataTransferrer
                            ON d.sd_oid = es.sd_oid";
             db.ExecuteSQL(sql_string);
 
-            // Also, all non preferred titles must be non-default (default will be from the preferred source)
+            // Also, all non preferred titles must be non-default (default 
+            // will be from the preferred source)
 
             sql_string = @"UPDATE nk.source_data 
                            SET is_default = false;";
@@ -611,18 +615,14 @@ public class ObjectDataTransferrer
                            AND lower(s.title_text) = lower(e.title_text)
                            WHERE e.object_id is null ";
 
-            res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_titles", " and ", "existing objects");
-            _loggingHelper.LogLine($"Transferred {res} object titles, from 'non-preferred' objects");
+            int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_titles", " and ", "existing objects");
+            _loggingHelper.LogLine($"Transferred {res2} object titles, from 'non-preferred' objects");
             _loggingHelper.LogLine("");
-        }
-        else
-        {
-            _loggingHelper.LogLine("");
-        }
+            return res1 + res2;
     }
 
 
-    public void LoadObjectDates(string ftw_schema_name)
+    public int LoadObjectDates(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_dates"];
         string srceFields = objectSourceFields["object_dates"];
@@ -633,55 +633,55 @@ public class ObjectDataTransferrer
         INNER JOIN nk.temp_objects_to_add t
         on s.sd_oid = t.sd_oid ";
 
-        int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_dates", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object dates");
+        int res1 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_dates", " where ", "new objects");
+        _loggingHelper.LogLine($"Loaded {res1} object dates");
         
-        if (num_to_check > 0)
-        {
-            // add any additional dates 
-
-            sql_string = $@"DROP TABLE IF EXISTS nk.source_data;
-                               CREATE TABLE nk.source_data as 
-                               SELECT es.object_id, d.* 
-                               FROM {ftw_schema_name}.object_dates d
-                               INNER JOIN nk.temp_objects_to_check es
-                               ON d.sd_oid = es.sd_oid";
-            db.ExecuteSQL(sql_string);
-
-            sql_string = @"DROP TABLE IF EXISTS nk.existing_data;
-                               CREATE TABLE nk.existing_data as 
-                               SELECT k.sd_oid, 
-                               c.object_id, c.start_year, c.start_month, c.start_day
-                               FROM ob.object_dates c
-                               INNER JOIN nk.temp_objects_to_check k
-                               ON c.object_id = k.object_id;";
-            db.ExecuteSQL(sql_string);
-
-            // for dates which are new to the study (have null on the RHS of a
-            // LEFT JOIN on oid and year, month and day, add them
-
-            sql_string = $@"INSERT INTO ob.object_dates(object_id, {destFields})
-                               SELECT s.object_id, {srceFields}
-                               FROM nk.source_data s
-                               LEFT JOIN nk.existing_data e
-                               ON s.sd_oid = e.sd_oid
-                               AND s.start_year = e.start_year
-                               AND s.start_month = e.start_month
-                               AND s.start_day = e.start_day
-                               WHERE e.object_id is null ";
-
-            res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_dates", " and ", "existing objects");
-            _loggingHelper.LogLine($"Transferred {res} object dates, from 'non-preferred' objects");
-            _loggingHelper.LogLine("");
-        }
-        else
+        if (num_to_check == 0)
         {
             _loggingHelper.LogLine("");
+            return res1;
         }
+
+        // add any additional dates 
+
+        sql_string = $@"DROP TABLE IF EXISTS nk.source_data;
+                           CREATE TABLE nk.source_data as 
+                           SELECT es.object_id, d.* 
+                           FROM {ftw_schema_name}.object_dates d
+                           INNER JOIN nk.temp_objects_to_check es
+                           ON d.sd_oid = es.sd_oid";
+        db.ExecuteSQL(sql_string);
+
+        sql_string = @"DROP TABLE IF EXISTS nk.existing_data;
+                           CREATE TABLE nk.existing_data as 
+                           SELECT k.sd_oid, 
+                           c.object_id, c.start_year, c.start_month, c.start_day
+                           FROM ob.object_dates c
+                           INNER JOIN nk.temp_objects_to_check k
+                           ON c.object_id = k.object_id;";
+        db.ExecuteSQL(sql_string);
+
+        // for dates which are new to the study (have null on the RHS of a
+        // LEFT JOIN on oid and year, month and day, add them
+
+        sql_string = $@"INSERT INTO ob.object_dates(object_id, {destFields})
+                           SELECT s.object_id, {srceFields}
+                           FROM nk.source_data s
+                           LEFT JOIN nk.existing_data e
+                           ON s.sd_oid = e.sd_oid
+                           AND s.start_year = e.start_year
+                           AND s.start_month = e.start_month
+                           AND s.start_day = e.start_day
+                           WHERE e.object_id is null ";
+
+        int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_dates", " and ", "existing objects");
+        _loggingHelper.LogLine($"Transferred {res2} object dates, from 'non-preferred' objects");
+        _loggingHelper.LogLine("");
+        return res1 + res2;
     }
 
 
-    public void LoadObjectPeople(string ftw_schema_name)
+    public int LoadObjectPeople(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_people"];
         string srceFields = objectSourceFields["object_people"];
@@ -693,12 +693,13 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_people", " where ", "");
-        _loggingHelper.LogLine($"Loaded records - {res} object people");
+        _loggingHelper.LogLine($"Loaded {res} object people");
         _loggingHelper.LogLine("");
+        return res;
     }
 
     
-    public void LoadObjectOrganisations(string ftw_schema_name)
+    public int LoadObjectOrganisations(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_organisations"];
         string srceFields = objectSourceFields["object_organisations"];
@@ -710,12 +711,13 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_organisations", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object organisations");
+        _loggingHelper.LogLine($"Loaded {res} object organisations");
         _loggingHelper.LogLine("");
+        return res;
     }
 
 
-    public void LoadObjectTopics(string ftw_schema_name)
+    public int LoadObjectTopics(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_topics"];
         string srceFields = objectSourceFields["object_topics"];
@@ -727,12 +729,13 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_topics", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object topics");
+        _loggingHelper.LogLine($"Loaded {res} object topics");
         _loggingHelper.LogLine("");
+        return res;
     }
 
 
-    public void LoadObjectDescriptions(string ftw_schema_name)
+    public int LoadObjectDescriptions(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_descriptions"];
         string srceFields = objectSourceFields["object_descriptions"];
@@ -744,12 +747,13 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_descriptions", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object descriptions");
+        _loggingHelper.LogLine($"Loaded {res} object descriptions");
         _loggingHelper.LogLine("");
+        return res;
     }
 
 
-    public void LoadObjectIdentifiers(string ftw_schema_name)
+    public int LoadObjectIdentifiers(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_identifiers"];
         string srceFields = objectSourceFields["object_identifiers"];
@@ -761,12 +765,13 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_identifiers"," where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object identifiers");
+        _loggingHelper.LogLine($"Loaded {res} object identifiers");
         _loggingHelper.LogLine("");
+        return res;
     }
 
 
-    public void LoadObjectRelationships(string ftw_schema_name)
+    public int LoadObjectRelationships(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_relationships"];
         string srceFields = objectSourceFields["object_relationships"];
@@ -780,12 +785,13 @@ public class ObjectDataTransferrer
         // NEED TO DO UPDATE OF TARGET SEPARATELY
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_relationships", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object relationships");
+        _loggingHelper.LogLine($"Loaded {res} object relationships");
         _loggingHelper.LogLine("");
+        return res;
     }
 
 
-    public void LoadObjectRights(string ftw_schema_name)
+    public int LoadObjectRights(string ftw_schema_name)
     {
         string destFields = objectDestFields["object_rights"];
         string srceFields = objectSourceFields["object_rights"];
@@ -797,8 +803,9 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_rights", " where ", "new objects");
-        _loggingHelper.LogLine($"Loaded records - {res} object rights");
+        _loggingHelper.LogLine($"Loaded {res} object rights");
         _loggingHelper.LogLine("");
+        return res;
     }
     
     public void DropTempObjectIdsTable()

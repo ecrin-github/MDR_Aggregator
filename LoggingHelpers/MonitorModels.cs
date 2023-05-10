@@ -42,8 +42,6 @@ public class Source
 [Table("sf.source_summaries")]
 public class SourceSummary	
 {
-    [Key]
-    public int id { get; set; }
     public int aggregation_event_id { get; set; }
     public DateTime aggregation_datetime { get; set; }
     public string database_name { get; set; }
@@ -82,10 +80,8 @@ public class SourceSummary
 }
 
 [Table("sf.aggregation_summaries")]
-public class AggregationSummary
+public class CoreSummary
 {
-    [Key]
-    public int id { get; set; }
     public int aggregation_event_id { get; set; }
     public DateTime aggregation_datetime { get; set; }
     public int study_recs { get; set; }
@@ -115,7 +111,7 @@ public class AggregationSummary
 
     public int study_object_link_recs { get; set; }
 
-    public AggregationSummary(int _aggregation_event_id)
+    public CoreSummary(int _aggregation_event_id)
     {
         aggregation_event_id = _aggregation_event_id;
         aggregation_datetime = DateTime.Now;

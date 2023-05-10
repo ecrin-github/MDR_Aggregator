@@ -863,8 +863,8 @@ internal class PubmedTransferHelper
                                  DROP TABLE IF EXISTS nk.temp_object_ids;
                                  DROP TABLE IF EXISTS nk.distinct_temp_object_ids;
                                  DROP TABLE IF EXISTS nk.pub_titles;
-                                 DROP TABLE IF EXISTS new_links;
-                                 DROP TABLE IF EXISTS new_pmids;";
+                                 DROP TABLE IF EXISTS nk.new_links;
+                                 DROP TABLE IF EXISTS nk.new_pmids;";
            conn.Execute(sql_string);
     }
 }

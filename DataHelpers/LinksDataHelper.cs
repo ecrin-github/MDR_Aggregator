@@ -1122,8 +1122,8 @@ public class LinksDataHelper
 
     public void AddStudyStudyRelationshipRecords()
     {
-        // Use the study_all_ids to insert the study Ids for the linked 
-        // sources / sd_sids, using  nk.linked_study_groups as the source
+        // Use the study_ids table to insert the study Ids for the linked 
+        // sources / sd_sids, using nk.linked_study_groups as the source
 
         using var conn = new NpgsqlConnection(_aggs_connString);
         string sql_string = @"Insert into st.study_relationships

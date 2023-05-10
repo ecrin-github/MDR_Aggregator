@@ -28,7 +28,7 @@ public interface IMonDataLayer
     void DeleteSameEventSummaryStats(int agg_event_id);
     int GetAggregateRecNum(string table_name, string schema_name, string source_conn_string);
     void StoreSourceSummary(SourceSummary sm);
-    void StoreAggregationSummary(AggregationSummary asm);
+    void StoreCoreSummary(CoreSummary asm);
     void DeleteSameEventObjectStats(int agg_event_id);
     List<AggregationObjectNum> GetObjectTypes(int aggregation_event_id, string dest_conn_string);
     void RecreateStudyStudyLinksTable();

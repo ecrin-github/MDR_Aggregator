@@ -140,7 +140,7 @@ public class StudyLinkBuilder
     public void AddStudyStudyRelationshipRecords()
     {
         // Adds the study relationship records previously created.
-        // But first use the study_all_ids to insert the correct study Ids for the linked sources / sd_sids.
+        // But first use the study_ids table to insert the correct study Ids for the linked sources / sd_sids.
         
         slh.AddStudyStudyRelationshipRecords();
     }

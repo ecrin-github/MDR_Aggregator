@@ -4,6 +4,7 @@ public class DataTransferBuilder
 {
     private readonly Source _source;
     private readonly ILoggingHelper _loggingHelper;
+    private readonly IMonDataLayer _monDatalayer;
     private readonly string _ftw_schema_name;
     private readonly string _source_conn_string;
     private readonly string _dest_conn_string;
@@ -13,14 +14,15 @@ public class DataTransferBuilder
     private readonly int source_id;
 
     public DataTransferBuilder(Source source, string ftw_schema_name, string dest_conn_string, 
-                               ILoggingHelper logginghelper)
+                               IMonDataLayer monDatalayer, ILoggingHelper logginghelper)
     {
         _source = source;
         source_id = _source.id;
+        _source_conn_string = source.db_conn!;   
         
         _loggingHelper = logginghelper;
+        _monDatalayer = monDatalayer;
         _ftw_schema_name = ftw_schema_name;
-        _source_conn_string = source.db_conn!;
         _dest_conn_string = dest_conn_string;
 
         st_tr = new StudyDataTransferrer(_dest_conn_string, _loggingHelper);
@@ -48,21 +50,44 @@ public class DataTransferBuilder
     }
     
 
-    public int TransferStudyData()
+    public int TransferStudyData(SourceSummary srce_summ)
     {
         int study_number = st_tr.LoadStudies(_ftw_schema_name);
-        st_tr.LoadStudyIdentifiers(_ftw_schema_name);
-        st_tr.LoadStudyTitles(_ftw_schema_name);
-        
-        if (_source.has_study_people is true) st_tr.LoadStudyPeople(_ftw_schema_name);
-        if (_source.has_study_organisations is true) st_tr.LoadStudyOrganisations(_ftw_schema_name);
-        if (_source.has_study_topics is true) st_tr.LoadStudyTopics(_ftw_schema_name);
-        if (_source.has_study_conditions is true) st_tr.LoadStudyConditions(_ftw_schema_name);
-        if (_source.has_study_features is true) st_tr.LoadStudyFeatures(_ftw_schema_name);
-        if (_source.has_study_relationships is true) st_tr.LoadStudyRelationShips(_ftw_schema_name);
-        if (_source.has_study_countries is true) st_tr.LoadStudyCountries(_ftw_schema_name);
-        if (_source.has_study_locations is true) st_tr.LoadStudyLocations(_ftw_schema_name);
-        
+        srce_summ.study_recs = study_number;
+        srce_summ.study_identifiers_recs = st_tr.LoadStudyIdentifiers(_ftw_schema_name);
+        srce_summ.study_titles_recs = st_tr.LoadStudyTitles(_ftw_schema_name);
+        if (_source.has_study_people is true)
+        {
+            srce_summ.study_people_recs = st_tr.LoadStudyPeople(_ftw_schema_name);
+        }
+        if (_source.has_study_organisations is true)
+        {
+            srce_summ.study_organisations_recs = st_tr.LoadStudyOrganisations(_ftw_schema_name);
+        }
+        if (_source.has_study_topics is true)
+        {
+            srce_summ.study_topics_recs = st_tr.LoadStudyTopics(_ftw_schema_name);
+        }
+        if (_source.has_study_conditions is true)
+        {
+            srce_summ.study_conditions_recs = st_tr.LoadStudyConditions(_ftw_schema_name);
+        }
+        if (_source.has_study_features is true)
+        {
+            srce_summ.study_features_recs = st_tr.LoadStudyFeatures(_ftw_schema_name);
+        }
+        if (_source.has_study_relationships is true)
+        {
+            srce_summ.study_relationships_recs = st_tr.LoadStudyRelationShips(_ftw_schema_name);
+        }
+        if (_source.has_study_countries is true)
+        {
+            srce_summ.study_countries_recs = st_tr.LoadStudyCountries(_ftw_schema_name);
+        }
+        if (_source.has_study_locations is true)
+        {
+            srce_summ.study_locations_recs = st_tr.LoadStudyLocations(_ftw_schema_name);
+        }
         st_tr.DropTempStudyIdsTable();
         return study_number;
     }
@@ -78,7 +103,7 @@ public class DataTransferBuilder
         _loggingHelper.LogLine($"{res} Object Ids obtained");
         _loggingHelper.LogLine("");
         
-        // Update the object parent ids against the all_ids_studies table.
+        // Update the object parent ids against the study_ids table.
 
         ob_tr.MatchExistingObjectIds(source_id);
         ob_tr.UpdateNewObjectsWithStudyIds(source_id);
@@ -86,7 +111,7 @@ public class DataTransferBuilder
         _loggingHelper.LogLine("");
         
         // Carry out a check for (currently very rare) duplicate objects (i.e. that have been imported
-        // before with the data from another source). [RARE - TO IMPLEMENT]
+        // before with the data from another source). 
         
         ob_tr.CheckNewObjectsForDuplicateTitles(source_id);
         ob_tr.CheckNewObjectsForDuplicateURLs(source_id, _ftw_schema_name);
@@ -172,28 +197,46 @@ public class DataTransferBuilder
     }
 
 
-    public int TransferObjectData()
+    public int TransferObjectData(SourceSummary srce_summ)
     {
         // Add new records where status indicates they are new.
         
         int object_number = ob_tr.LoadDataObjects(_ftw_schema_name);
-        if (_source.has_object_datasets is true) ob_tr.LoadObjectDatasets(_ftw_schema_name);
-        ob_tr.LoadObjectInstances(_ftw_schema_name);
-        ob_tr.LoadObjectTitles(_ftw_schema_name);
-        
-        if (_source.has_object_dates is true) ob_tr.LoadObjectDates(_ftw_schema_name);
-        if (_source.has_object_rights is true) ob_tr.LoadObjectRights(_ftw_schema_name);
-        if (_source.has_object_relationships is true) ob_tr.LoadObjectRelationships(_ftw_schema_name);
+        srce_summ.data_object_recs = object_number;
+        if (_source.has_object_datasets is true)
+        {
+            srce_summ.object_datasets_recs = ob_tr.LoadObjectDatasets(_ftw_schema_name);
+        }
+        srce_summ.object_instances_recs = ob_tr.LoadObjectInstances(_ftw_schema_name);
+        srce_summ.object_titles_recs = ob_tr.LoadObjectTitles(_ftw_schema_name);
+        if (_source.has_object_dates is true)
+        {
+            srce_summ.object_dates_recs = ob_tr.LoadObjectDates(_ftw_schema_name);
+        }
+        if (_source.has_object_rights is true)
+        {
+            srce_summ.object_rights_recs = ob_tr.LoadObjectRights(_ftw_schema_name);
+        }
+        if (_source.has_object_relationships is true)
+        {
+            srce_summ.object_relationships_recs = ob_tr.LoadObjectRelationships(_ftw_schema_name);
+        }
         if (_source.has_object_pubmed_set is true)
         {
-            ob_tr.LoadObjectPeople(_ftw_schema_name);
-            ob_tr.LoadObjectOrganisations(_ftw_schema_name);
-            ob_tr.LoadObjectTopics(_ftw_schema_name);
-            ob_tr.LoadObjectDescriptions(_ftw_schema_name);
-            ob_tr.LoadObjectIdentifiers(_ftw_schema_name);
+            srce_summ.object_people_recs = ob_tr.LoadObjectPeople(_ftw_schema_name);
+            srce_summ.object_organisations_recs = ob_tr.LoadObjectOrganisations(_ftw_schema_name);
+            srce_summ.object_topics_recs = ob_tr.LoadObjectTopics(_ftw_schema_name);
+            srce_summ.object_descriptions_recs = ob_tr.LoadObjectDescriptions(_ftw_schema_name);
+            srce_summ.object_identifiers_recs = ob_tr.LoadObjectIdentifiers(_ftw_schema_name);
         }
         ob_tr.DropTempObjectIdsTable();
         return object_number;
     }
+    
+    public void StoreSourceSummaryStatistics(SourceSummary srce_summ)
+    {
+        _monDatalayer.StoreSourceSummary(srce_summ);
+    }
+    
 }
 

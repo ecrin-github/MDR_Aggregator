@@ -46,9 +46,9 @@ public class MonDataLayer : IMonDataLayer
                            OPTIONS (host 'localhost', dbname 'context');";
         conn.Execute(sql_string);
 
-        sql_string = @"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-                 SERVER context"
-                     + @" OPTIONS (user '" + username + "', password '" + password + "');";
+        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
+                 SERVER context 
+                 OPTIONS (user '{username}', password '{password}');";
         conn.Execute(sql_string);
 
         sql_string = @"DROP SCHEMA IF EXISTS context_lup cascade;
@@ -94,33 +94,37 @@ public class MonDataLayer : IMonDataLayer
                                  schema core;";
         conn.Execute(sql_string);
 
-        sql_string = @"CREATE SERVER IF NOT EXISTS " + database_name
-                                                     + @" FOREIGN DATA WRAPPER postgres_fdw
-                         OPTIONS (host 'localhost', dbname '" + database_name + "');";
+        sql_string = $@"CREATE SERVER IF NOT EXISTS {database_name} FOREIGN DATA WRAPPER postgres_fdw
+                         OPTIONS (host 'localhost', dbname '{database_name}');";
         conn.Execute(sql_string);
 
-        sql_string = @"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-                 SERVER " + database_name
-                          + @" OPTIONS (user '" + username + "', password '" + password + "');";
+        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
+                 SERVER {database_name} OPTIONS (user '{username}', password '{password}');";
         conn.Execute(sql_string);
         string schema_name;
         if (database_name == "mon")
         {
             schema_name = database_name + "_sf";
-            sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
-                 CREATE SCHEMA " + schema_name + @";
+            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+                 CREATE SCHEMA {schema_name};
                  IMPORT FOREIGN SCHEMA sf
-                 FROM SERVER " + database_name +
-                         @" INTO " + schema_name + ";";
+                 FROM SERVER {database_name} INTO {schema_name};";
+        }
+        else if (database_name == "aggs")
+        {
+            schema_name = database_name + "_nk";
+            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+                 CREATE SCHEMA {schema_name};
+                 IMPORT FOREIGN SCHEMA nk
+                 FROM SERVER {database_name} INTO {schema_name};";
         }
         else
         {
             schema_name = database_name + "_ad";
-            sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
-                 CREATE SCHEMA " + schema_name + @";
+            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+                 CREATE SCHEMA {schema_name};
                  IMPORT FOREIGN SCHEMA ad
-                 FROM SERVER " + database_name +
-                         @" INTO " + schema_name + ";";
+                 FROM SERVER {database_name} INTO {schema_name};";
         }
         conn.Execute(sql_string);
         return schema_name;
@@ -166,30 +170,30 @@ public class MonDataLayer : IMonDataLayer
                          OPTIONS (host 'localhost', dbname 'aggs');";
         conn.Execute(sql_string);
 
-        sql_string = @"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-                 SERVER aggs OPTIONS (user '" + username + "', password '" + password + "');";
+        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
+                 SERVER aggs OPTIONS (user '{username}', password '{password}');";
         conn.Execute(sql_string);
         string schema_name;
         
         schema_name = "aggs_st";
-        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
-             CREATE SCHEMA " + schema_name + @";
-             IMPORT FOREIGN SCHEMA sf
-             FROM SERVER aggs INTO " + schema_name + ";";
+        sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+             CREATE SCHEMA {schema_name};
+             IMPORT FOREIGN SCHEMA st
+             FROM SERVER aggs INTO {schema_name};";
         conn.Execute(sql_string);
         
         schema_name = "aggs_ob";
-        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
-             CREATE SCHEMA " + schema_name + @";
-             IMPORT FOREIGN SCHEMA sf
-             FROM SERVER aggs INTO " + schema_name + ";";
+        sql_string =$@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+             CREATE SCHEMA {schema_name};
+             IMPORT FOREIGN SCHEMA ob
+             FROM SERVER aggs INTO {schema_name};";
         conn.Execute(sql_string);
         
         schema_name = "aggs_nk";
-        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name + @" cascade;
-             CREATE SCHEMA " + schema_name + @";
-             IMPORT FOREIGN SCHEMA sf
-             FROM SERVER aggs INTO " + schema_name + ";";
+        sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+             CREATE SCHEMA {schema_name};
+             IMPORT FOREIGN SCHEMA nk
+             FROM SERVER aggs INTO {schema_name};";
         conn.Execute(sql_string);
     }
 
@@ -316,7 +320,7 @@ public class MonDataLayer : IMonDataLayer
     }
 
 
-    public void StoreAggregationSummary(AggregationSummary asm)
+    public void StoreCoreSummary(CoreSummary asm)
     {
         using var conn = new NpgsqlConnection(monConnString);
         conn.Insert(asm);
@@ -338,7 +342,7 @@ public class MonDataLayer : IMonDataLayer
                 d.object_type_id, 
                 t.name as object_type_name,
                 count(d.id) as number_of_type
-                from ob.data_objects d
+                from core.data_objects d
                 inner join context_lup.object_types t
                 on d.object_type_id = t.id
                 group by object_type_id, t.name
@@ -375,7 +379,7 @@ public class MonDataLayer : IMonDataLayer
                 k.preferred_source_id as other_source_id,
                 d2.default_name as other_source_name,
                 count(preferred_sd_sid) as number_in_other_source
-                from nk.study_study_links k
+                from aggs_nk.study_study_links k
                 inner join context_ctx.data_sources d1
                 on k.source_id = d1.id
                 inner join context_ctx.data_sources d2
@@ -389,17 +393,17 @@ public class MonDataLayer : IMonDataLayer
     public List<StudyStudyLinkData> GetStudyStudyLinkData2(int aggregation_event_id, string dest_conn_string)
     {
         string sql_string = @"SELECT 
-                    k.preferred_source_id as source_id, 
-                    d2.repo_name as source_name,
-                    k.source_id as other_source_id,
-                    d1.repo_name as other_source_name,
-                    count(sd_sid) as number_in_other_source
-                    from nk.study_study_links k
-                    inner join mon_sf.source_parameters d1
-                    on k.source_id = d1.id
-                    inner join mon_sf.source_parameters d2
-                    on k.preferred_source_id = d2.id
-                    group by preferred_source_id, source_id, d2.repo_name, d1.repo_name;";
+              k.preferred_source_id as source_id, 
+              d2.default_name as source_name,
+              k.source_id as other_source_id,
+              d1.default_name as other_source_name,
+              count(sd_sid) as number_in_other_source
+              from aggs_nk.study_study_links k
+              inner join context_ctx.data_sources d1
+              on k.source_id = d1.id
+              inner join context_ctx.data_sources d2
+              on k.preferred_source_id = d2.id
+             group by preferred_source_id, source_id, d2.default_name, d1.default_name;";
 
         using var conn = new NpgsqlConnection(dest_conn_string);
         return conn.Query<StudyStudyLinkData>(sql_string).ToList();
