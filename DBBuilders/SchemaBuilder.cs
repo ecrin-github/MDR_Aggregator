@@ -53,11 +53,11 @@ public class SchemaBuilder
         object_tablebuilder.create_table_object_identifiers();
     }
 
-
     public void BuildNewLinkTables()
     {
         link_tablebuilder.create_table_linked_study_groups();
         link_tablebuilder.create_table_study_object_links();
         link_tablebuilder.create_table_study_study_links();
     }
+    
 }

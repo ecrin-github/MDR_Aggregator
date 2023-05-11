@@ -2,6 +2,7 @@
 
 public interface ILoggingHelper
 {
+    void OpenFile(string[] args);
     void LogLine(string message, string identifier = "");
     void LogHeader(string header_text);
     void LogError(string message);
@@ -10,5 +11,7 @@ public interface ILoggingHelper
     void CloseLog();
     void LogCommandLineParameters(Options opts);
     void LogStudyHeader(string leadText, string studyName);
+    void LogSummaryStatistics(CoreSummary summ);
+    void LogDataObjectTypeStatistics(int lastAggEventId);
 }
 

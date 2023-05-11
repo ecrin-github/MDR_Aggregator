@@ -143,9 +143,14 @@ internal class PubmedTransferHelper
                     WHERE parent_study_source_id = 100116
                     AND length(parent_study_sd_sid) = 14;";
         conn.Execute(sql_string);
-
+        
         sql_string = @"UPDATE nk.temp_pmids
                     SET parent_study_sd_sid = Replace(parent_study_sd_sid, ' ', '')
+                    WHERE parent_study_source_id = 100116;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                    SET parent_study_sd_sid = Replace(parent_study_sd_sid, 'O', '')
                     WHERE parent_study_source_id = 100116;";
         conn.Execute(sql_string);
 
@@ -163,7 +168,25 @@ internal class PubmedTransferHelper
                     SET parent_study_sd_sid = Replace(parent_study_sd_sid, '[', '')
                     WHERE parent_study_source_id = 100116;";
         conn.Execute(sql_string);
-
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                    SET parent_study_sd_sid = substring(parent_study_sd_sid, 1, 19)
+                    WHERE parent_study_source_id = 100116
+                    AND parent_study_sd_sid like 'ACTRN%'
+                    AND length(parent_study_sd_sid) > 19;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                    SET parent_study_source_id = 100126,
+                    parent_study_sd_sid = Replace(parent_study_sd_sid, 'ACTRN', '')
+                    WHERE parent_study_source_id = 100116
+                    AND parent_study_sd_sid like 'ACTRNISRCTN%';";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                    SET parent_study_sd_sid = Replace(parent_study_sd_sid, '--', '-')
+                    WHERE parent_study_source_id = 100118;";
+        conn.Execute(sql_string);
 
         sql_string = @"UPDATE nk.temp_pmids
                     SET parent_study_sd_sid = Replace(parent_study_sd_sid, 'CHICTR', 'ChiCTR')
@@ -180,14 +203,73 @@ internal class PubmedTransferHelper
                     SET parent_study_sd_sid = Replace(parent_study_sd_sid, 'ChiCTR-ChiCTR', 'ChiCTR-')
                     WHERE parent_study_source_id = 100118;";
         conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                    SET parent_study_sd_sid = Replace(parent_study_sd_sid, '-', '')
+                    WHERE parent_study_source_id = 100118
+                    and parent_study_sd_sid ~'^ChiCTR-\d{10}$' ;";
+       conn.Execute(sql_string);
+       
+       sql_string = @"UPDATE nk.temp_pmids
+                    SET parent_study_source_id = 100120,
+                    parent_study_sd_sid = regexp_match(parent_study_sd_sid, 'NCT\d{8}')
+                    WHERE parent_study_source_id = 100118
+                    and parent_study_sd_sid ~'-NCT\d{8}' ;";
+       conn.Execute(sql_string);
     }
 
     private void CleanPMIDsdsidData2()
     {
         using var conn = new NpgsqlConnection(_connString);
-        string sql_string = @"UPDATE nk.temp_pmids
+        string sql_string = @"UPDATE nk.temp_pmids p
+                 SET parent_study_sd_sid = new_id
+                 FROM nk.ctg_id_checker k
+                 WHERE p.parent_study_sd_sid = k.old_id
+                 and parent_study_source_id = 100120;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                 SET parent_study_sd_sid = Replace(parent_study_sd_sid, '}', '')
+                 WHERE parent_study_source_id = 100120;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                 SET parent_study_sd_sid = Replace(parent_study_sd_sid, '{', '')
+                 WHERE parent_study_source_id = 100120;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                 SET parent_study_sd_sid = Replace(parent_study_sd_sid, ' ', '')
+                 WHERE parent_study_source_id = 100120;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                 SET parent_study_sd_sid = Replace(parent_study_sd_sid, '.', '')
+                 WHERE parent_study_source_id = 100120;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                 SET parent_study_sd_sid = Replace(parent_study_sd_sid, ')', '')
+                 WHERE parent_study_source_id = 100120;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids p
+                 SET parent_study_sd_sid = regexp_match(parent_study_sd_sid, 'NCT\d{8}')
+                 WHERE p.parent_study_sd_sid ilike '%clinicaltrials%'
+                 AND  p.parent_study_sd_sid ilike '%nct%'
+                 and parent_study_source_id = 100120;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
                  SET parent_study_sd_sid = Replace(parent_study_sd_sid, '/', '-')
                  WHERE parent_study_source_id = 100121;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+                 SET parent_study_source_id = 100121,
+                 parent_study_sd_sid = Replace(parent_study_sd_sid, '/', '-')
+                 WHERE parent_study_sd_sid like 'CTRI%'
+                 and parent_study_sd_sid like '%/%';";
         conn.Execute(sql_string);
 
         sql_string = @"UPDATE nk.temp_pmids
@@ -290,13 +372,11 @@ internal class PubmedTransferHelper
                and parent_study_sd_sid not ilike 'DRKS%';";
         conn.Execute(sql_string);
 
-
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = 'IRCT' || parent_study_sd_sid
                WHERE parent_study_source_id = 100125
                and parent_study_sd_sid not ilike 'IRCT%';";
         conn.Execute(sql_string);
-
         
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = replace(parent_study_sd_sid, 'SRCTN', 'ISRCTN')
@@ -304,6 +384,16 @@ internal class PubmedTransferHelper
                and parent_study_sd_sid ilike 'SRCTN%';";
         conn.Execute(sql_string);
 
+        sql_string = @"UPDATE nk.temp_pmids
+               SET parent_study_sd_sid = replace(parent_study_sd_sid, '.', '')
+               WHERE parent_study_source_id = 100126;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+               SET parent_study_sd_sid = replace(parent_study_sd_sid, ',', '')
+               WHERE parent_study_source_id = 100126;";
+        conn.Execute(sql_string);
+        
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = replace(parent_study_sd_sid, 'ISRTN', 'ISRCTN')
                WHERE parent_study_source_id = 100126;";
@@ -319,7 +409,17 @@ internal class PubmedTransferHelper
                WHERE parent_study_source_id = 100126
                and parent_study_sd_sid not ilike 'ISRCTN%';";
         conn.Execute(sql_string);
-
+        
+        sql_string = @"UPDATE nk.temp_pmids
+               SET parent_study_sd_sid = replace(parent_study_sd_sid, 'ISRCTNISCRTN', 'ISRCTN')
+               WHERE parent_study_source_id = 100126;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+               SET parent_study_sd_sid = replace(parent_study_sd_sid, 'ISRCTNISCTRN', 'ISRCTN')
+               WHERE parent_study_source_id = 100126;";
+        conn.Execute(sql_string);
+        
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = replace(parent_study_sd_sid, ' ', '')
                WHERE parent_study_source_id = 100126;";
@@ -338,6 +438,30 @@ internal class PubmedTransferHelper
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = replace(parent_study_sd_sid, ':', '')
                WHERE parent_study_source_id = 100126;";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+               SET source_id = 100126,
+               parent_study_sd_sid = replace(parent_study_sd_sid, 'ACTN', '')
+               WHERE parent_study_sd_sid like 'ACTNISRCTN%'; ";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+               SET parent_study_source_id = 100125,
+               parent_study_sd_sid = replace(parent_study_sd_sid, 'ISRCTN', '')
+               WHERE parent_study_sd_sid like '%IRCTISRCTN%';";
+        conn.Execute(sql_string);
+
+        sql_string = @"UPDATE nk.temp_pmids
+               SET parent_study_source_id = 100126,
+               parent_study_sd_sid = replace(parent_study_sd_sid, 'IRCT', '')
+               WHERE parent_study_sd_sid like '%ISRCTNIRCT%';";
+        conn.Execute(sql_string);
+        
+        sql_string = @"UPDATE nk.temp_pmids
+               SET parent_study_source_id = 100127,
+               parent_study_sd_sid = 'JPRN-' || parent_study_sd_sid
+               WHERE parent_study_sd_sid like 'UMIN%'; ";
         conn.Execute(sql_string);
     }
     
@@ -390,7 +514,13 @@ internal class PubmedTransferHelper
                and parent_study_sd_sid not ilike 'TCTR%';";
         conn.Execute(sql_string);
 
-
+        sql_string = @"UPDATE nk.temp_pmids p
+                 SET parent_study_sd_sid = new_id
+                 FROM nk.dutch_id_checker k
+                 WHERE p.parent_study_sd_sid = k.old_id
+                 and parent_study_source_id = 100132;";
+        conn.Execute(sql_string);
+        
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = replace(parent_study_sd_sid, 'NTRR', 'NTR')
                WHERE parent_study_source_id = 100132;";
@@ -461,7 +591,7 @@ internal class PubmedTransferHelper
            try
            {
                   ulong stored = 0;
-                  sql_string = $@"select {source_id}, pmid as sd_oid, 
+                  sql_string = $@"select {source_id} as source_id, pmid as sd_oid, 
                         source_id as parent_study_source_id,
                         sd_sid as parent_study_sd_sid, 
                         type_id, datetime_of_data_fetch
@@ -525,11 +655,12 @@ internal class PubmedTransferHelper
                 and t.parent_study_sd_sid = si.sd_sid ";
 
         int res = db.Update_UsingTempTable("nk.temp_object_ids", "nk.temp_object_ids", sql_string, " and "
-                               , 50000, ", with parent study and is preferred status ");
+                               , 50000, ", with parent study and is preferred status");
         _loggingHelper.LogLine($"{res} parent studies matched in temp PMID table");
 
         // Some pubmed entries are not matched, as the ids in the pubmed bank
-        // data are still non-standard, or refer to obsolete ids (about 2500 in total)
+        // data are still non-standard, or refer to obsolete ids (about 4600 in total)
+        // Possibly put this up to the banks id section as all the DB references should be matched
 
         sql_string = @"DELETE from nk.temp_object_ids t
                    where t.parent_study_id is null;";
@@ -781,7 +912,7 @@ internal class PubmedTransferHelper
         res = db.ExecuteSQL(sql_string);
         _loggingHelper.LogLine($"{res} objects set as 'non-preferred' for new PMIDs");
 
-        // Add in the preferred new PMID records.
+        // Add in the preferred new PMID records. Note that the match status (3) is included.
 
         sql_string = @"Insert into nk.data_object_ids
         (source_id, sd_oid, object_type_id, title, is_preferred_object,
@@ -799,7 +930,7 @@ internal class PubmedTransferHelper
          res = db.ExecuteSQL(sql_string);
          _loggingHelper.LogLine($"{res} new 'preferred' PMID-study combinations added for new PMIDs");
 
-         // Update newly added records with object ids.
+         // Update newly added records with object ids, if the 'preferred' object record.
 
          sql_string = @"Update nk.data_object_ids doi
                         set object_id = id
@@ -824,7 +955,7 @@ internal class PubmedTransferHelper
                                         , 50000, ", with object ids, for new pubmed-study combinations");
         _loggingHelper.LogLine($"{res} object ids applied to new PMIDs and 'non-preferred' objects");
 
-        // Add remaining matching study-PMIDs records.
+        // Add remaining matching study-PMIDs records. Note object_id is included in the add this time.
 
         sql_string = @"Insert into nk.data_object_ids
         (object_id, source_id, sd_oid, object_type_id, title, is_preferred_object,

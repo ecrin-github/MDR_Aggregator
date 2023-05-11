@@ -1,5 +1,5 @@
 ﻿namespace MDR_Aggregator;
-
+ 
 public class Aggregator
 {
     private readonly ILoggingHelper _loggingHelper;
@@ -97,13 +97,14 @@ public class Aggregator
                     }
                     else
                     {
-                        ftw_schema_name = _monDatalayer.SetUpTempFTW(_credentials, db_name, agg_conn_string);
+                        ftw_schema_name = _monDatalayer.SetUpTempCoreFTW(_credentials, db_name, agg_conn_string);
                     }
 
                     _loggingHelper.LogStudyHeader("Aggregating", db_name);
                     DataTransferBuilder tb = new DataTransferBuilder(source, ftw_schema_name, 
                                                  agg_conn_string, _monDatalayer, _loggingHelper);
                     SourceSummary srce_summ = new (agg_event_id, db_name);
+                    
                     if (source.has_study_tables is true)
                     {
                         _loggingHelper.LogHeader("Process study Ids");
@@ -125,7 +126,7 @@ public class Aggregator
                         tb.StoreSourceSummaryStatistics(srce_summ);
                     }
 
-                    _monDatalayer.DropTempFTW(db_name, agg_conn_string);
+                    _monDatalayer.DropTempCoreFTW(db_name, agg_conn_string);
                 }
 
                 // Also use the study groups data to insert additional study_relationship records.
@@ -139,7 +140,7 @@ public class Aggregator
 
                 agg_event.num_total_studies = _monDatalayer.GetAggregateRecNum("studies", "st", agg_conn_string);
                 agg_event.num_total_objects = _monDatalayer.GetAggregateRecNum("data_objects", "ob", agg_conn_string);
-                agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_objects_ids", 
+                agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_object_ids", 
                                                                                       "nk", agg_conn_string);
 
                 if (!opts.testing)
@@ -154,10 +155,10 @@ public class Aggregator
                 // Create core tables and establish necessary additional foreign tables for transfer.
 
                 CoreBuilder cb = new CoreBuilder(core_conn_string, _loggingHelper);
-                // cb.BuildNewCoreTables();
+                cb.BuildNewCoreTables();
                 _loggingHelper.LogLine("Core tables recreated");
                 _monDatalayer.SetUpTempAggsFTW(_credentials, core_conn_string);
-                _monDatalayer.SetUpTempFTW(_credentials, "mon", core_conn_string);
+                _monDatalayer.SetUpTempCoreFTW(_credentials, "mon", core_conn_string);
                 _loggingHelper.LogLine("FTW tables recreated");
                 
                 // Transfer data to core tables
@@ -177,9 +178,7 @@ public class Aggregator
                 ctb.GenerateProvenanceData(); 
                 _loggingHelper.LogHeader("Generating provenance data");
                 
-                // Do summary statistics
-                
-                _loggingHelper.LogHeader("SUMMARY STATISTICS");
+                // Store summary statistics
  
                 ctb.StoreCoreSummaryStatistics(core_summ);
                 ctb.StoreDataObjectStatistics(last_agg_event_id);
@@ -188,7 +187,7 @@ public class Aggregator
                 // Drop FTW schemas.
                 
                 _monDatalayer.DropTempAggsFTW(core_conn_string);
-                _monDatalayer.DropTempFTW("mon", core_conn_string);
+                _monDatalayer.DropTempCoreFTW("mon", core_conn_string);
                 _loggingHelper.LogLine("FTW tables dropped");
             }
 
@@ -204,55 +203,67 @@ public class Aggregator
                 csb.CreateStudyTextSearchData();
             }
 
+
+            if (opts.do_statistics)
+            {
+                // Find last agg event id. Use that to locate and write out most recent
+                // aggregate summary record to log, and then to obtain and write out breakdown 
+                // of data objects, and study-study links.
+               
+                CoreSummary? core_summ = _monDatalayer.GetLatestCoreSummary();
+                if (core_summ is not null)
+                {
+                    _loggingHelper.LogHeader("TABLE RECORD NUMBERS");
+                    _loggingHelper.LogSummaryStatistics(core_summ);
+                }
+
+                List<AggregationObjectNum>? objectNumbers = _monDatalayer.GetLatestObjectNumbers();
+                if (objectNumbers?.Any() is true)
+                {
+                    int small_cats = 0;
+                    _loggingHelper.LogHeader("OBJECT TYPE NUMBERS");
+                    foreach (AggregationObjectNum a in objectNumbers)
+                    {
+                        if (a.number_of_type >= 30)
+                        {
+                            _loggingHelper.LogLine($"\t{a.object_type_id}\t{a.object_type_name}: {a.number_of_type:n0}");
+                        }
+                        else
+                        {
+                            small_cats += a.number_of_type;
+                        }
+                    }
+                    _loggingHelper.LogLine($"\tXX\tTotal of smaller categories (n<30): {small_cats:n0}");
+                }
+            }
             
+
             if (opts.do_iec)
             {
                 // Get connection string for destination DB and re-establish IEC tables 
                 
-                _loggingHelper.LogHeader("Establishing IEC tables");
-                //IECSchemaBuilder sb = new SchemaBuilder(dest_conn_string);
-                //sb.BuildNewIECTables();
+                string dest_conn_string = _credentials.GetConnectionString("iec", opts.testing);
+                IECTransferrer ieh = new IECTransferrer(dest_conn_string, _loggingHelper);
+                ieh.BuildNewIECTables();
                 _loggingHelper.LogLine("IEC tables recreated");
-
-                // construct the aggregation event record  (??)
                 AggregationEvent agg_event = new AggregationEvent(agg_event_id);
-                
-                // Loop through the study sources (in preference order)
-                // N.B. Study links table already obtained.
-                // In each case establish and then drop the source tables   
-                // in a foreign table wrapper
 
-                int num_studies_imported = 0;
+                // Get a list of sources that have IEC data, and transfer the data from each one. Use the 
+                // source's db_conn property for the FTW schema name, which will be in the form <db_name>_ad.
                 
-                List<Source> sources = _monDatalayer.RetrieveDataSources()
-                    .OrderBy(s => s.preference_rating).ToList();
+                IEnumerable<Source> sources = _monDatalayer.RetrieveIECDataSources();
                 _loggingHelper.LogLine("Sources obtained");
-
                 foreach (Source source in sources)
                 {
-                    string source_conn_string = _credentials.GetConnectionString(source.database_name!, opts.testing);
-                    source.db_conn = source_conn_string;
-
-                    // in normal (non-testing) environment, schema name references the ad tables in a FTW
-                    // - i.e. <db name>_ad. Credentials are here to get the connection string for the source
-                    // database. In a testing environment source schema name will simply be 'ad', and the
-                    // ad table data all has to be transferred from adcomp before each source transfer...
-                   
-                    string schema_name = _monDatalayer.SetUpTempFTW(_credentials, 
-                                              source.database_name!, core_conn_string);
-                    
-                    //IECTransferBuilder iecb = new IECTransferBuilder(source, schema_name, 
-                    //                                 dest_conn_string, _loggingHelper);
-                    //if (source.has_study_tables is true)
-                    //{
-                    //    iecb.ProcessStudyIds();
-                    //    num_studies_imported += iecb.TransferStudyData();
-                    //}
-                    
-                    // update statistics about aggregation
-                    agg_event.num_studies_imported = num_studies_imported;
-                    _monDatalayer.StoreAggregationEvent(agg_event);
-                }
+                    source.db_conn = _monDatalayer.SetUpTempIECFTW(_credentials, 
+                                         source.database_name!, dest_conn_string);
+                    ieh.TransferIECData(source);
+                    _monDatalayer.DropTempIECFTW(source.database_name!, dest_conn_string);
+                }  
+                
+                // update statistics about aggregation (?)
+                
+                _monDatalayer.StoreAggregationEvent(agg_event);
             }
             
             

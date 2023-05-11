@@ -692,7 +692,7 @@ public class ObjectDataTransferrer
         INNER JOIN nk.temp_objects_to_add t
         on s.sd_oid = t.sd_oid ";
 
-        int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_people", " where ", "");
+        int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_people", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object people");
         _loggingHelper.LogLine("");
         return res;

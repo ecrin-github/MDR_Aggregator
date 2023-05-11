@@ -2,7 +2,8 @@
   "profiles": {
     "MDR_Aggregator": {
       "commandName": "Project",
-      "commandLineArgs": "-S"
+      "commandLineArgs": "-C -S"
     }
   }
 } 
+ 

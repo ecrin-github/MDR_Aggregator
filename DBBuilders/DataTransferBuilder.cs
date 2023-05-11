@@ -145,7 +145,7 @@ public class DataTransferBuilder
             PubmedTransferHelper pm_tr = new PubmedTransferHelper(_ftw_schema_name, _dest_conn_string, _loggingHelper);
             pm_tr.SetupTempPMIDTables();
             
-            int res = pm_tr.FetchBankReferences(_source.id, _ftw_schema_name);
+            int res = pm_tr.FetchBankReferences(source_id, _ftw_schema_name);
             _loggingHelper.LogLine($"{res} PMID Ids obtained from PMID 'bank' data");
             
             // study ids referenced in PubMed data often poorly formed and need cleaning
@@ -158,7 +158,8 @@ public class DataTransferBuilder
             // This holds all known trial registry sourced references, most of which have PMIDs. There is no 
             // to recapture it - it should always reflect the state of the DBs during the most recent download.
 
-            ulong res2 = pm_tr.FetchSourceReferences(_source.id, _source_conn_string);
+            
+            ulong res2 = pm_tr.FetchSourceReferences(source_id, _source_conn_string);
             _loggingHelper.LogLine($"{res2} PMID Ids obtained from DB sources");
             _loggingHelper.LogLine("");
             

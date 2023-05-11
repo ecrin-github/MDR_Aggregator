@@ -84,13 +84,13 @@ public class MonDataLayer : IMonDataLayer
     }
 
 
-    public string SetUpTempFTW(ICredentials credentials, string database_name, string dbConnString)
+    public string SetUpTempCoreFTW(ICredentials credentials, string database_name, string dbConnString)
     {
         using var conn = new NpgsqlConnection(dbConnString);
         string username = credentials.Username;
         string password = credentials.Password;     
             
-        string sql_string = @"CREATE EXTENSION IF NOT EXISTS postgres_fdw
+        string sql_string = $@"CREATE EXTENSION IF NOT EXISTS postgres_fdw
                                  schema core;";
         conn.Execute(sql_string);
 
@@ -130,8 +130,78 @@ public class MonDataLayer : IMonDataLayer
         return schema_name;
     }
 
+    public string SetUpTempIECFTW(ICredentials credentials, string database_name, string dbConnString)
+    {
+        using var conn = new NpgsqlConnection(dbConnString);
+        string username = credentials.Username;
+        string password = credentials.Password;     
+            
+        string sql_string = $@"CREATE EXTENSION IF NOT EXISTS postgres_fdw
+                                 schema ad;";
+        conn.Execute(sql_string);
 
-    public void DropTempFTW(string database_name, string dbConnString)
+        sql_string = $@"CREATE SERVER IF NOT EXISTS {database_name} FOREIGN DATA WRAPPER postgres_fdw
+                         OPTIONS (host 'localhost', dbname '{database_name}');";
+        conn.Execute(sql_string);
+
+        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
+                 SERVER {database_name} OPTIONS (user '{username}', password '{password}');";
+        conn.Execute(sql_string);
+        string schema_name;
+        if (database_name == "mon")
+        {
+            schema_name = database_name + "_sf";
+            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+                 CREATE SCHEMA {schema_name};
+                 IMPORT FOREIGN SCHEMA sf
+                 FROM SERVER {database_name} INTO {schema_name};";
+        }
+        else if (database_name == "aggs")
+        {
+            schema_name = database_name + "_nk";
+            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+                 CREATE SCHEMA {schema_name};
+                 IMPORT FOREIGN SCHEMA nk
+                 FROM SERVER {database_name} INTO {schema_name};";
+        }
+        else
+        {
+            schema_name = database_name + "_ad";
+            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
+                 CREATE SCHEMA {schema_name};
+                 IMPORT FOREIGN SCHEMA ad
+                 FROM SERVER {database_name} INTO {schema_name};";
+        }
+        conn.Execute(sql_string);
+        return schema_name;
+    }
+    
+    public void DropTempIECFTW(string database_name, string dbConnString)
+    {
+        using var conn = new NpgsqlConnection(dbConnString);
+        string schema_name;
+        if (database_name == "mon")
+        {
+            schema_name = database_name + "_sf";
+        }
+        else
+        {
+            schema_name = database_name + "_ad";
+        }
+
+        string sql_string = @"DROP USER MAPPING IF EXISTS FOR CURRENT_USER
+                 SERVER " + database_name + ";";
+        conn.Execute(sql_string);
+
+        sql_string = @"DROP SERVER IF EXISTS " + database_name + " CASCADE;";
+        conn.Execute(sql_string);
+
+        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name;
+        conn.Execute(sql_string);
+    }
+    
+    
+    public void DropTempCoreFTW(string database_name, string dbConnString)
     {
         using var conn = new NpgsqlConnection(dbConnString);
         string schema_name;
@@ -235,7 +305,36 @@ public class MonDataLayer : IMonDataLayer
         return last_id ?? 0;
     }
 
+    public CoreSummary? GetLatestCoreSummary()
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);
+        string sql_string = "select max(aggregation_event_id) from sf.aggregation_summaries ";
+        int? last_id = Conn.ExecuteScalar<int?>(sql_string);
+        if (last_id.HasValue)
+        {
+            sql_string = $@"select * from sf.aggregation_summaries 
+                               where aggregation_event_id = {last_id}";
+            return Conn.Query<CoreSummary?>(sql_string).FirstOrDefault();
+        }
+        return null;  // as a fallback
 
+    }
+
+    public List<AggregationObjectNum>? GetLatestObjectNumbers()
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);
+        string sql_string = "select max(aggregation_event_id) from sf.aggregation_object_numbers ";
+        int? last_id = Conn.ExecuteScalar<int?>(sql_string);
+        if (last_id.HasValue)
+        {
+            sql_string = $@"select * from sf.aggregation_object_numbers
+                               where aggregation_event_id = {last_id}
+                               order by number_of_type desc";
+            return Conn.Query<AggregationObjectNum>(sql_string)?.ToList();
+        }
+        return null;  // as a fallback
+    }
+    
     public int StoreAggregationEvent(AggregationEvent aggregation)
     {
         aggregation.time_ended = DateTime.Now;
@@ -246,7 +345,7 @@ public class MonDataLayer : IMonDataLayer
 
     public IEnumerable<Source> RetrieveDataSources()
     {
-        string sql_string = @"select id, preference_rating, database_name, 
+        string sql_string = @"select id, preference_rating, database_name, study_iec_storage_type,
                               has_study_tables,	has_study_topics, has_study_conditions, has_study_features,
                               has_study_people, has_study_organisations, 
                               has_study_references, has_study_relationships,
@@ -261,7 +360,21 @@ public class MonDataLayer : IMonDataLayer
         return conn.Query<Source>(sql_string);
     }
 
-   
+    public IEnumerable<Source> RetrieveIECDataSources()
+    {
+        string sql_string = @"select id, preference_rating, database_name, study_iec_storage_type,
+                              has_study_tables,	has_study_topics, has_study_conditions, has_study_features,
+                              has_study_people, has_study_organisations, 
+                              has_study_references, has_study_relationships,
+                              has_study_countries, has_study_locations,
+                              has_object_datasets, has_object_dates, has_object_rights,
+                              has_object_relationships, has_object_pubmed_set 
+                            from sf.source_parameters
+                            where study_iec_storage_type <> 'n/a';";
+        
+        using var conn = new NpgsqlConnection(monConnString);
+        return conn.Query<Source>(sql_string);
+    }
 
     public void DeleteSameEventDBStats(int agg_event_id)
     {
@@ -274,18 +387,6 @@ public class MonDataLayer : IMonDataLayer
 
     public int GetRecNum(string table_name, string source_conn_string)
     {
-        /*
-        string test_string = "SELECT to_regclass('ad." + table_name + "')::varchar";
-        string table_exists;
-        using (var conn = new NpgsqlConnection(source_conn_string))
-        {
-            table_exists = conn.ExecuteScalar<string>(test_string);
-        }
-        if (table_exists == null)
-        {
-            return 0;
-        }
-        */
         string sql_string = "SELECT count(*) from ad." + table_name;
         int? rec_num;
         using (var conn = new NpgsqlConnection(source_conn_string))

@@ -18,6 +18,7 @@ public class Source
     public bool? local_files_grouped { get; }
     public int? grouping_range_by_id { get; }
     public string? local_file_prefix { get; }
+    public string? study_iec_storage_type { get; }
     public bool? has_study_tables { get; }
     public bool? has_study_topics { get; }
     public bool? has_study_conditions { get; }
@@ -82,6 +83,8 @@ public class SourceSummary
 [Table("sf.aggregation_summaries")]
 public class CoreSummary
 {
+    [Key]
+    public int id { get; set; }
     public int aggregation_event_id { get; set; }
     public DateTime aggregation_datetime { get; set; }
     public int study_recs { get; set; }
@@ -108,9 +111,12 @@ public class CoreSummary
     public int object_descriptions_recs { get; set; }
     public int object_rights_recs { get; set; }
     public int object_relationships_recs { get; set; }
-
     public int study_object_link_recs { get; set; }
 
+    public CoreSummary()
+    {
+    }
+    
     public CoreSummary(int _aggregation_event_id)
     {
         aggregation_event_id = _aggregation_event_id;
@@ -178,6 +184,5 @@ public class DataSource
         id = _id;
         preference_rating = _preference_rating;
         database_name = _database_name;
-
     }
 }

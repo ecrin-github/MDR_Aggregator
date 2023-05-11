@@ -3,9 +3,11 @@ namespace MDR_Aggregator;
 
 public class LoggingHelper : ILoggingHelper
 {
-    private readonly string _logfilePath;
-    private readonly string _summaryLogfilePath;
-    private readonly StreamWriter? _sw;
+    private readonly string _logFileStartOfPath;
+    private readonly string _summaryLogFileStartOfPath;    
+    private string? _logFilePath;    
+    private string? _summaryLogFilePath;
+    private StreamWriter? _sw;
     
     public LoggingHelper()
     {
@@ -14,29 +16,36 @@ public class LoggingHelper : ILoggingHelper
             .AddJsonFile("appsettings.json")
             .Build();
 
-        string logfileStartOfPath = settings["logFileStartOfPath"] ?? "";
-        string summaryLogfileStartOfPath = settings["summaryFileStartOfPath"] ?? "";
-        
+        _logFileStartOfPath = settings["logFileStartOfPath"] ?? "";
+        _summaryLogFileStartOfPath = settings["summaryFileStartOfPath"] ?? "";
+    }
+    
+    public void OpenFile(string[] args)
+    {
         string dtString = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture)
             .Replace(":", "").Replace("T", " ");
 
-        string logFolderPath = Path.Combine(logfileStartOfPath, "aggs");
+        string logFolderPath = Path.Combine(_logFileStartOfPath, "aggs");
         if (!Directory.Exists(logFolderPath))
         {
             Directory.CreateDirectory(logFolderPath);
         }
+
+        string logFileName = "AG ";
+        if (args.Any())
+        {
+            foreach (string t in args)
+            {
+                logFileName += t + " ";
+            }
+        }
         
-        string logFileName = "AG " + dtString + ".log";
-        _logfilePath = Path.Combine(logFolderPath, logFileName);
-        _summaryLogfilePath = Path.Combine(summaryLogfileStartOfPath, logFileName);
-        _sw = new StreamWriter(_logfilePath, true, System.Text.Encoding.UTF8);
+        logFileName += dtString + ".log";
+        _logFilePath = Path.Combine(logFolderPath, logFileName);
+        _summaryLogFilePath = Path.Combine(_summaryLogFileStartOfPath, logFileName);
+        _sw = new StreamWriter(_logFilePath, true, System.Text.Encoding.UTF8);
     }
 
-    // Used to check if a log file with a named source has been created.
-
-    public string LogFilePath => _logfilePath;
-   
-    
     public void LogCommandLineParameters(Options opts)
     {
         LogHeader("Setup");
@@ -117,77 +126,62 @@ public class LoggingHelper : ILoggingHelper
         Transmit(error_message);
     }
 
-/*
-    public void LogTableStatistics(Source s, string schema)
+
+    public void LogSummaryStatistics(CoreSummary summ)
     {
-        // Gets and logs record count for each table in the sd schema of the database
-        // Start by obtaining the connection string, then construct log line for each by 
-        // calling db interrogation for each applicable table
-        string db_conn = s.db_conn ?? "";
-
-        LogLine("");
-        LogLine("TABLE RECORD NUMBERS");
-
-        if (s.has_study_tables is true)
-        {
-            LogHeader("study tables");
-            LogLine("");
-            LogLine(StudyTableSummary(db_conn, schema, "studies", false));
-            LogLine(StudyTableSummary(db_conn, schema, "study_identifiers"));
-            LogLine(StudyTableSummary(db_conn, schema, "study_titles"));
-
-            // These are database dependent.
+        // Logs the record count for each table in the core schema
+        
+        LogHeader("study tables");
+        LogLine($"Studies: {summ.study_recs:n0}");
+        LogLine($"Study Identifiers: {summ.study_identifiers_recs:n0}");
+        LogLine($"Study Titles: {summ.study_titles_recs:n0}");
             
-            if (s.has_study_topics is true) LogLine(StudyTableSummary(db_conn, schema, "study_topics"));
-            if (s.has_study_features is true) LogLine(StudyTableSummary(db_conn, schema, "study_features"));
-            if (s.has_study_conditions is true) LogLine(StudyTableSummary(db_conn, schema, "study_conditions"));
+        LogLine($"Study Topics: {summ.study_topics_recs:n0}");
+        LogLine($"Study Features: {summ.study_features_recs:n0}");
+        LogLine($"Study Conditions: {summ.study_conditions_recs:n0}");
             
-            if (s.has_study_people is true) LogLine(StudyTableSummary(db_conn, schema, "study_people"));
-            if (s.has_study_organisations is true) LogLine(StudyTableSummary(db_conn, schema, "study_organisations"));
+        LogLine($"Study People: {summ.study_people_recs:n0}");
+        LogLine($"Study Organisations: {summ.study_organisations_recs:n0}");
+        LogLine($"Study Relationships: {summ.study_relationships_recs:n0}");
             
-            if (s.has_study_references is true) LogLine(StudyTableSummary(db_conn, schema, "study_references"));
-            if (s.has_study_relationships is true)
-                LogLine(StudyTableSummary(db_conn, schema, "study_relationships"));
-            
-            if (s.has_study_links is true) LogLine(StudyTableSummary(db_conn, schema, "study_links"));
-            if (s.has_study_ipd_available is true)
-                LogLine(StudyTableSummary(db_conn, schema, "study_ipd_available"));
-            
-            if (s.has_study_countries is true) LogLine(StudyTableSummary(db_conn, schema, "study_countries"));
-            if (s.has_study_locations is true) LogLine(StudyTableSummary(db_conn, schema, "study_locations"));
-            
-            if (s.has_study_iec is true) LogLine(StudyTableSummary(db_conn, schema, "study_iec"));
-        }
+        LogLine($"Study Countries: {summ.study_countries_recs:n0}");
+        LogLine($"Study Locations: {summ.study_locations_recs:n0}");
 
         LogHeader("object tables");
-        LogLine("");
-        // these common to all databases
-        LogLine(ObjectTableSummary(db_conn, schema, "data_objects", false));
-        LogLine(ObjectTableSummary(db_conn, schema, "object_instances"));
-        LogLine(ObjectTableSummary(db_conn, schema, "object_titles"));
 
-        // these are database dependent		
+        LogLine($"Data Objects: {summ.data_object_recs:n0}");
+        LogLine($"Object Instances: {summ.object_instances_recs:n0}");
+        LogLine($"Object titles: {summ.object_titles_recs:n0}");
 
-        if (s.has_object_datasets is true) LogLine(ObjectTableSummary(db_conn, schema, "object_datasets"));
-        if (s.has_object_dates is true) LogLine(ObjectTableSummary(db_conn, schema, "object_dates"));
-        if (s.has_object_relationships is true)
-            LogLine(ObjectTableSummary(db_conn, schema, "object_relationships"));
-        if (s.has_object_rights is true) LogLine(ObjectTableSummary(db_conn, schema, "object_rights"));
-        if (s.has_object_pubmed_set is true)
-        {
-            LogLine(ObjectTableSummary(db_conn, schema, "journal_details"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_people"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_organisations"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_topics"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_comments"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_descriptions"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_identifiers"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_db_links"));
-            LogLine(ObjectTableSummary(db_conn, schema, "object_publication_types"));
-        }
+        LogLine($"Object Datasets: {summ.object_datasets_recs:n0}");
+        LogLine($"Object Dates: {summ.object_dates_recs:n0}");
+        LogLine($"Object Relationships: {summ.object_relationships_recs:n0}");
+        LogLine($"Object Rights: {summ.object_rights_recs:n0}");
+        
+        LogLine($"Object People: {summ.object_people_recs:n0}");
+        LogLine($"Object Organisations: {summ.object_organisations_recs:n0}");
+        
+        LogLine($"Object Topics: {summ.object_topics_recs:n0}");
+        LogLine($"Object Descriptions: {summ.object_descriptions_recs:n0}");
+        LogLine($"Object Identifiers: {summ.object_identifiers_recs:n0}");
+        
+        LogHeader("Study-Object Linkage");
+        LogLine($"Study-Object Links: {summ.study_object_link_recs:n0}");
+        
     }
 
-*/
+    public void LogDataObjectTypeStatistics(int lastAggEventId)
+    {
+        // Logs the number of each data object type, where n > 10,
+        // from the last aggregation event
+        
+        // input a list of object type - total objects, obtained from a
+        // DB call to the monitor DB layer. Loop through and log each line.
+        
+        LogLine("");
+        LogLine("DATA OBJECT NUMBERS");
+    }
+
     public void CloseLog()
     {
         if (_sw is not null)
@@ -199,7 +193,7 @@ public class LoggingHelper : ILoggingHelper
 
         // Write out the summary file.
 
-        var sw_summary = new StreamWriter(_summaryLogfilePath, true, System.Text.Encoding.UTF8);
+        var sw_summary = new StreamWriter(_summaryLogFilePath!, true, System.Text.Encoding.UTF8);
 
         sw_summary.Flush();
         sw_summary.Close();
@@ -212,42 +206,7 @@ public class LoggingHelper : ILoggingHelper
         Console.WriteLine(message);
     }
 
-/*
-    private string StudyTableSummary(string dbConn, string schema, string tableName, bool includeSource = true)
-    {
-        using NpgsqlConnection conn = new(dbConn);
-        string sql_string = "select count(*) from " + schema + "." + tableName;
-        int res = conn.ExecuteScalar<int>(sql_string);
-        if (includeSource)
-        {
-            sql_string = "select count(distinct sd_sid) from " + schema + "." + tableName;
-            int study_num = conn.ExecuteScalar<int>(sql_string);
-            return $"{res} records found in {schema}.{tableName}, from {study_num} studies";
-        }
-        else
-        {
-            return $"{res} records found in {schema}.{tableName}";
-        }
-    }
-
-
-    private string ObjectTableSummary(string dbConn, string schema, string tableName, bool includeSource = true)
-    {
-        using NpgsqlConnection conn = new(dbConn);
-        string sql_string = "select count(*) from " + schema + "." + tableName;
-        int res = conn.ExecuteScalar<int>(sql_string);
-        if (includeSource)
-        {
-            sql_string = "select count(distinct sd_oid) from " + schema + "." + tableName;
-            int object_num = conn.ExecuteScalar<int>(sql_string);
-            return $"{res} records found in {schema}.{tableName}, from {object_num} objects";
-        }
-        else
-        {
-            return $"{res} records found in {schema}.{tableName}";
-        }
-    }
-*/
+    
     public void SendEmail(string errorMessageText)
     {
         // construct txt file with message

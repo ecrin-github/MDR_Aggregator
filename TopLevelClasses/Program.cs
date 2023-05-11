@@ -36,10 +36,12 @@ IHost host = Host.CreateDefaultBuilder()
      .Build();
 
 // Create the logging helper and monitor repository singleton instances.
+// The logger takes the args as an object array in order to include them in the log title.
 // The monitor repo also includes DB credentials if required elsewhere.
 
-LoggingHelper loggingHelper = ActivatorUtilities.CreateInstance<LoggingHelper>(host.Services);
-MonDataLayer monDataLayer = ActivatorUtilities.CreateInstance<MonDataLayer>(host.Services);
+ILoggingHelper loggingHelper = ActivatorUtilities.CreateInstance<LoggingHelper>(host.Services);
+loggingHelper.OpenFile(args);
+IMonDataLayer monDataLayer = ActivatorUtilities.CreateInstance<MonDataLayer>(host.Services);
 
 // Check the command line arguments to ensure they are valid. If they are,
 // start the program by instantiating the aggregator object and telling it to run. 

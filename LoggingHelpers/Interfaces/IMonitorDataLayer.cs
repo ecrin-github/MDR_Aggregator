@@ -13,16 +13,24 @@ public interface IMonDataLayer
     void SetUpTempAggsFTW(ICredentials _credentials, string core_conn_string);
     void DropTempAggsFTW(string core_conn_string);
     
-    string SetUpTempFTW(ICredentials credentials, string database_name, string dest_conn_string);
-    void DropTempFTW(string database_name, string dest_conn_string);
-
+    string SetUpTempCoreFTW(ICredentials credentials, string database_name, string dest_conn_string);
+    void DropTempCoreFTW(string database_name, string dest_conn_string);
+    
+    string SetUpTempIECFTW(ICredentials credentials, string database_name, string dest_conn_string);
+    void DropTempIECFTW(string database_name, string dest_conn_string);
+    
     Source FetchSourceParameters(int source_id);
+    
     int GetNextAggEventId();
     int GetLastAggEventId();
+    List<AggregationObjectNum>? GetLatestObjectNumbers();
+    CoreSummary? GetLatestCoreSummary();
 
     int StoreAggregationEvent(AggregationEvent aggregation);
+    
     IEnumerable<Source> RetrieveDataSources();
-
+    IEnumerable<Source> RetrieveIECDataSources();
+        
     void DeleteSameEventDBStats(int agg_event_id);
     int GetRecNum(string table_name, string source_conn_string);
     void DeleteSameEventSummaryStats(int agg_event_id);
