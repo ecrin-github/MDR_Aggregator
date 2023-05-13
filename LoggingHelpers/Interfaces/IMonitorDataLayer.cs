@@ -6,31 +6,28 @@ public interface IMonDataLayer
 {
     ICredentials Credentials { get; }
     string GetConnectionString(string databaseName, bool testing);
+
+    IEnumerable<Source> RetrieveDataSources();
+    IEnumerable<Source> RetrieveIECDataSources();
     
-    void SetUpTempContextFTWs(ICredentials credentials, string connString);
-    void DropTempContextFTWs(string connString);
-    
-    void SetUpTempAggsFTW(ICredentials _credentials, string core_conn_string);
-    void DropTempAggsFTW(string core_conn_string);
-    
-    string SetUpTempCoreFTW(ICredentials credentials, string database_name, string dest_conn_string);
-    void DropTempCoreFTW(string database_name, string dest_conn_string);
-    
-    string SetUpTempIECFTW(ICredentials credentials, string database_name, string dest_conn_string);
-    void DropTempIECFTW(string database_name, string dest_conn_string);
+    List<string> SetUpTempFTWs(ICredentials credentials, string dbConnString, string fdw_schema,
+        string source_db, List<string> source_schemas);
+    void DropTempFTWs(string dbConnString, string source_db, List<string>  source_schemas);
     
     Source FetchSourceParameters(int source_id);
-    
+
     int GetNextAggEventId();
+    int GetNextIECAggEventId();
+    
     int GetLastAggEventId();
     List<AggregationObjectNum>? GetLatestObjectNumbers();
     CoreSummary? GetLatestCoreSummary();
 
     int StoreAggregationEvent(AggregationEvent aggregation);
+    int StoreIECAggregationEvent(IECAggregationEvent iec_agg);
+    void StoreSourceIECData(int iec_agg_id, Source source, Int64 res);
+    void UpdateIECAggregationEvent(IECAggregationEvent iec_agg_event, string iec_conn_string);
     
-    IEnumerable<Source> RetrieveDataSources();
-    IEnumerable<Source> RetrieveIECDataSources();
-        
     void DeleteSameEventDBStats(int agg_event_id);
     int GetRecNum(string table_name, string source_conn_string);
     void DeleteSameEventSummaryStats(int agg_event_id);

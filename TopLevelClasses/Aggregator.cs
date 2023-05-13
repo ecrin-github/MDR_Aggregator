@@ -22,40 +22,32 @@ public class Aggregator
         {
             _loggingHelper.LogCommandLineParameters(opts);
 
-            // Obtain connection strings to the database where aggregation will occur and the final location
-            // of the 'core' mdr database - the mdr DB.  If not testing, agg_conn_string points to the 'aggs'
-            // aggregating database (if testing it points to the test database). Then set up the context DB
-            // as two schemas of foreign tables (ctx & lup) as that data is used in several places. 
-            
-            string agg_conn_string = _credentials.GetConnectionString("aggs", opts.testing);
-            string core_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
-            _monDatalayer.SetUpTempContextFTWs(_credentials, agg_conn_string);
-            _monDatalayer.SetUpTempContextFTWs(_credentials, core_conn_string);
-            
             if (opts.transfer_data)
             {
-                // Set up the context DB as two schemas of foreign tables (ctx & lup) and then  
-                // establish new tables for the three schemas st, ob, nk
-                
+                // Obtain connection string to the database where aggregation will occur - the 'aggs'.
+                // aggregating database (unless testing). Set up the context DB as two schemas of foreign
+                // tables (ctx & lup), and finally establish new tables for the three schemas st, ob, nk
+                // and construct a new aggregation event record.
+                         
+                string agg_conn_string = _credentials.GetConnectionString("aggs", opts.testing);
+                List<string> source_schemas = new(){"ctx", "lup"};
+                _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", "context", source_schemas);
+                _loggingHelper.LogLine("Context data established as FTWs in aggs DB");
                 SchemaBuilder sb = new SchemaBuilder(agg_conn_string);
                 sb.BuildNewStudyTables();
                 sb.BuildNewObjectTables();
                 sb.BuildNewLinkTables();
                 _loggingHelper.LogLine("Study, object and link aggregate tables recreated");
                 _loggingHelper.LogLine("");
-                
-                // construct the aggregation event record
                 AggregationEvent agg_event = new AggregationEvent(agg_event_id);
 
                 // Derive a new table of inter-study relationships - First get a list of all
-                // the study sources and ensure it is sorted correctly.
+                // the study sources and ensure it is sorted correctly, then use the study link
+                // builder to create a record of all current study - study links
               
                 List<Source> sources = _monDatalayer.RetrieveDataSources()
                                            .OrderBy(s => s.preference_rating).ToList();
                 _loggingHelper.LogLine("Sources obtained");
-
-                // Then use the study link builder to create a record of all current study - study links
-
                 StudyLinkBuilder slb = new StudyLinkBuilder(_loggingHelper, _credentials, 
                                                           agg_conn_string, opts.testing);
                 slb.CollectStudyStudyLinks(sources);
@@ -66,39 +58,23 @@ public class Aggregator
                 _loggingHelper.LogLine("Study-study links identified");
                 _loggingHelper.LogLine("");
 
-                // Start the data transfer process. Loop through the study sources (in preference order).
+                // Loop through the study sources (in preference order).
                 // In each case establish and then drop the source AD tables as an FTW.
 
                 _loggingHelper.LogHeader("Data Transfer");
                 int num_studies_imported = 0;
                 int num_objects_imported = 0;
-                if (opts.testing)
-                {
-                    // ensure all AD tables are present for use in the test db
-                    //_test_repo.BuildNewADTables();
-                }
-
                 foreach (Source source in sources)
                 {
-                    string db_name = source.database_name!;
-                    string source_conn_string = _credentials.GetConnectionString(db_name, opts.testing);
-                    source.db_conn = source_conn_string;
-
                     // in normal (non-testing) environment, schema name references the ad tables in a source FTW
-                    // - i.e. <db name>_ad. Credentials are used here to get the connection string for the source
-                    // database. In a testing environment source schema name will simply be 'ad', and the
-                    // ad table data all has to be transferred from adcomp before each source transfer...to revise!
-
-                    string ftw_schema_name;
-                    if (opts.testing)
-                    {
-                        ftw_schema_name = "ad";
-                        //_test_repo.TransferADTableData(source);
-                    }
-                    else
-                    {
-                        ftw_schema_name = _monDatalayer.SetUpTempCoreFTW(_credentials, db_name, agg_conn_string);
-                    }
+                    // - i.e. <db name>_ad. Credentials are used here to also get the connection string for the 
+                    // source database. Process in a testing environment to be revised!
+                    
+                    string db_name = source.database_name!;
+                    source.db_conn = _credentials.GetConnectionString(db_name, opts.testing);
+                    source_schemas = new List<string>{"ad"};
+                    _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", db_name, source_schemas);
+                    string ftw_schema_name = $"{db_name}_ad";
 
                     _loggingHelper.LogStudyHeader("Aggregating", db_name);
                     DataTransferBuilder tb = new DataTransferBuilder(source, ftw_schema_name, 
@@ -120,16 +96,13 @@ public class Aggregator
                     _loggingHelper.LogHeader("Transfer object data");
                     num_objects_imported += tb.TransferObjectData(srce_summ);
                     
-                    // store summary record for that database...
-                    if (!opts.testing)
-                    {
-                        tb.StoreSourceSummaryStatistics(srce_summ);
-                    }
-
-                    _monDatalayer.DropTempCoreFTW(db_name, agg_conn_string);
+                    // store summary record, and remove FTW, for this source.
+                    
+                    tb.StoreSourceSummaryStatistics(srce_summ);
+                    _monDatalayer.DropTempFTWs(agg_conn_string, db_name, source_schemas);
                 }
 
-                // Also use the study groups data to insert additional study_relationship records.
+                // Use the study groups data to insert additional study_relationship records.
                 
                 slb.AddStudyStudyRelationshipRecords();
 
@@ -137,7 +110,6 @@ public class Aggregator
 
                 agg_event.num_studies_imported = num_studies_imported;
                 agg_event.num_objects_imported = num_objects_imported;
-
                 agg_event.num_total_studies = _monDatalayer.GetAggregateRecNum("studies", "st", agg_conn_string);
                 agg_event.num_total_objects = _monDatalayer.GetAggregateRecNum("data_objects", "ob", agg_conn_string);
                 agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_object_ids", 
@@ -152,15 +124,20 @@ public class Aggregator
 
             if (opts.create_core)
             {
-                // Create core tables and establish necessary additional foreign tables for transfer.
-
+                // Obtain connection strings to the final core schema in the mdr database.
+                // Then create FTW tables for source aggs schemas and mon (sf) monitoring data schema,
+                // before using the core builder class to recreate the core tables.
+                
+                string core_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
+                List<string> aggs_schemas = new(){"st", "ob", "nk"};
+                _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "aggs", aggs_schemas);
+                List<string> mon_schemas = new(){"sf"};
+                _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "mon", mon_schemas);
+                _loggingHelper.LogLine("FTW tables recreated");
                 CoreBuilder cb = new CoreBuilder(core_conn_string, _loggingHelper);
                 cb.BuildNewCoreTables();
                 _loggingHelper.LogLine("Core tables recreated");
-                _monDatalayer.SetUpTempAggsFTW(_credentials, core_conn_string);
-                _monDatalayer.SetUpTempCoreFTW(_credentials, "mon", core_conn_string);
-                _loggingHelper.LogLine("FTW tables recreated");
-                
+ 
                 // Transfer data to core tables
                 
                 int last_agg_event_id = _monDatalayer.GetLastAggEventId();
@@ -186,8 +163,8 @@ public class Aggregator
                 
                 // Drop FTW schemas.
                 
-                _monDatalayer.DropTempAggsFTW(core_conn_string);
-                _monDatalayer.DropTempCoreFTW("mon", core_conn_string);
+                _monDatalayer.DropTempFTWs(core_conn_string, "aggs", aggs_schemas);
+                _monDatalayer.DropTempFTWs(core_conn_string, "mon", mon_schemas);
                 _loggingHelper.LogLine("FTW tables dropped");
             }
 
@@ -195,7 +172,8 @@ public class Aggregator
             if (opts.do_indexes)
             {
                 // Set up study search data.
-
+                
+                string core_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
                 CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
                 _loggingHelper.LogHeader("Setting up Study Text Search data");
                 csb.CreateStudyFeatureSearchData();
@@ -240,14 +218,17 @@ public class Aggregator
 
             if (opts.do_iec)
             {
-                // Get connection string for destination DB and re-establish IEC tables 
+                // Get connection string for destination DB and re-establish IEC tables.
+                // Set up a new IEC Aggravation Event record.
                 
-                string dest_conn_string = _credentials.GetConnectionString("iec", opts.testing);
-                IECTransferrer ieh = new IECTransferrer(dest_conn_string, _loggingHelper);
+                string iec_conn_string = _credentials.GetConnectionString("iec", opts.testing);
+                IECTransferrer ieh = new IECTransferrer(iec_conn_string, _loggingHelper);
                 ieh.BuildNewIECTables();
                 _loggingHelper.LogLine("IEC tables recreated");
-                AggregationEvent agg_event = new AggregationEvent(agg_event_id);
 
+                int iec_agg_id = _monDatalayer.GetNextIECAggEventId();
+                IECAggregationEvent iec_agg_event = new (iec_agg_id);
+                
                 // Get a list of sources that have IEC data, and transfer the data from each one. Use the 
                 // source's db_conn property for the FTW schema name, which will be in the form <db_name>_ad.
                 
@@ -255,15 +236,20 @@ public class Aggregator
                 _loggingHelper.LogLine("Sources obtained");
                 foreach (Source source in sources)
                 {
-                    source.db_conn = _monDatalayer.SetUpTempIECFTW(_credentials, 
-                                         source.database_name!, dest_conn_string);
-                    ieh.TransferIECData(source);
-                    _monDatalayer.DropTempIECFTW(source.database_name!, dest_conn_string);
+                    string db_name = source.database_name!;
+                    List<string> source_schemas = new List<string>{"ad"};
+                    _monDatalayer.SetUpTempFTWs(_credentials, iec_conn_string, "dv", db_name, source_schemas);
+                    source.db_conn = $"{db_name}_ad";
+                    _loggingHelper.LogStudyHeader("Aggregating", db_name);
+                    Int64 res = ieh.TransferIECData(source);
+                    _monDatalayer.StoreSourceIECData(iec_agg_id, source, res);
+                    _monDatalayer.DropTempFTWs(iec_conn_string, db_name, source_schemas);
                 }  
                 
-                // update statistics about aggregation (?)
+                // update statistics about aggregation and store the final aggregation record
                 
-                _monDatalayer.StoreAggregationEvent(agg_event);
+                _monDatalayer.UpdateIECAggregationEvent(iec_agg_event, iec_conn_string);
+                _monDatalayer.StoreIECAggregationEvent(iec_agg_event);
             }
             
             
@@ -284,8 +270,7 @@ public class Aggregator
                 //jh.LoopThroughOAObjectRecords();
             }
 
-            _monDatalayer.DropTempContextFTWs(core_conn_string);
-            _monDatalayer.DropTempContextFTWs(agg_conn_string);
+            
             _loggingHelper.CloseLog();
             return 0;
         }

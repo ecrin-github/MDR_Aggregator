@@ -60,63 +60,64 @@ public class IECTransferrer
     }
     
     
-    internal void TransferIECData(Source source)
+    internal Int64 TransferIECData(Source source)
     {
-        string? srce_conn_string = source.db_conn;
+        Int64 recs_trans = 0;
         if (source.study_iec_storage_type == "Single Table")
         {
-            TransferData(source, "study_iec", "study_iec_null", false);
-            TransferData(source, "study_iec", "study_iec_pre06", false);
-            TransferData(source, "study_iec", "study_iec_0608", false);
-            TransferData(source, "study_iec", "study_iec_0910", false);
-            TransferData(source, "study_iec", "study_iec_1112", false);
-            TransferData(source, "study_iec", "study_iec_1314", false);
+            recs_trans += TransferData(source, "study_iec", "study_iec_null", false);
+            recs_trans += TransferData(source, "study_iec", "study_iec_pre06", false);
+            recs_trans += TransferData(source, "study_iec", "study_iec_0608", false);
+            recs_trans += TransferData(source, "study_iec", "study_iec_0910", false);
+            recs_trans += TransferData(source, "study_iec", "study_iec_1112", false);
+            recs_trans += TransferData(source, "study_iec", "study_iec_1314", false);
             for (int i = 15; i <= 30; i++)
             {
-                TransferData(source,$"study_iec", "study_iec_{i}", false);
+                recs_trans += TransferData(source,$"study_iec", "study_iec_{i}", false);
             }
         }
     
         if (source.study_iec_storage_type == "By Year Groupings")
         {
-            TransferData(source, "study_iec_upto12", "study_iec_null", false);
-            TransferData(source, "study_iec_upto12", "study_iec_pre06", false);
-            TransferData(source, "study_iec_upto12", "study_iec_0608", false);
-            TransferData(source, "study_iec_upto12", "study_iec_0910", false);
-            TransferData(source, "study_iec_upto12", "study_iec_1112", false);
-            TransferData(source, "study_iec_13to19", "study_iec_1314", false);
+            recs_trans += TransferData(source, "study_iec_upto12", "study_iec_null", false);
+            recs_trans += TransferData(source, "study_iec_upto12", "study_iec_pre06", false);
+            recs_trans += TransferData(source, "study_iec_upto12", "study_iec_0608", false);
+            recs_trans += TransferData(source, "study_iec_upto12", "study_iec_0910", false);
+            recs_trans += TransferData(source, "study_iec_upto12", "study_iec_1112", false);
+            recs_trans += TransferData(source, "study_iec_13to19", "study_iec_1314", false);
             for (int i = 15; i <= 19; i++)
             {
-                TransferData(source, $"study_iec_13to19", "study_iec_{i}", false);
+                recs_trans += TransferData(source, $"study_iec_13to19", "study_iec_{i}", false);
             }
             for (int i = 20; i <= 30; i++)
             {
-                TransferData(source, $"study_iec_20on", "study_iec_{i}", false);
+                recs_trans += TransferData(source, $"study_iec_20on", "study_iec_{i}", false);
             }
         } 
         
         if (source.study_iec_storage_type == "By Years")
         {
-            TransferData(source, "study_iec_null", "study_iec_null", true);
-            TransferData(source, "study_iec_pre06", "study_iec_pre06", true);
-            TransferData(source, "study_iec_0608", "study_iec_0608", true);
-            TransferData(source, "study_iec_0910", "study_iec_0910", true);
-            TransferData(source, "study_iec_1112", "study_iec_1112", true);
-            TransferData(source, "study_iec_1314", "study_iec_1314", true);
+            recs_trans += TransferData(source, "study_iec_null", "study_iec_null", true);
+            recs_trans += TransferData(source, "study_iec_pre06", "study_iec_pre06", true);
+            recs_trans += TransferData(source, "study_iec_0608", "study_iec_0608", true);
+            recs_trans += TransferData(source, "study_iec_0910", "study_iec_0910", true);
+            recs_trans += TransferData(source, "study_iec_1112", "study_iec_1112", true);
+            recs_trans += TransferData(source, "study_iec_1314", "study_iec_1314", true);
             for (int i = 15; i <= 30; i++)
             {
-                TransferData(source, $"study_iec_{i}", $"study_iec_{i}", true);
+                recs_trans += TransferData(source, $"study_iec_{i}", $"study_iec_{i}", true);
             }
         }
+
+        return recs_trans;
     }
 
-    private void TransferData(Source source, string srce_table_name, 
+    private int TransferData(Source source, string srce_table_name, 
                               string dest_table_name, bool uses_whole_table)
     {
-        // set up the source ad as FTW
-        
+
         int source_id = source.id;
-        string FTW_schema_name = source.db_conn!;
+        string FTW_schema_name = source.database_name! + "_ad";
         string top_sql = $@" Insert into {dest_table_name} (source_id, {field_list})
                              select {source_id},{field_list})  
                              from {FTW_schema_name}.{srce_table_name} ";

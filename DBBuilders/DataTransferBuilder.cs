@@ -11,13 +11,13 @@ public class DataTransferBuilder
 
     private readonly StudyDataTransferrer st_tr;
     private readonly ObjectDataTransferrer ob_tr;
-    private readonly int source_id;
+    private readonly int _source_id;
 
     public DataTransferBuilder(Source source, string ftw_schema_name, string dest_conn_string, 
                                IMonDataLayer monDatalayer, ILoggingHelper logginghelper)
     {
         _source = source;
-        source_id = _source.id;
+        _source_id = source.id;
         _source_conn_string = source.db_conn!;   
         
         _loggingHelper = logginghelper;
@@ -44,8 +44,8 @@ public class DataTransferBuilder
 
         st_tr.MatchExistingStudyIds();
         st_tr.IdentifyNewLinkedStudyIds();
-        st_tr.AddNewStudyIds(source_id);
-        st_tr.CreateTempStudyIdTables(source_id);
+        st_tr.AddNewStudyIds(_source_id);
+        st_tr.CreateTempStudyIdTables(_source_id);
         _loggingHelper.LogLine("Study Ids matched or added new");
     }
     
@@ -105,24 +105,24 @@ public class DataTransferBuilder
         
         // Update the object parent ids against the study_ids table.
 
-        ob_tr.MatchExistingObjectIds(source_id);
-        ob_tr.UpdateNewObjectsWithStudyIds(source_id);
-        ob_tr.AddNewObjectsToIdentifiersTable(source_id);
+        ob_tr.MatchExistingObjectIds(_source_id);
+        ob_tr.UpdateNewObjectsWithStudyIds(_source_id);
+        ob_tr.AddNewObjectsToIdentifiersTable(_source_id);
         _loggingHelper.LogLine("");
         
         // Carry out a check for (currently very rare) duplicate objects (i.e. that have been imported
         // before with the data from another source). 
         
-        ob_tr.CheckNewObjectsForDuplicateTitles(source_id);
-        ob_tr.CheckNewObjectsForDuplicateURLs(source_id, _ftw_schema_name);
-        ob_tr.CompleteNewObjectsStatuses(source_id);
+        ob_tr.CheckNewObjectsForDuplicateTitles(_source_id);
+        ob_tr.CheckNewObjectsForDuplicateURLs(_source_id, _ftw_schema_name);
+        ob_tr.CompleteNewObjectsStatuses(_source_id);
         _loggingHelper.LogLine("Object Ids updated");
         _loggingHelper.LogLine("");
 
         // Update all objects ids table and derive a small table that lists the object Ids for all objects,
         // and one that lists the ids of possible duplicate objects, to check.
 
-        ob_tr.FillObjectsToAddTables(source_id);
+        ob_tr.FillObjectsToAddTables(_source_id);
         _loggingHelper.LogLine("Object Ids processed");
         _loggingHelper.LogLine("");
     }
@@ -135,7 +135,7 @@ public class DataTransferBuilder
         // process the data using available object-study links (may be multiple study links per object).
         // Exact process likely to differ with different object sources - at present only PubMed in this category
 
-        if (source_id == 100135)
+        if (_source_id == 100135)
         {
             // Get the source-study-pmid link data. A table of PMID bank data was created during
             // data download, but this may have been date limited (probably was) so the total of records 
@@ -145,7 +145,7 @@ public class DataTransferBuilder
             PubmedTransferHelper pm_tr = new PubmedTransferHelper(_ftw_schema_name, _dest_conn_string, _loggingHelper);
             pm_tr.SetupTempPMIDTables();
             
-            int res = pm_tr.FetchBankReferences(source_id, _ftw_schema_name);
+            int res = pm_tr.FetchBankReferences(_source_id, _ftw_schema_name);
             _loggingHelper.LogLine($"{res} PMID Ids obtained from PMID 'bank' data");
             
             // study ids referenced in PubMed data often poorly formed and need cleaning
@@ -159,7 +159,7 @@ public class DataTransferBuilder
             // to recapture it - it should always reflect the state of the DBs during the most recent download.
 
             
-            ulong res2 = pm_tr.FetchSourceReferences(source_id, _source_conn_string);
+            ulong res2 = pm_tr.FetchSourceReferences(_source_id, _source_conn_string);
             _loggingHelper.LogLine($"{res2} PMID Ids obtained from DB sources");
             _loggingHelper.LogLine("");
             
@@ -190,7 +190,7 @@ public class DataTransferBuilder
             pm_tr.IdentifyNewPMIDLinks();
             pm_tr.AddNewPMIDStudyLinks();
             pm_tr.AddCompletelyNewPMIDs();
-            pm_tr.IdentifyPMIDDataForImport(source_id);
+            pm_tr.IdentifyPMIDDataForImport(_source_id);
             _loggingHelper.LogLine("");
             
             pm_tr.DropTempPMIDTables();

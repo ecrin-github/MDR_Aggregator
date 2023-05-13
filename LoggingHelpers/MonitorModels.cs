@@ -173,6 +173,68 @@ public class AggregationEvent
 }
 
 
+[Table("sf.iec_agg_events")]
+public class IECAggregationEvent
+{
+    [ExplicitKey] public int id { get; set; }
+    public DateTime? time_started { get; set; }
+    public DateTime? time_ended { get; set; }
+    public Int64? iec_null_recs { get; set; }
+    public Int64? iec_pre06_recs { get; set; }
+    public Int64? iec_0608_recs { get; set; }
+    public Int64? iec_0910_recs { get; set; }
+    public Int64? iec_1112_recs { get; set; }
+    public Int64? iec_1314_recs { get; set; }
+    public Int64? iec_15_recs { get; set; }
+    public Int64? iec_16_recs { get; set; }
+    public Int64? iec_17_recs { get; set; }
+    public Int64? iec_18_recs { get; set; }
+    public Int64? iec_19_recs { get; set; }
+    public Int64? iec_20_recs { get; set; }
+    public Int64? iec_21_recs { get; set; }
+    public Int64? iec_22_recs { get; set; }
+    public Int64? iec_23_recs { get; set; }
+    public Int64? iec_24_recs { get; set; }
+    public Int64? iec_25_recs { get; set; }
+    public Int64? iec_26_recs { get; set; }
+    public Int64? iec_27_recs { get; set; }
+    public Int64? iec_28_recs { get; set; }
+    public Int64? iec_29_recs { get; set; }
+    public Int64? iec_30_recs { get; set; }
+    public Int64? total_records_imported { get; set; }
+    public Int64? comments { get; set; }
+
+    public IECAggregationEvent(int _id)
+    {
+        id = _id;
+        time_started = DateTime.Now;
+    }
+
+    public IECAggregationEvent() { }
+}
+
+[Table("sf.iec_agg_source_numbers")]
+public class IECAggregationSourceNum
+{
+    [Key]
+    public int id { get; set; }
+    public int iec_agg_event_id { get; set; }
+    public int source_id { get; set; }
+    public string? source_db_name { get; set; }
+    public Int64 number_of_iec_recs { get; set; }
+
+    public IECAggregationSourceNum(int iecAggEventId, int sourceId, 
+                                   string? sourceDbName, Int64 numberOfIecRecs)
+    {
+        iec_agg_event_id = iecAggEventId;
+        source_id = sourceId;
+        source_db_name = sourceDbName;
+        number_of_iec_recs = numberOfIecRecs;
+    }
+}
+
+
+
 public class DataSource
 {
     public int id { get; set; }
