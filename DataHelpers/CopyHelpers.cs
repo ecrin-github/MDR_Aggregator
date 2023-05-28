@@ -78,4 +78,24 @@ public static class CopyHelpers
         new PostgreSQLCopyHelper<OldNewLink>("nk", "dutch_id_checker")
             .MapVarchar("new_id", x => x.new_id)
             .MapVarchar("old_id", x => x.old_id);
+    
+    public static readonly PostgreSQLCopyHelper<IECStudyDetails> iec_study_helper =
+        new PostgreSQLCopyHelper<IECStudyDetails>("ad", "studies")
+            .MapInteger("study_id", x => x.study_id)
+            .MapInteger("source_id", x => x.source_id)
+            .MapVarchar("sd_sid", x => x.sd_sid)
+            .MapBoolean("is_preferred", x=> x.is_preferred)
+            .MapVarchar("display_title", x => x.display_title)
+            .MapVarchar("brief_description", x => x.brief_description)
+            .MapInteger("iec_level_id", x => x.study_id)
+            .MapInteger("study_start_year", x => x.source_id)
+            .MapInteger("study_start_month", x => x.study_id)
+            .MapInteger("study_type_id", x => x.study_type_id)
+            .MapVarchar("study_enrolment", x => x.study_enrolment)
+            .MapInteger("study_gender_elig_id", x => x.study_gender_elig_id)
+            .MapInteger("min_age", x => x.min_age)
+            .MapInteger("min_age_units_id", x => x.min_age_units_id)
+            .MapInteger("max_age", x => x.max_age)
+            .MapInteger("max_age_units_id", x => x.max_age_units_id)
+            .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
 }

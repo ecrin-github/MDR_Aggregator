@@ -127,13 +127,14 @@ public class Aggregator
                 // Obtain connection strings to the final core schema in the mdr database.
                 // Then create FTW tables for source aggs schemas and mon (sf) monitoring data schema,
                 // before using the core builder class to recreate the core tables.
-                
+
                 string core_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
                 List<string> aggs_schemas = new(){"st", "ob", "nk"};
                 _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "aggs", aggs_schemas);
                 List<string> mon_schemas = new(){"sf"};
                 _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "mon", mon_schemas);
                 _loggingHelper.LogLine("FTW tables recreated");
+ 
                 CoreBuilder cb = new CoreBuilder(core_conn_string, _loggingHelper);
                 cb.BuildNewCoreTables();
                 _loggingHelper.LogLine("Core tables recreated");
@@ -154,12 +155,15 @@ public class Aggregator
                 
                 ctb.GenerateProvenanceData(); 
                 _loggingHelper.LogHeader("Generating provenance data");
+
+                // Store summary statistics - needs a reference to context schemas
                 
-                // Store summary statistics
- 
+                List<string> context_schemas = new(){"lup", "ctx"};
+                _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "context", context_schemas);
                 ctb.StoreCoreSummaryStatistics(core_summ);
                 ctb.StoreDataObjectStatistics(last_agg_event_id);
                 ctb.StoreStudyStudyLinkStatistics(last_agg_event_id);
+                _monDatalayer.DropTempFTWs(core_conn_string, "context", context_schemas);
                 
                 // Drop FTW schemas.
                 
@@ -171,14 +175,36 @@ public class Aggregator
             
             if (opts.do_indexes)
             {
-                // Set up study search data.
+                // Set up study search data. The lup schemas from context, as well as the
+                // aggs databases required to set up these tables.
                 
                 string core_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
+                List<string> aggs_schemas = new(){"st", "ob", "nk"};
+                _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "aggs", aggs_schemas);
+                List<string> ctx_schemas = new(){"lup"};
+                _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "context", ctx_schemas);
+                _loggingHelper.LogLine("FTW tables recreated");
+                
                 CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
                 _loggingHelper.LogHeader("Setting up Study Text Search data");
-                csb.CreateStudyFeatureSearchData();
-                csb.CreateStudyObjectSearchData();
-                csb.CreateStudyTextSearchData();
+                
+                csb.CreateSearchTables();
+                //csb.CreateStudySearchData();
+                //csb.CreateStudyFeatureData();
+                //csb.CreateStudyHasObjectData();
+                csb.CreateStudyCompositeFieldData();
+                csb.CreateIdentifierSearchData();
+                csb.CreatePMIDSearchData();
+                csb.CreateObjectSearchData();
+                csb.CreateLexemeSearchData();
+                csb.CreateLexemeIndices();
+                
+                
+                // Drop FTW schemas.
+                
+                _monDatalayer.DropTempFTWs(core_conn_string, "aggs", aggs_schemas);
+                _monDatalayer.DropTempFTWs(core_conn_string, "context", ctx_schemas);
+                _loggingHelper.LogLine("FTW tables dropped");
             }
 
 
@@ -223,6 +249,7 @@ public class Aggregator
                 
                 string iec_conn_string = _credentials.GetConnectionString("iec", opts.testing);
                 IECTransferrer ieh = new IECTransferrer(iec_conn_string, _loggingHelper);
+                
                 ieh.BuildNewIECTables();
                 _loggingHelper.LogLine("IEC tables recreated");
 
@@ -250,6 +277,27 @@ public class Aggregator
                 
                 _monDatalayer.UpdateIECAggregationEvent(iec_agg_event, iec_conn_string);
                 _monDatalayer.StoreIECAggregationEvent(iec_agg_event);
+                
+                // Update aggregated IEC records with study Ids from aggs DB still required.
+                // First import the key study data from the aggs db, by using two aggs schemas
+                // as FTWs. Then update the IEC records, first from lup tables, then internally.
+                
+               
+                _loggingHelper.LogHeader("Adding study data");
+                List<string> agg_schemas = new List<string>{"nk", "st"};
+                _monDatalayer.SetUpTempFTWs(_credentials, iec_conn_string, "dv", "aggs", agg_schemas);
+                ieh.TransferKeyStudyIdData("aggs_nk");
+                ieh.TransferKeyStudyRecordData("aggs_st");
+                _loggingHelper.LogLine("Key study data imported from the aggs database");
+                _monDatalayer.DropTempFTWs(iec_conn_string, "aggs", agg_schemas);
+                
+                _loggingHelper.LogHeader("Decoding Study data");
+                ieh.DecodeStudyData();
+                _loggingHelper.LogLine("Key study data updated with lookup decodes");
+                
+                _loggingHelper.LogHeader("Updating IEC data");
+                ieh.UpdateIECWithStudyIds();
+                _loggingHelper.LogLine("IECdata updated with study ids");
             }
             
             

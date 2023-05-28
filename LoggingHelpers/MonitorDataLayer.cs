@@ -9,7 +9,6 @@ public class MonDataLayer : IMonDataLayer
 {
     private readonly ICredentials _credentials;
     private readonly string monConnString;
-    private Source? source;
 
     public MonDataLayer(ICredentials credentials)
     {
@@ -22,8 +21,7 @@ public class MonDataLayer : IMonDataLayer
     public Source FetchSourceParameters(int source_id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);
-        source = Conn.Get<Source>(source_id);
-        return source;
+        return Conn.Get<Source>(source_id);
     }
 
     public string GetConnectionString(string databaseName, bool testing)
@@ -44,7 +42,7 @@ public class MonDataLayer : IMonDataLayer
 
         sql_string = $@"CREATE SERVER IF NOT EXISTS {source_db}
                         FOREIGN DATA WRAPPER postgres_fdw
-                        OPTIONS (host 'localhost', dbname {source_db});";
+                        OPTIONS (host 'localhost', dbname '{source_db}');";
         conn.Execute(sql_string);
 
         sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
@@ -86,265 +84,6 @@ public class MonDataLayer : IMonDataLayer
     }
     
     
-    
-    public void SetUpTempContextFTWs(ICredentials credentials, string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        string username = credentials.Username;
-        string password = credentials.Password;
-
-        string sql_string = @"CREATE EXTENSION IF NOT EXISTS postgres_fdw
-                                 schema sf;";
-        conn.Execute(sql_string);
-
-        sql_string = @"CREATE SERVER IF NOT EXISTS context
-                           FOREIGN DATA WRAPPER postgres_fdw
-                           OPTIONS (host 'localhost', dbname 'context');";
-        conn.Execute(sql_string);
-
-        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-                 SERVER context 
-                 OPTIONS (user '{username}', password '{password}');";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SCHEMA IF EXISTS context_lup cascade;
-                 CREATE SCHEMA context_lup;
-                 IMPORT FOREIGN SCHEMA lup
-                 FROM SERVER context 
-                 INTO context_lup;";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SCHEMA IF EXISTS context_ctx cascade;
-                 CREATE SCHEMA context_ctx;
-                 IMPORT FOREIGN SCHEMA ctx
-                 FROM SERVER context 
-                 INTO context_ctx;";
-        conn.Execute(sql_string);
-    }
-
-
-    public void DropTempContextFTWs(string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        string sql_string = @"DROP USER MAPPING IF EXISTS FOR CURRENT_USER
-                 SERVER context;";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SERVER IF EXISTS context CASCADE;";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SCHEMA IF EXISTS context_lup;";
-        conn.Execute(sql_string);
-        sql_string = @"DROP SCHEMA IF EXISTS context_ctx;";
-        conn.Execute(sql_string);
-    }
-
-
-    public string SetUpTempCoreFTW(ICredentials credentials, string database_name, string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        string username = credentials.Username;
-        string password = credentials.Password;     
-            
-        string sql_string = $@"CREATE EXTENSION IF NOT EXISTS postgres_fdw
-                                 schema core;";
-        conn.Execute(sql_string);
-
-        sql_string = $@"CREATE SERVER IF NOT EXISTS {database_name} FOREIGN DATA WRAPPER postgres_fdw
-                         OPTIONS (host 'localhost', dbname '{database_name}');";
-        conn.Execute(sql_string);
-
-        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-                 SERVER {database_name} OPTIONS (user '{username}', password '{password}');";
-        conn.Execute(sql_string);
-        string schema_name;
-        if (database_name == "mon")
-        {
-            schema_name = database_name + "_sf";
-            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-                 CREATE SCHEMA {schema_name};
-                 IMPORT FOREIGN SCHEMA sf
-                 FROM SERVER {database_name} INTO {schema_name};";
-        }
-        else if (database_name == "aggs")
-        {
-            schema_name = database_name + "_nk";
-            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-                 CREATE SCHEMA {schema_name};
-                 IMPORT FOREIGN SCHEMA nk
-                 FROM SERVER {database_name} INTO {schema_name};";
-        }
-        else
-        {
-            schema_name = database_name + "_ad";
-            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-                 CREATE SCHEMA {schema_name};
-                 IMPORT FOREIGN SCHEMA ad
-                 FROM SERVER {database_name} INTO {schema_name};";
-        }
-        conn.Execute(sql_string);
-        return schema_name;
-    }
-
-    public string SetUpTempIECFTW(ICredentials credentials, string database_name, string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        string username = credentials.Username;
-        string password = credentials.Password;     
-            
-        string sql_string = $@"CREATE EXTENSION IF NOT EXISTS postgres_fdw
-                                 schema ad;";
-        conn.Execute(sql_string);
-
-        sql_string = $@"CREATE SERVER IF NOT EXISTS {database_name} FOREIGN DATA WRAPPER postgres_fdw
-                         OPTIONS (host 'localhost', dbname '{database_name}');";
-        conn.Execute(sql_string);
-
-        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-                 SERVER {database_name} OPTIONS (user '{username}', password '{password}');";
-        conn.Execute(sql_string);
-        string schema_name;
-        if (database_name == "mon")
-        {
-            schema_name = database_name + "_sf";
-            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-                 CREATE SCHEMA {schema_name};
-                 IMPORT FOREIGN SCHEMA sf
-                 FROM SERVER {database_name} INTO {schema_name};";
-        }
-        else if (database_name == "aggs")
-        {
-            schema_name = database_name + "_nk";
-            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-                 CREATE SCHEMA {schema_name};
-                 IMPORT FOREIGN SCHEMA nk
-                 FROM SERVER {database_name} INTO {schema_name};";
-        }
-        else
-        {
-            schema_name = database_name + "_ad";
-            sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-                 CREATE SCHEMA {schema_name};
-                 IMPORT FOREIGN SCHEMA ad
-                 FROM SERVER {database_name} INTO {schema_name};";
-        }
-        conn.Execute(sql_string);
-        return schema_name;
-    }
-    
-    public void DropTempIECFTW(string database_name, string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        string schema_name;
-        if (database_name == "mon")
-        {
-            schema_name = database_name + "_sf";
-        }
-        else
-        {
-            schema_name = database_name + "_ad";
-        }
-
-        string sql_string = @"DROP USER MAPPING IF EXISTS FOR CURRENT_USER
-                 SERVER " + database_name + ";";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SERVER IF EXISTS " + database_name + " CASCADE;";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name;
-        conn.Execute(sql_string);
-    }
-    
-    
-    public void DropTempCoreFTW(string database_name, string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        string schema_name;
-        if (database_name == "mon")
-        {
-            schema_name = database_name + "_sf";
-        }
-        else
-        {
-            schema_name = database_name + "_ad";
-        }
-
-        string sql_string = @"DROP USER MAPPING IF EXISTS FOR CURRENT_USER
-                 SERVER " + database_name + ";";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SERVER IF EXISTS " + database_name + " CASCADE;";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SCHEMA IF EXISTS " + schema_name;
-        conn.Execute(sql_string);
-    }
-
-
-    public void SetUpTempAggsFTW(ICredentials credentials, string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        string username = credentials.Username;
-        string password = credentials.Password;     
-            
-        string sql_string = @"CREATE EXTENSION IF NOT EXISTS postgres_fdw
-                                 schema core;";
-        conn.Execute(sql_string);
-
-        sql_string = @"CREATE SERVER IF NOT EXISTS aggs  FOREIGN DATA WRAPPER postgres_fdw
-                         OPTIONS (host 'localhost', dbname 'aggs');";
-        conn.Execute(sql_string);
-
-        sql_string = $@"CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-                 SERVER aggs OPTIONS (user '{username}', password '{password}');";
-        conn.Execute(sql_string);
-        string schema_name;
-        
-        schema_name = "aggs_st";
-        sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-             CREATE SCHEMA {schema_name};
-             IMPORT FOREIGN SCHEMA st
-             FROM SERVER aggs INTO {schema_name};";
-        conn.Execute(sql_string);
-        
-        schema_name = "aggs_ob";
-        sql_string =$@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-             CREATE SCHEMA {schema_name};
-             IMPORT FOREIGN SCHEMA ob
-             FROM SERVER aggs INTO {schema_name};";
-        conn.Execute(sql_string);
-        
-        schema_name = "aggs_nk";
-        sql_string = $@"DROP SCHEMA IF EXISTS {schema_name} cascade;
-             CREATE SCHEMA {schema_name};
-             IMPORT FOREIGN SCHEMA nk
-             FROM SERVER aggs INTO {schema_name};";
-        conn.Execute(sql_string);
-    }
-
-    public void DropTempAggsFTW(string dbConnString)
-    {
-        using var conn = new NpgsqlConnection(dbConnString);
-        
-        string sql_string = @"DROP USER MAPPING IF EXISTS FOR CURRENT_USER
-                 SERVER aggs;";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SERVER IF EXISTS aggs CASCADE;";
-        conn.Execute(sql_string);
-
-        sql_string = @"DROP SCHEMA IF EXISTS aggs_st;";
-        conn.Execute(sql_string);
-        
-        sql_string = @"DROP SCHEMA IF EXISTS aggs_ob;";
-        conn.Execute(sql_string);
-        
-        sql_string = @"DROP SCHEMA IF EXISTS aggs_nk;";
-        conn.Execute(sql_string);
-    }
-    
-    
     public IEnumerable<Source> RetrieveDataSources()
     {
         string sql_string = @"select id, preference_rating, database_name, study_iec_storage_type,
@@ -372,7 +111,8 @@ public class MonDataLayer : IMonDataLayer
                               has_object_datasets, has_object_dates, has_object_rights,
                               has_object_relationships, has_object_pubmed_set 
                             from sf.source_parameters
-                            where study_iec_storage_type <> 'n/a';";
+                            where study_iec_storage_type <> 'n/a' 
+                              and is_current_agg_source = true;";
         
         using var conn = new NpgsqlConnection(monConnString);
         return conn.Query<Source>(sql_string);
@@ -463,28 +203,28 @@ public class MonDataLayer : IMonDataLayer
 
     public void UpdateIECAggregationEvent(IECAggregationEvent iec_agg_event, string iec_conn_string)
     {
-        iec_agg_event.iec_null_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_pre06_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_0608_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_0910_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_1112_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_1314_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_15_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_16_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_17_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_18_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_19_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_20_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_21_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_22_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_23_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_24_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_25_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_26_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_27_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_28_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_29_recs = GetRecNum("iec_null_recs", iec_conn_string);
-        iec_agg_event.iec_30_recs = GetRecNum("iec_null_recs", iec_conn_string);
+        iec_agg_event.iec_null_recs = GetRecNum("study_iec_null", iec_conn_string);
+        iec_agg_event.iec_pre06_recs = GetRecNum("study_iec_pre06", iec_conn_string);
+        iec_agg_event.iec_0608_recs = GetRecNum("study_iec_0608", iec_conn_string);
+        iec_agg_event.iec_0910_recs = GetRecNum("study_iec_0910", iec_conn_string);
+        iec_agg_event.iec_1112_recs = GetRecNum("study_iec_1112", iec_conn_string);
+        iec_agg_event.iec_1314_recs = GetRecNum("study_iec_1314", iec_conn_string);
+        iec_agg_event.iec_15_recs = GetRecNum("study_iec_15", iec_conn_string);
+        iec_agg_event.iec_16_recs = GetRecNum("study_iec_16", iec_conn_string);
+        iec_agg_event.iec_17_recs = GetRecNum("study_iec_17", iec_conn_string);
+        iec_agg_event.iec_18_recs = GetRecNum("study_iec_18", iec_conn_string);
+        iec_agg_event.iec_19_recs = GetRecNum("study_iec_19", iec_conn_string);
+        iec_agg_event.iec_20_recs = GetRecNum("study_iec_20", iec_conn_string);
+        iec_agg_event.iec_21_recs = GetRecNum("study_iec_21", iec_conn_string);
+        iec_agg_event.iec_22_recs = GetRecNum("study_iec_22", iec_conn_string);
+        iec_agg_event.iec_23_recs = GetRecNum("study_iec_23", iec_conn_string);
+        iec_agg_event.iec_24_recs = GetRecNum("study_iec_24", iec_conn_string);
+        iec_agg_event.iec_25_recs = GetRecNum("study_iec_25", iec_conn_string);
+        iec_agg_event.iec_26_recs = GetRecNum("study_iec_26", iec_conn_string);
+        iec_agg_event.iec_27_recs = GetRecNum("study_iec_27", iec_conn_string);
+        iec_agg_event.iec_28_recs = GetRecNum("study_iec_28", iec_conn_string);
+        iec_agg_event.iec_29_recs = GetRecNum("study_iec_29", iec_conn_string);
+        iec_agg_event.iec_30_recs = GetRecNum("study_iec_30", iec_conn_string);
         
         iec_agg_event.total_records_imported = (iec_agg_event.iec_null_recs ?? 0) +
             (iec_agg_event.iec_pre06_recs ?? 0) + (iec_agg_event.iec_0608_recs ?? 0) + 
