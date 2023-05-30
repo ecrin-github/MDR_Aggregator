@@ -72,8 +72,8 @@ public class SearchTableBuilder
         (
            study_id               int   primary key  not null
          , study_name    		  varchar            null     		
-         , titles_lex   		  varchar            null
-         , topics_lex   		  varchar            null
+         , tt_lex   	     	  varchar            null
+         , conditions_lex   	  varchar            null
         );";
 
         ExecuteSQL(sql_string);
@@ -114,7 +114,7 @@ public class SearchTableBuilder
         (
             study_id          int                 not null
           , object_id         int                 not null
-          , object_name       varchar             not null
+          , object_name       varchar             null
           , type_id           int                 null
           , type_name         varchar             null
           , url               varchar             null

@@ -23,7 +23,8 @@ public class SearchHelperStudies
                               max_age::varchar, max_age_units_id, provenance_string
                               from core.studies s ";
         string bottom_sql = " order by s.id";
-        return db.SearchTableTransfer(top_sql, bottom_sql, "id", min_studies_id, max_studies_id, "search_studies");
+        return db.SearchTableTransfer(top_sql, bottom_sql, "id", min_studies_id, max_studies_id,
+                               "search_studies", 50000);
     }
 
     public int UpdateStudyTypeData()
@@ -205,7 +206,8 @@ public class SearchHelperStudies
         set country_list = c_list
         from 
         (
-            select study_id, string_agg(country_name, ', ') as c_list from core.study_countries ";
+            select study_id, 
+            string_agg(country_name, ', ') as c_list from core.study_countries sc ";
         
         string bottom_sql = @"group by study_id) c
                   where ss.study_id = c.study_id;";
@@ -219,7 +221,8 @@ public class SearchHelperStudies
         set condition_list = c_list
         from 
         (
-            select study_id, string_agg(original_value, ', ') as c_list from core.study_conditions ";
+            select study_id, 
+            string_agg(original_value, ', ') as c_list from core.study_conditions sc ";
         
         string bottom_sql = @"group by study_id) c
                   where ss.study_id = c.study_id;";

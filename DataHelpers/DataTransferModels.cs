@@ -91,3 +91,12 @@ public class PMIDLink
     public int type_id { get; set; }
     public DateTime? datetime_of_data_fetch { get; set; }
 }
+
+public class LexemeBase
+{
+    public int study_id { get; set; }
+    public string? study_name { get; set; }
+    public string? tt { get; set; }
+    public string? conditions { get; set; }
+}
+

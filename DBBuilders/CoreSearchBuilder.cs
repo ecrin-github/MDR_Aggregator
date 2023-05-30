@@ -23,7 +23,7 @@ public class CoreSearchBuilder
         //srch_builder.create_table_search_lexemes();
         //srch_builder.create_table_search_pmids();
         //srch_builder.create_table_search_idents();
-        srch_builder.create_table_search_objects();
+        //srch_builder.create_table_search_objects();
     }
 
     public void CreateStudySearchData()
@@ -130,13 +130,15 @@ public class CoreSearchBuilder
     public void CreateObjectSearchData()
     {
         int res = objects_srch.CreateObjectSearchData();
-        _loggingHelper.LogLine($"{res} data object summary records created");
+        _loggingHelper.LogLine($"{res} data object summary records created with instance data");
+        res = objects_srch.UpdateObjectSearchData();
+        _loggingHelper.LogLine($"{res} data object records updated with object data");
         res = objects_srch.UpdateObjectSearchDataWithType();
-        _loggingHelper.LogLine($"{res} data object summary records created");
-        res = objects_srch.UpdateObjectSearchDataWithResourceIcon();
-        _loggingHelper.LogLine($"{res} data object summary records created");
+        _loggingHelper.LogLine($"{res} data object summary updated with type data");
         res = objects_srch.UpdateObjectSearchDataWithAccessIcon();
-        _loggingHelper.LogLine($"{res} data object summary records created");
+        _loggingHelper.LogLine($"{res} data object summary updated with access icon data");        
+        res = objects_srch.UpdateObjectSearchDataWithResourceIcon();
+        _loggingHelper.LogLine($"{res} data object summary updated with resource icon data");
     }
     
     public void CreateLexemeSearchData()
@@ -146,56 +148,71 @@ public class CoreSearchBuilder
         // Then aggregate to study based text, before indexing.
 
         lexemes_srch.CreateTSConfig1(); // ensure test search configs up to date
-        _loggingHelper.LogLine("Text search configuration 1 reconstructed");
-        lexemes_srch.CreateTSConfig2();
-        _loggingHelper.LogLine("Text search configuration 2 reconstructed");
+        _loggingHelper.LogLine("Text search configuration reconstructed");
 
-        // Titles
+        // Obtain relevant data
 
-        int res = lexemes_srch.GenerateTempTitleData();
-        _loggingHelper.LogLine($"{res} temporary title records created");
-
+        //int res = lexemes_srch.GenerateTitleData();
+        //_loggingHelper.LogLine($"{res} temporary title records created");
+        //res = lexemes_srch.GenerateTopicData();
+        // _loggingHelper.LogLine($"{res} temporary topic records created");
+        //res = lexemes_srch.GenerateConditionData();
+        //_loggingHelper.LogLine($"{res} temporary condition records created");
+        
+        /*
         res = lexemes_srch.GenerateTitleLexemeStrings();
         _loggingHelper.LogLine($"{res} title lexeme records created");
-
-        res = lexemes_srch.GenerateTitleDataByStudy();
-        _loggingHelper.LogLine($"{res} title lexeme records, by study, created");
-
-        res = lexemes_srch.TransferTitleDataByStudy();
-        _loggingHelper.LogLine($"{res} records created");
-
-        lexemes_srch.IndexTitleText();
-        _loggingHelper.LogLine("title lexeme indices created");
-
-        // Topics
-
-        res = lexemes_srch.GenerateTopicData();
-        _loggingHelper.LogLine($"{res} temporary topic records created");
-
         res = lexemes_srch.GenerateTopicLexemeStrings();
-        _loggingHelper.LogLine($"{res} title lexeme records created");
-
-        res = lexemes_srch.GenerateTopicDataByStudy();
-        _loggingHelper.LogLine($"{res} topic lexeme records, by study, created");
-
-        res = lexemes_srch.TransferTopicDataByStudy();
         _loggingHelper.LogLine($"{res} topic lexeme records created");
+        res = lexemes_srch.GenerateConditionLexemeStrings();
+        _loggingHelper.LogLine($"{res} condition lexeme records created");
+        */
+        
+        //res = lexemes_srch.GenerateTitleDataByStudy();
+        //_loggingHelper.LogLine($"{res} title records, by study, created");
+        //res = lexemes_srch.GenerateTopicDataByStudy();
+        //_loggingHelper.LogLine($"{res} topic records, by study, created");
+        //res = lexemes_srch.GenerateConditionDataByStudy();
+        //_loggingHelper.LogLine($"{res} condition  records, by study, created");
+        //res = lexemes_srch.CombineTitleAndTopicText();
+        //_loggingHelper.LogLine($"{res} title and topic text combined");
+        
+        //int res = lexemes_srch.CreateSearchLexemesTable();
+        //_loggingHelper.LogLine($"{res} study lexeme records established");
+        
+        //lexemes_srch.CleanCollectedTTData();
+        //_loggingHelper.LogLine($"tt data records - preliminary clean done");
+        //lexemes_srch.CleanCollectedConditionData();
+        //_loggingHelper.LogLine($"condition data records - preliminary clean done");
 
-        lexemes_srch.IndexTopicText();
-        _loggingHelper.LogLine("topic lexeme indices created");
+        lexemes_srch.CleanNumbersInTTData();
+        lexemes_srch.CleanNumbersInTTData();
+        
+        int res = lexemes_srch.TransferTitleLexDataByStudy();
+        _loggingHelper.LogLine($"{res} title lexeme records, by study, stored");
+        res = lexemes_srch.TransferConditionLexDataByStudy();
+        _loggingHelper.LogLine($"{res} condition lexeme records, by study, stored");
+        
+        
+        lexemes_srch.IndexTTLexText();
+        _loggingHelper.LogLine("title lexeme indices created");
+        //lexemes_srch.IndexTopicLexText();
+        //_loggingHelper.LogLine("topic lexeme indices created");
+        lexemes_srch.IndexConditionLexText();
+        _loggingHelper.LogLine("condition lexeme indices created");
 
         // tidy up
-
-        lexemes_srch.DropTempSearchTables();
+        
+        //lexemes_srch.DropTempLexTables(); - leave in for now
     }
 
 
     public void CreateLexemeIndices()
     {
+        lexemes_srch.IndexTTLexText();
+        //lexemes_srch.IndexTopicLexText();
+        lexemes_srch.IndexConditionLexText();
+        
     }
-    
-    
-    
-    
 
 }

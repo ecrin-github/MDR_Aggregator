@@ -98,4 +98,11 @@ public static class CopyHelpers
             .MapInteger("max_age", x => x.max_age)
             .MapInteger("max_age_units_id", x => x.max_age_units_id)
             .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
+    
+    public static readonly PostgreSQLCopyHelper<LexemeBase> lexeme_base_helper =
+        new PostgreSQLCopyHelper<LexemeBase>("core", "search_lexemes")
+            .MapInteger("study_id", x => x.study_id)
+            .MapVarchar("study_name", x => x.study_name)
+            .MapVarchar("tt", x => x.tt)
+            .MapVarchar("conditions", x => x.conditions);
 }
