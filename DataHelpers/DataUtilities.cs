@@ -257,7 +257,7 @@ public class DBUtilities
         try
         {
             int updated = 0;
-            int rec_batch = 50000;
+            int rec_batch = 20000;
             for (int r = min_id; r <= max_id; r += rec_batch)
             {
                 string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
@@ -286,7 +286,7 @@ public class DBUtilities
         try
         {
             int transferred = 0;
-            int rec_batch = 50000;
+            int rec_batch = 20000;
             for (int r = min_id; r <= max_id; r += rec_batch)
             {
                 string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
@@ -339,7 +339,7 @@ public class DBUtilities
         try
         {
             int updated = 0;
-            int rec_batch = 50000;
+            int rec_batch = 20000;
             for (int r = min_id; r <= max_id; r += rec_batch)
             {
                 string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
@@ -404,7 +404,7 @@ public class DBUtilities
             for (int r = min_id; r <= max_id; r += rec_batch)
             {
                 string batch_sql_string = top_sql 
-                                          + $" where si.study_id >= {r} and si.study_id < {r + rec_batch} " +
+                                          + $" and si.study_id >= {r} and si.study_id < {r + rec_batch} " +
                                           bottom_sql;
                 int res = ExecuteSQL(batch_sql_string);
                 if (res > 0)
@@ -431,7 +431,7 @@ public class DBUtilities
         try
         {
             int updated = 0;
-            int rec_batch = 50000;
+            int rec_batch = 20000;
             for (int r = min_id; r <= max_id; r += rec_batch)
             {
                 string batch_sql_string = sql_string + qualifier
@@ -545,6 +545,124 @@ public class DBUtilities
         catch (Exception e)
         {
             _loggingHelper.LogError($"In TransferSearchDataByStudy ({data_type}): { e.Message}");
+            return 0;
+        }
+    }
+    
+    
+    public int UpdateStudyFeatureList(string sql_string,  int min_id, int max_id, string data_type)
+    {
+        try
+        {
+            int transferred = 0;
+            int rec_batch = 20000;
+            for (int r = min_id; r <= max_id; r += rec_batch)
+            {
+                string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
+                int res = ExecuteSQL(batch_sql_string);
+                if (res > 0)
+                {
+                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
+                    string feedback = $"Updated search_studies table with {data_type} data, ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    transferred += res;
+                }
+            }
+            return transferred;
+        } 
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({data_type}s): { e.Message}");
+            return 0;
+        }
+    }
+    
+    public int UpdateSearchStudyObjectJson(int min_id, int max_id, string list_type )
+    {
+        try
+        { 
+            int updated = 0;
+            int rec_batch = 20000;
+            for (int r = min_id; r <= max_id; r += rec_batch)
+            {
+                string batch_sql_string = $@"Update core.search_studies ss
+                   set object_json = b.obj_json
+                from
+                    (select study_id, json_agg(object_json) as obj_json
+                    from core.search_objects 
+                    where study_id >= {r}
+                    and study_id < {r + rec_batch} 
+                    group by study_id) b
+                    where ss.study_id = b.study_id ";
+
+                int res = ExecuteSQL(batch_sql_string);
+                if (res > 0)
+                {
+                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
+                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    updated += res;
+                }
+            }
+            return updated;
+        }
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In {list_type} update: { e.Message}");
+            return 0;
+        }
+    }
+    
+    public int UpdateStudyJson(string sql_string,  int min_id, int max_id, string data_type)
+    {
+        try
+        {
+            int transferred = 0;
+            int rec_batch = 20000;
+            for (int r = min_id; r <= max_id; r += rec_batch)
+            {
+                string batch_sql_string = sql_string + $" where ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
+                int res = ExecuteSQL(batch_sql_string);
+                if (res > 0)
+                {
+                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
+                    string feedback = $"Updated search_studies table with {data_type} data, ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    transferred += res;
+                }
+            }
+            return transferred;
+        } 
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({data_type}s): { e.Message}");
+            return 0;
+        }
+    }
+    
+    public int TransferStudyJson(string sql_string,  int min_id, int max_id, string data_type)
+    {
+        try
+        {
+            int transferred = 0;
+            int rec_batch = 10000;
+            for (int r = min_id; r <= max_id; r += rec_batch)
+            {
+                string batch_sql_string = sql_string + $" and s.study_id >= {r} and s.study_id < {r + rec_batch} ";
+                int res = ExecuteSQL(batch_sql_string);
+                if (res > 0)
+                {
+                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
+                    string feedback = $"Updated {data_type} table with study json data, ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    transferred += res;
+                }
+            }
+            return transferred;
+        } 
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({data_type}s): { e.Message}");
             return 0;
         }
     }

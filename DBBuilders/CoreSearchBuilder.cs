@@ -3,7 +3,6 @@
 public class CoreSearchBuilder
 {
     private readonly ILoggingHelper _loggingHelper;
-    private readonly SearchTableBuilder srch_builder;
     private readonly SearchHelperStudies studies_srch;
     private readonly SearchHelperLexemes lexemes_srch;
     private readonly SearchHelperObjects objects_srch;
@@ -11,23 +10,15 @@ public class CoreSearchBuilder
     public CoreSearchBuilder(string connString, ILoggingHelper loggingHelper)
     {
         _loggingHelper = loggingHelper;
-        srch_builder = new SearchTableBuilder(connString, _loggingHelper);
         studies_srch = new SearchHelperStudies(connString, _loggingHelper);
         lexemes_srch = new SearchHelperLexemes(connString, _loggingHelper);
         objects_srch = new SearchHelperObjects(connString, _loggingHelper);
     }
 
-    public void CreateSearchTables()
-    {
-        //srch_builder.create_table_search_studies();
-        //srch_builder.create_table_search_lexemes();
-        //srch_builder.create_table_search_pmids();
-        //srch_builder.create_table_search_idents();
-        //srch_builder.create_table_search_objects();
-    }
-
+    
     public void CreateStudySearchData()
     {
+        studies_srch.CreateTableSearchStudies();
         int res = studies_srch.GenerateStudySearchData();
         _loggingHelper.LogLine(res + " study search records created");
         res = studies_srch.UpdateStudyTypeData();
@@ -60,7 +51,6 @@ public class CoreSearchBuilder
         _loggingHelper.LogLine($"{res} study search records updated with time perspective data");
         res = studies_srch.UpdateStudySearchDataWithBioSpecData();
         _loggingHelper.LogLine($"{res} study search records updated with bio-specimen data");
-
     }
 
     public void CreateStudyHasObjectData()
@@ -103,7 +93,7 @@ public class CoreSearchBuilder
         
         studies_srch.CreateBitMapData();
         studies_srch.DropStudySearchObjectDataTable();
-        _loggingHelper.LogLine($"'Has objects data transferred to bitmap in search_studies table");
+        _loggingHelper.LogLine($"Objects data transferred to bitmap in search_studies table");
     }
 
     public void CreateStudyCompositeFieldData()
@@ -112,7 +102,26 @@ public class CoreSearchBuilder
         _loggingHelper.LogLine($"{res} study search records updated with lists of countries");
         res = studies_srch.UpdateStudySearchDataWithConditionData();
         _loggingHelper.LogLine($"{res} study search records updated with lists of conditions");
-        
+    }
+    
+    public void CompleteStudySearchData()
+    {
+        int res = studies_srch.CreateFeatureString();
+        _loggingHelper.LogLine($"{res} study search records updated with feature list data");
+        res = studies_srch.ObtainObjectJsonData();
+        _loggingHelper.LogLine($"{res} study search records updated with object json data");
+        res = studies_srch.CreateStudyJsonData();
+        _loggingHelper.LogLine($"{res} study search records updated study json data");
+    }
+    
+    public void AddStudyJsonToSearchTables()
+    {
+        //int res = studies_srch.UpdateIdentsSearchWithStudyJson();
+        //_loggingHelper.LogLine($"{res} idents search records updated with study json data");
+       //res = studies_srch.UpdatePMIDsSearchWithStudyJson();
+        //_loggingHelper.LogLine($"{res} pmids search records updated with study json data");
+        int res = studies_srch.UpdateLexemesSearchWithStudyJson();
+        _loggingHelper.LogLine($"{res} lexemes search records updated with study json data");
     }
     
     public void CreateIdentifierSearchData()
@@ -139,6 +148,8 @@ public class CoreSearchBuilder
         _loggingHelper.LogLine($"{res} data object summary updated with access icon data");        
         res = objects_srch.UpdateObjectSearchDataWithResourceIcon();
         _loggingHelper.LogLine($"{res} data object summary updated with resource icon data");
+        res = objects_srch.UpdateObjectSearchDataWithJson();
+        _loggingHelper.LogLine($"{res} data object summary updated with json equivalent");
     }
     
     public void CreateLexemeSearchData()
@@ -147,72 +158,33 @@ public class CoreSearchBuilder
         // temporary tables and do an initial transition to lexemes.
         // Then aggregate to study based text, before indexing.
 
-        lexemes_srch.CreateTSConfig1(); // ensure test search configs up to date
+        lexemes_srch.CreateTSConfig();
         _loggingHelper.LogLine("Text search configuration reconstructed");
 
         // Obtain relevant data
 
-        //int res = lexemes_srch.GenerateTitleData();
-        //_loggingHelper.LogLine($"{res} temporary title records created");
-        //res = lexemes_srch.GenerateTopicData();
-        // _loggingHelper.LogLine($"{res} temporary topic records created");
-        //res = lexemes_srch.GenerateConditionData();
-        //_loggingHelper.LogLine($"{res} temporary condition records created");
+        int res = lexemes_srch.GenerateTitleData();
+        _loggingHelper.LogLine($"{res} temporary title records created");
+        res = lexemes_srch.GenerateTopicData();
+         _loggingHelper.LogLine($"{res} temporary topic records created");
+        res = lexemes_srch.GenerateConditionData();
+        _loggingHelper.LogLine($"{res} temporary condition records created");
         
-        /*
-        res = lexemes_srch.GenerateTitleLexemeStrings();
-        _loggingHelper.LogLine($"{res} title lexeme records created");
-        res = lexemes_srch.GenerateTopicLexemeStrings();
-        _loggingHelper.LogLine($"{res} topic lexeme records created");
-        res = lexemes_srch.GenerateConditionLexemeStrings();
-        _loggingHelper.LogLine($"{res} condition lexeme records created");
-        */
+        res = lexemes_srch.GenerateTitleDataByStudy();
+        _loggingHelper.LogLine($"{res} title records, by study, created");
+        res = lexemes_srch.GenerateTopicDataByStudy();
+        _loggingHelper.LogLine($"{res} topic records, by study, created");
+        res = lexemes_srch.GenerateConditionDataByStudy();
+        _loggingHelper.LogLine($"{res} condition  records, by study, created");
+        res = lexemes_srch.CombineTitleAndTopicText();
+        _loggingHelper.LogLine($"{res} title and topic text combined");
         
-        //res = lexemes_srch.GenerateTitleDataByStudy();
-        //_loggingHelper.LogLine($"{res} title records, by study, created");
-        //res = lexemes_srch.GenerateTopicDataByStudy();
-        //_loggingHelper.LogLine($"{res} topic records, by study, created");
-        //res = lexemes_srch.GenerateConditionDataByStudy();
-        //_loggingHelper.LogLine($"{res} condition  records, by study, created");
-        //res = lexemes_srch.CombineTitleAndTopicText();
-        //_loggingHelper.LogLine($"{res} title and topic text combined");
+        lexemes_srch.CreateSearchLexemesTable();
+        lexemes_srch.ProcessLexemeBaseData();
         
-        //int res = lexemes_srch.CreateSearchLexemesTable();
-        //_loggingHelper.LogLine($"{res} study lexeme records established");
-        
-        //lexemes_srch.CleanCollectedTTData();
-        //_loggingHelper.LogLine($"tt data records - preliminary clean done");
-        //lexemes_srch.CleanCollectedConditionData();
-        //_loggingHelper.LogLine($"condition data records - preliminary clean done");
-
-        lexemes_srch.CleanNumbersInTTData();
-        lexemes_srch.CleanNumbersInTTData();
-        
-        int res = lexemes_srch.TransferTitleLexDataByStudy();
-        _loggingHelper.LogLine($"{res} title lexeme records, by study, stored");
-        res = lexemes_srch.TransferConditionLexDataByStudy();
-        _loggingHelper.LogLine($"{res} condition lexeme records, by study, stored");
-        
-        
-        lexemes_srch.IndexTTLexText();
-        _loggingHelper.LogLine("title lexeme indices created");
-        //lexemes_srch.IndexTopicLexText();
-        //_loggingHelper.LogLine("topic lexeme indices created");
-        lexemes_srch.IndexConditionLexText();
-        _loggingHelper.LogLine("condition lexeme indices created");
-
         // tidy up
         
-        //lexemes_srch.DropTempLexTables(); - leave in for now
-    }
-
-
-    public void CreateLexemeIndices()
-    {
-        lexemes_srch.IndexTTLexText();
-        //lexemes_srch.IndexTopicLexText();
-        lexemes_srch.IndexConditionLexText();
-        
+        lexemes_srch.DropTempLexTables(); // leave in for now
     }
 
 }

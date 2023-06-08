@@ -188,7 +188,6 @@ public class Aggregator
                 CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
                 _loggingHelper.LogHeader("Setting up Study Text Search data");
                 
-                //csb.CreateSearchTables();
                 //csb.CreateStudySearchData();
                 //csb.CreateStudyFeatureData();
                 //csb.CreateStudyHasObjectData();
@@ -196,9 +195,9 @@ public class Aggregator
                 //csb.CreateIdentifierSearchData();
                 //csb.CreatePMIDSearchData();
                 //csb.CreateObjectSearchData();
-                csb.CreateLexemeSearchData();
-                csb.CreateLexemeIndices();
-                
+                //csb.CreateLexemeSearchData();
+                //csb.CompleteStudySearchData();
+                csb.AddStudyJsonToSearchTables();
                 
                 // Drop FTW schemas.
                 

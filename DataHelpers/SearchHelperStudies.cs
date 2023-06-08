@@ -12,19 +12,68 @@ public class SearchHelperStudies
         max_studies_id = db.GetAggMaxId("core.studies");
     }
     
+    public void CreateTableSearchStudies()
+    {
+        string sql_string = @"drop table if exists core.search_studies;
+        create table core.search_studies
+        (
+            study_id                int primary key   not null
+            , study_name            varchar           null
+            , description           varchar           null
+            , dss                   varchar           null
+            , start_year            int               null
+            , start_month           int               null
+            , type_id               int               null
+            , type_name             varchar           null
+            , status_id             int               null
+            , status_name           varchar           null
+            , gender_elig_id        int               null
+            , gender_elig           varchar           null
+            , min_age               varchar           null
+            , min_age_units_id      int               null
+            , max_age               varchar           null
+            , max_age_units_id      int               null
+            , phase_id              int               null
+            , phase_name            varchar           null
+            , alloc_id              int               null
+            , alloc_name            varchar           null
+            , purpose_name          varchar           null
+            , interv_name           varchar           null
+            , masking_name          varchar           null
+            , obsmodel_name         varchar           null
+            , timepersp_name        varchar           null
+            , biospec_name          varchar           null
+            , feature_list          varchar           null
+            , has_objects           bit(16)           default '0000000000000000'
+            , country_list          varchar           null
+            , condition_list        varchar           null
+            , provenance            varchar           null
+            , object_json           json              null
+            , study_json            json              null
+        );
+        create index ss_start_year on core.search_studies(start_year);
+        create index ss_type on core.search_studies(type_id);
+        create index ss_status on core.search_studies(status_id);
+        create index ss_phase_id on core.search_studies(phase_id);
+        create index ss_alloc_id on core.search_studies(alloc_id);";
+
+        db.ExecuteSQL(sql_string);
+    }
+    
     public int GenerateStudySearchData()
     {
         string top_sql = @"INSERT INTO core.search_studies(study_id, study_name, description, dss, 
                               start_year, start_month, type_id, status_id, gender_elig_id, 
                               min_age, min_age_units_id, max_age, max_age_units_id,provenance)
                               select id, display_title, brief_description, data_sharing_statement,
-                              study_start_year, study_start_month, study_type_id, study_status_id,
-                              study_gender_elig_id, min_age::varchar, min_age_units_id, 
+                              study_start_year, study_start_month, coalesce(study_type_id, 0), 
+                              coalesce(study_status_id, 0), coalesce(study_gender_elig_id, 915), 
+                              min_age::varchar, min_age_units_id, 
                               max_age::varchar, max_age_units_id, provenance_string
                               from core.studies s ";
         string bottom_sql = " order by s.id";
         return db.SearchTableTransfer(top_sql, bottom_sql, "id", min_studies_id, max_studies_id,
-                               "search_studies", 50000);
+                               "search_studies", 20000);
     }
 
     public int UpdateStudyTypeData()
@@ -82,15 +131,15 @@ public class SearchHelperStudies
     public int UpdateStudySearchDataWithPhaseIdData()
     {
         string sql_string = @"UPDATE core.search_studies ss
-               set phase_id = f.feature_value_id, 
-                   phase_name = f.name
+               set phase_id = f.feature_value_id
+                   phase_name = f.name,
                from 
                    (select sf.study_id, sf.feature_value_id,
                     lup.name from core.study_features sf
                     inner join context_lup.study_feature_categories lup
                     on sf.feature_value_id = lup.id
                     where sf.feature_type_id = 20) f
-               where ss.study_id = f.study_id";
+               where ss.study_id = f.study_id ";
 
         return db.UpdateSearchFeatureData(sql_string, "phase", min_studies_id, max_studies_id);
     }
@@ -98,7 +147,7 @@ public class SearchHelperStudies
     public int UpdateStudySearchDataWithAllocIdData()
     {
         string sql_string = @"UPDATE core.search_studies ss
-               set alloc_id = f.feature_value_id, 
+               set alloc_id = f.feature_value_id
                    alloc_name = f.name
                from 
                    (select sf.study_id, sf.feature_value_id,
@@ -143,7 +192,7 @@ public class SearchHelperStudies
     public int UpdateStudySearchDataWithMaskingData()
     {
         string sql_string = @"UPDATE core.search_studies ss
-               set masking_name = f.name 
+               set masking_name = f.name
                from 
                    (select sf.study_id, sf.feature_value_id,
                     lup.name from core.study_features sf
@@ -244,7 +293,7 @@ public class SearchHelperStudies
         string sql_string = @"DROP TABLE IF EXISTS core.temp_searchobjects; ";
         db.ExecuteSQL(sql_string);
     }
-        
+
     public int UpdateStudySearchDataIfHasRegResults()
     {
         return db.CollectHasObjectData("b.object_type_id in (28)", 0, "registry results");
@@ -253,7 +302,7 @@ public class SearchHelperStudies
     public int UpdateStudySearchDataIfHasArticle()
     {
         return db.CollectHasObjectData(@"b.object_type_id in (12, 100, 117, 135, 152, 201, 
-                                       202, 203, 294, 210)", 1, "article");
+                                       202, 203, 204, 210)", 1, "article");
     }
 
     public int UpdateStudySearchDataIfHasProtocol()
@@ -293,14 +342,13 @@ public class SearchHelperStudies
 
     public int UpdateStudySearchDataIfHasDataDesc()
     {
-        return db.CollectHasObjectData(@"b.object_type_id in (20, 31, 32, 81, 82, 
-                                         69, 70, 71, 72, 73, 154)", 9, "Data Summary");
+        return db.CollectHasObjectData(@"b.object_type_id in (20, 31, 32, 81, 82, 73)", 9, "Data Description");
     }
 
     public int UpdateStudySearchDataIfHasIPD()
     {
-        return db.CollectHasObjectData(@"b.object_type_id in (80, 153) or 
-                                       b.object_type_id between 51 and 68", 10, "IPD");
+        return db.CollectHasObjectData(@"b.object_type_id in (80, 153, 154) or 
+                                       b.object_type_id between 51 and 72", 10, "IPD");
     }
    
     public int UpdateStudySearchDataIfHasOthRes()
@@ -347,6 +395,109 @@ public class SearchHelperStudies
                                 and b.bit_pos = {n} ";
             db.UpdateBitMap(sql_string, n, min_studies_id, max_studies_id);
         }
+    }
+    
+    public int CreateFeatureString()
+    {
+        string sql_string = $@"Update core.search_studies ss 
+                               set feature_list = 'Randomised: '
+                   || case 
+                      when alloc_name is null then 'Not provided'
+					  when alloc_name = 'Randomised' then 'Yes'
+					  when alloc_name = 'Nonrandomised' then 'No'
+					  when alloc_name = 'Not applicable' then 'No'
+                      else 'Unclear'
+                   end 
+                  || case 
+                      when phase_name is null then ''
+                      when phase_name ='Not applicable' then ''
+                      else ';  Phase: '|| phase_name
+                   end 
+                  
+                 || case 
+                      when purpose_name is null then ''
+                      when purpose_name ='Other' then ''
+                      else ';  Focus: '|| purpose_name
+                   end 
+                 || case 
+                      when interv_name is null then ''
+                      when interv_name ='Other' then ''
+                      else ';  Intervention design: '|| interv_name
+                   end 
+                 || case 
+                      when ss.masking_name is null then ''
+                      when ss.masking_name ='Not applicable' then ''
+                      else '; Masking: '|| masking_name
+                  end 
+                  where type_id = 11 ";
+        
+        db.UpdateStudyFeatureList(sql_string, min_studies_id, max_studies_id, "intervention feature");
+        
+        sql_string = $@"Update core.search_studies ss 
+                      set feature_list = 'Time Perspective:  '|| case 
+			          when timepersp_name is null then ''
+			          when timepersp_name ='Other' then 'Not specified'
+			          else timepersp_name
+		           end 
+		           || case 
+			          when obsmodel_name is null then ''
+			          when obsmodel_name ='Other' then ''
+			          else '; Observation model: '|| obsmodel_name
+		           end 
+		           || case 
+			          when biospec_name is null then ''
+			          when biospec_name ='other' then ''
+			          else '; '||trim(biospec_name)||' reported as available'
+		           end 
+            where type_id = 12 ";
+        
+        return db.UpdateStudyFeatureList(sql_string, min_studies_id, max_studies_id, "observation feature");
+    }
+
+
+    public int ObtainObjectJsonData()
+    {
+        return db.UpdateSearchStudyObjectJson(min_studies_id, max_studies_id, "study object json" );
+    }
+    
+    public int CreateStudyJsonData()
+    {
+        string sql_string = @"Update core.search_studies ss 
+             set study_json =  json_build_object ('study_id', study_id, 'study_name', study_name, 
+		     'description', description, 'dss', dss, 'start_year', start_year, 'start_month', start_month,
+             'type_id', type_id, 'type_name', type_name, 'status_id', status_id, 'status_name', status_name, 
+             'gender_elig', gender_elig, 'min_age', min_age, 'max_age', max_age, 'phase_id', phase_id,
+             'alloc_id', alloc_id, 'feature_list', feature_list, 'has_objects', has_objects, 'country_list', 
+              country_list, 'condition_list', condition_list, 'provenance', provenance, 'objects', object_json) ";
+           
+        return db.UpdateStudyJson(sql_string, min_studies_id, max_studies_id, "study json");
+    }
+    
+    public int UpdateIdentsSearchWithStudyJson()
+    {
+        string sql_string = @"update core.search_idents s
+                              set study_json = ss.study_json
+                              from core.search_studies ss
+                              where s.study_id = ss.study_id ";
+        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "idents study json");
+    }
+    
+    public int UpdatePMIDsSearchWithStudyJson()
+    {
+        string sql_string = @"update core.search_pmids s
+                              set study_json = ss.study_json
+                              from core.search_studies ss
+                              where s.study_id = ss.study_id ";
+        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "pmids study json");
+    }
+    
+    public int UpdateLexemesSearchWithStudyJson()
+    {
+        string sql_string = @"update core.search_lexemes s
+                              set study_json = ss.study_json
+                              from core.search_studies ss
+                              where s.study_id = ss.study_id ";
+        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "lexemes study json");
     }
     
 }

@@ -16,7 +16,18 @@ public class SearchHelperObjects
     
     public int CreatePMIDSearchData()
     {
-        string sql_string = @"truncate table core.search_pmids;
+        string sql_string = @"drop table if exists core.search_pmids;
+        create table core.search_pmids
+        (
+            pmid                 int                not null
+          , study_id             int                not null
+          , study_json           json               null
+        );
+        create index sp_pmid on core.search_pmids(pmid);";
+        
+        db.ExecuteSQL(sql_string);
+        
+        sql_string = @"truncate table core.search_pmids;
         insert into core.search_pmids (pmid, study_id)
         select oi.identifier_value::int, k.study_id from 
         core.object_identifiers oi
@@ -32,7 +43,16 @@ public class SearchHelperObjects
     
     public int CreateIdentifierSearchData()
     {
-        string sql_string = @"truncate table core.search_idents; ";
+        string sql_string = @"drop table if exists core.search_idents;
+         create table core.search_idents
+         (
+            ident_type  		int                not null
+          , ident_value			varchar            not null		
+          , study_id 			int                not null
+          , study_json          json               null
+         );
+        create index si_type_value on core.search_idents(ident_type, ident_value);";
+
         db.ExecuteSQL(sql_string);
 
         string top_sql = @"insert into core.search_idents (ident_type, ident_value, study_id)
@@ -44,39 +64,44 @@ public class SearchHelperObjects
 
         return db.CreateSearchIdentsData(top_sql, bottom_sql, min_studies_id, max_studies_id, "search_idents");
     }
-        
+       
+    
     // objects table.
    
     public int CreateObjectSearchData()
     {
+        string sql_string = @"drop table if exists core.search_objects;
+        create table core.search_objects
+        (
+            study_id          int                 not null
+          , object_id         int                 not null
+          , object_name       varchar             null
+          , type_id           int                 null
+          , type_name         varchar             null
+          , url               varchar             null
+          , resource_type_id  int                 null
+          , resource_icon     varchar             null
+          , year_published    int                 null
+          , access_type_id    int                 null
+          , access_icon       varchar             null
+          , provenance        varchar             null
+          , object_json       json               null
+        );
+        create index so_study_id on core.search_objects(study_id);
+        create index so_object_id on core.search_objects(object_id);";
+         
+        db.ExecuteSQL(sql_string);
+        
         string top_sql =
             @"insert into core.search_objects(study_id, object_id, url, resource_type_id)
                 select s.study_id, s.object_id, bi.url, bi.resource_type_id
                 from core.study_object_links s
                 inner join core.object_instances bi
                 on s.object_id = bi.object_id ";
-        string bottom_sql = " order by s.study_id, s.object_id"; 
+        string bottom_sql = " order by s.study_id, s.object_id, resource_type_id desc"; 
        
         return db.SearchTableTransfer(top_sql, bottom_sql, "study_id", min_studies_id, max_studies_id,
             "search_objects", 20000);
-        
-        /*
-        string top_sql =
-            @"insert into core.search_objects(study_id, object_id, object_name, type_id, url,
-                                              resource_type_id, year_published, access_type_id, provenance)
-                select s.study_id, s.object_id, b.display_title, b.object_type_id, bi.url, 
-                       bi.resource_type_id, b.publication_year, b.access_type_id, b.provenance_string
-                from core.study_object_links s
-                inner join core.data_objects b
-                on s.object_id = b.id
-                inner join core.object_instances bi
-                on b.id = bi.object_id ";
-       string bottom_sql = " order by s.study_id, s.object_id"; 
-       
-       return db.SearchTableTransfer(top_sql, bottom_sql, "study_id", min_studies_id, max_studies_id,
-                                     "search_objects", 20000);
-       */
-       
     }
     
     public int UpdateObjectSearchData()
@@ -135,12 +160,14 @@ public class SearchHelperObjects
         return db.UpdateObjectSearchData(sql_string, min_studies_id, max_studies_id, " where ","resource icon");
     }
     
-    
-    
-    
+    public int UpdateObjectSearchDataWithJson()
+    {
+        string sql_string = @"update core.search_objects so
+                set object_json = json_build_object ('sid', study_id, 'oid', object_id, 
+		        'ob_name', object_name, 'typeid', type_id, 'typename', type_name,
+		        'url', url, 'res_type_id', resource_type_id, 'res_icon', resource_icon, 
+		        'year_pub', year_published, 'acc_icon', access_icon, 'prov', provenance) ";
 
-    
-
-
-
+        return db.UpdateObjectSearchData(sql_string, min_studies_id, max_studies_id, " where ","json string");
+    }
 }
