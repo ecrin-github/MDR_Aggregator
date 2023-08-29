@@ -5,15 +5,13 @@ public class StatisticsBuilder
     private readonly int _agg_event_id;
     private readonly IMonDataLayer _monDatalayer;
     private readonly ILoggingHelper _loggingHelper;
-    private readonly bool _testing;
 
     public StatisticsBuilder(int agg_event_id, IMonDataLayer monDatalayer,
-                             ILoggingHelper logginghelper, bool testing)
+                             ILoggingHelper logginghelper)
     {
         _agg_event_id = agg_event_id;
         _monDatalayer = monDatalayer;
         _loggingHelper = logginghelper;
-        _testing = testing;
     }
 
     public void GetStatisticsBySource()
@@ -30,7 +28,7 @@ public class StatisticsBuilder
 
         foreach (Source s in sources)
         {
-            string conn_string = _monDatalayer.GetConnectionString(s.database_name!, false);
+            string conn_string = _monDatalayer.GetConnectionString(s.database_name!);
             SourceSummary sm = new(_agg_event_id, s.database_name!);
 
             if (s.has_study_tables is true)
@@ -116,7 +114,7 @@ public class StatisticsBuilder
     {
         // Obtains figures for aggregate tables.
         
-        string conn_string = _monDatalayer.GetConnectionString("mdr", _testing);
+        string conn_string = _monDatalayer.GetConnectionString("mdr");
         CoreSummary sm = new (_agg_event_id);
 
         _loggingHelper.LogLine("");

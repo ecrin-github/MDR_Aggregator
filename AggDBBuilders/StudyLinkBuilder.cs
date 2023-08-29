@@ -5,14 +5,12 @@ public class StudyLinkBuilder
     private readonly ILoggingHelper _loggingHelper;
     private readonly LinksDataHelper slh;
     private readonly ICredentials _credentials;
-    private readonly bool _testing;
 
-    public StudyLinkBuilder(ILoggingHelper logginghelper, ICredentials credentials, 
-           string aggs_connString, bool testing)
+    public StudyLinkBuilder(ILoggingHelper loggingHelper, ICredentials credentials, 
+           string aggs_connString)
     {
-        _loggingHelper = logginghelper;
+        _loggingHelper = loggingHelper;
         _credentials = credentials;
-        _testing = testing;
         slh = new LinksDataHelper(aggs_connString, _loggingHelper);
     }
         
@@ -27,20 +25,12 @@ public class StudyLinkBuilder
 
         foreach (Source source in sources)
         {
-            if (_testing)
-            {
-                // need to populate the ad tables in a test situation with the relevant data,
-                // as the source_conn_string will always point to 'test' -
-                // at least get the study identifiers data - but this needs further consideration.
-                
-                slh.TransferTestIdentifiers(source.id);
-            }
-            else if (source.has_study_tables is true)
+            if (source.has_study_tables is true)
             {
                 // Fetch the study-study links and store them in the initial Collector table
                 // (assuming the source has study data).
                 
-                string source_conn_string = _credentials.GetConnectionString(source.database_name!, _testing);
+                string source_conn_string = _credentials.GetConnectionString(source.database_name!);
                 IEnumerable<StudyLink> links = slh.FetchLinks(source.id, source_conn_string);
                 ulong num = slh.StoreLinksInTempTable(CopyHelpers.links_helper, links);
                 _loggingHelper.LogLine($"{num} secondary id records transferred from {source.database_name!} ");
@@ -93,14 +83,9 @@ public class StudyLinkBuilder
 
         foreach (Source source in sources)
         {
-            if (_testing)
-            {
-                // do anything? - slh.TransferTestIdentifiers(source.id);
-            }
-
             if (source.has_study_tables is true)
             {
-                string source_conn_string = _credentials.GetConnectionString(source.database_name!, _testing);
+                string source_conn_string = _credentials.GetConnectionString(source.database_name!);
                 slh.ObtainStudyIds(source.id, source_conn_string, CopyHelpers.studyids_checker); 
                 slh.CheckIdsAgainstSourceStudyIds(source.id);
             }

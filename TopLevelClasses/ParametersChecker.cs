@@ -33,23 +33,12 @@ internal class ParametersChecker
         
         try
         {
-            if (opts.testing)
-            {
-                // No particular requirement here - can drop straight through to run the program
-                // but set the other parameters as true so all functions are tested.
-                // Need to think about involvement of do_iec and do_indexes,
-
-                opts.transfer_data = true;
-                opts.create_core = true;
-                opts.create_json = true;
-                opts.do_statistics = true;
-            }
-            else if (opts is { transfer_data: false, create_core: false, create_json: false, 
+            if (opts is { transfer_data: false, create_core: false, create_json: false, 
                                do_statistics: false, do_iec: false, do_indexes: false })
             {
-                // If not testing need at least one of D, C, J or S to be true
+                // Need at least one of D, C, J or S to be true
 
-                throw new Exception("None of the allowed optional parameters appear to be present!");
+                throw new Exception("None of the allowed parameters appear to be present!");
             }
 
             // Parameters valid - return opts and the source.
@@ -122,8 +111,6 @@ public class Options
     [Option('I', "do IEC data", Required = false, HelpText = "Aggregates the inclusion / exclusion data into a separate database ('iec')")]
     public bool do_iec { get; set; }
 
-    [Option('T', "use test data", Required = false, HelpText = "Carry out D, C, S and J but using test data only, in the test database")]
-    public bool testing { get; set; }
 }
 
   

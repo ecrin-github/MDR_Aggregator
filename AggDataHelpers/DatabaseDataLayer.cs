@@ -6,11 +6,11 @@ namespace MDR_Aggregator;
 
 public class DataLayer
     {
-        private string connString;
-        private string mon_connString;
-        private string username;
-        private string password;
-        private string host;
+        private readonly string? connString;
+        private readonly string? mon_connString;
+        private readonly string? username;
+        private readonly string? password;
+        private readonly string? host;
 
         public DataLayer(string database_name)
         {

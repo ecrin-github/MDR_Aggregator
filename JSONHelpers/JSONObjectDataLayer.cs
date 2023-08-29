@@ -65,6 +65,7 @@ public class JSONObjectDataLayer
             left join context_lup.object_access_types oat on dob.access_type_id = oat.id
             where dob.id = ";
 
+        
         // dataset query string
         
         data_set_query_string = @"select ds.id, 
@@ -80,7 +81,7 @@ public class JSONObjectDataLayer
             left join context_lup.dataset_recordkey_types rt on ds.record_keys_type_id = rt.id
             left join context_lup.dataset_deidentification_levels it on ds.deident_type_id = it.id
             left join context_lup.dataset_consent_types ct on ds.consent_type_id = ct.id
-            where ds.id = ";
+            where object_id = ";
 
 
         // object instances
@@ -97,7 +98,7 @@ public class JSONObjectDataLayer
             where object_id = ";
 
 
-        //object title query string
+        // object title query string
         
         object_title_query_string = @"select
             ot.id, ot.title_type_id, tt.name as title_type, 
@@ -256,7 +257,7 @@ public class JSONObjectDataLayer
 
     // Fetches all linked instance records for the specified data object
 
-    public IEnumerable<DBObjectInstance>? FetchObjectInstances(int id)
+    public IEnumerable<DBObjectInstance> FetchObjectInstances(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_instance_query_string + id;
@@ -266,17 +267,17 @@ public class JSONObjectDataLayer
 
     // Fetches all linked study records for the specified data object
 
-    public IEnumerable<int>? FetchLinkedStudies(int Id)
+    public IEnumerable<int> FetchLinkedStudies(int Id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_link_query_string + Id.ToString();
+        string sql_string = object_link_query_string + Id;
         return Conn.Query<int>(sql_string);
     }
 
     
     // Fetches all linked title records for the specified data object
 
-    public IEnumerable<DBObjectTitle>? FetchObjectTitles(int id)
+    public IEnumerable<DBObjectTitle> FetchObjectTitles(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_title_query_string + id;
@@ -286,7 +287,7 @@ public class JSONObjectDataLayer
 
     // Fetches all linked dates for the specified data object
 
-    public IEnumerable<DBObjectDate>? FetchObjectDates(int Id)
+    public IEnumerable<DBObjectDate> FetchObjectDates(int Id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_date_query_string + Id;
@@ -296,7 +297,7 @@ public class JSONObjectDataLayer
     
     // Fetches all linked people for the specified data object
 
-    public IEnumerable<DBObjectPerson>? FetchObjectPeople(int Id)
+    public IEnumerable<DBObjectPerson> FetchObjectPeople(int Id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_person_query_string + Id;
@@ -306,7 +307,7 @@ public class JSONObjectDataLayer
     
     // Fetches all linked organisations for the specified data object
 
-    public IEnumerable<DBObjectOrganisation>? FetchObjectOrganisations(int Id)
+    public IEnumerable<DBObjectOrganisation> FetchObjectOrganisations(int Id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_organisation_query_string + Id;
@@ -316,7 +317,7 @@ public class JSONObjectDataLayer
     
     // Fetches all linked topics for the specified data object
 
-    public IEnumerable<DBObjectTopic>? FetchObjectTopics(int Id)
+    public IEnumerable<DBObjectTopic> FetchObjectTopics(int Id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_topic_query_string + Id;
@@ -372,9 +373,10 @@ public class JSONObjectDataLayer
     }
     */
     
+    
     // Fetches all linked identifier records for the specified data object
 
-    public IEnumerable<DBObjectIdentifier>? FetchObjectIdentifiers(int id)
+    public IEnumerable<DBObjectIdentifier> FetchObjectIdentifiers(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_identifier_query_string + id;
@@ -382,14 +384,14 @@ public class JSONObjectDataLayer
     }
 
 
-    public IEnumerable<DBObjectDescription>? FetchObjectDescriptions(int id)
+    public IEnumerable<DBObjectDescription> FetchObjectDescriptions(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_description_query_string + id;
         return Conn.Query<DBObjectDescription>(sql_string);
     }
 
-    public IEnumerable<DBObjectRelationship>? FetchObjectRelationships(int id)
+    public IEnumerable<DBObjectRelationship> FetchObjectRelationships(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_relationships_query_string + id;
@@ -397,7 +399,7 @@ public class JSONObjectDataLayer
     }
 
 
-    public IEnumerable<DBObjectRight>? FetchObjectRights(int id)
+    public IEnumerable<DBObjectRight> FetchObjectRights(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_rights_query_string + id;

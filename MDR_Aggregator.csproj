@@ -23,6 +23,7 @@
     <Compile Remove="TopLevelClasses\Interfaces\IAggregator.cs" />
     <Compile Remove="LoggingHelpers\Interfaces\ISource.cs" />
     <Compile Remove="DataHelpers\DatabaseDataLayer.cs" />
+    <Compile Remove="AggDataHelpers\DatabaseDataLayer.cs" />
   </ItemGroup>
 
   <ItemGroup>

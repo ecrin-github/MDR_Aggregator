@@ -29,7 +29,7 @@ public class Aggregator
                 // tables (ctx & lup), and finally establish new tables for the three schemas st, ob, nk
                 // and construct a new aggregation event record.
                          
-                string agg_conn_string = _credentials.GetConnectionString("aggs", opts.testing);
+                string agg_conn_string = _credentials.GetConnectionString("aggs");
                 List<string> source_schemas = new(){"ctx", "lup"};
                 _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", "context", source_schemas);
                 _loggingHelper.LogLine("Context data established as FTWs in aggs DB");
@@ -48,8 +48,7 @@ public class Aggregator
                 List<Source> sources = _monDatalayer.RetrieveDataSources()
                                            .OrderBy(s => s.preference_rating).ToList();
                 _loggingHelper.LogLine("Sources obtained");
-                StudyLinkBuilder slb = new StudyLinkBuilder(_loggingHelper, _credentials, 
-                                                          agg_conn_string, opts.testing);
+                StudyLinkBuilder slb = new StudyLinkBuilder(_loggingHelper, _credentials, agg_conn_string);
                 slb.CollectStudyStudyLinks(sources);
                 _loggingHelper.LogLine("");
                 slb.CheckStudyStudyLinks(sources);
@@ -71,7 +70,7 @@ public class Aggregator
                     // source database. Process in a testing environment to be revised!
                     
                     string db_name = source.database_name!;
-                    source.db_conn = _credentials.GetConnectionString(db_name, opts.testing);
+                    source.db_conn = _credentials.GetConnectionString(db_name);
                     source_schemas = new List<string>{"ad"};
                     _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", db_name, source_schemas);
                     string ftw_schema_name = $"{db_name}_ad";
@@ -115,11 +114,8 @@ public class Aggregator
                 agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_object_ids", 
                                                                                       "nk", agg_conn_string);
 
-                if (!opts.testing)
-                {
-                    _monDatalayer.StoreAggregationEvent(agg_event);
-                }
-            }
+                _monDatalayer.StoreAggregationEvent(agg_event);
+            }           
 
 
             if (opts.create_core)
@@ -128,7 +124,7 @@ public class Aggregator
                 // Then create FTW tables for source aggs schemas and mon (sf) monitoring data schema,
                 // before using the core builder class to recreate the core tables.
 
-                string core_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
+                string core_conn_string = _credentials.GetConnectionString("mdr");
                 List<string> aggs_schemas = new(){"st", "ob", "nk"};
                 _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "aggs", aggs_schemas);
                 List<string> mon_schemas = new(){"sf"};
@@ -178,7 +174,7 @@ public class Aggregator
                 // Set up study search data. The lup schemas from context, as well as the
                 // aggs databases required to set up these tables.
                 
-                string core_conn_string = _credentials.GetConnectionString("mdr", opts.testing);
+                string core_conn_string = _credentials.GetConnectionString("mdr");
                 List<string> aggs_schemas = new(){"st", "ob", "nk"};
                 _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "aggs", aggs_schemas);
                 List<string> ctx_schemas = new(){"lup"};
@@ -246,7 +242,7 @@ public class Aggregator
                 // Get connection string for destination DB and re-establish IEC tables.
                 // Set up a new IEC Aggravation Event record.
                 
-                string iec_conn_string = _credentials.GetConnectionString("iec", opts.testing);
+                string iec_conn_string = _credentials.GetConnectionString("iec");
                 IECTransferrer ieh = new IECTransferrer(iec_conn_string, _loggingHelper);
                 
                 ieh.BuildNewIECTables();
@@ -281,7 +277,6 @@ public class Aggregator
                 // First import the key study data from the aggs db, by using two aggs schemas
                 // as FTWs. Then update the IEC records, first from lup tables, then internally.
                 
-               
                 _loggingHelper.LogHeader("Adding study data");
                 List<string> agg_schemas = new List<string>{"nk", "st"};
                 _monDatalayer.SetUpTempFTWs(_credentials, iec_conn_string, "dv", "aggs", agg_schemas);
@@ -302,7 +297,7 @@ public class Aggregator
             
             if (opts.create_json)
             {
-                string conn_string = _credentials.GetConnectionString("mdr", opts.testing);
+                string conn_string = _credentials.GetConnectionString("mdr");
                 JSONHelper jh = new JSONHelper(conn_string, _loggingHelper);
 
                 // Create json fields. If tables are to be left as they are, add false as an

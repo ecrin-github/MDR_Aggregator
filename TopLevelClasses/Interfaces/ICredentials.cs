@@ -6,6 +6,6 @@ public interface ICredentials
     string Password { get; set; }
     string Username { get; set; }
 
-    string GetConnectionString(string database_name, bool testing);
+    string GetConnectionString(string database_name);
 }
 

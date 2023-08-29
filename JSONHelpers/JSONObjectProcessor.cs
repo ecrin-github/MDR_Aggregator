@@ -17,7 +17,8 @@ class JSONObjectProcessor
    
     private List<object_instance>? object_instances;
     private List<object_title>? object_titles;
-    private List<object_contributor>? object_contributors;
+    private List<object_person>? object_people;
+    private List<object_organisation>? object_organisations;
     private List<object_date>? object_dates;
     private List<object_topic>? object_topics;
     private List<object_description>? object_descriptions;
@@ -26,10 +27,10 @@ class JSONObjectProcessor
     private List<object_relationship>? object_relationships;
     private List<int>? linked_studies;
 
-    public JSONObjectProcessor(JSONObjectDataLayer repo, ILoggingHelper logginghelper)
+    public JSONObjectProcessor(JSONObjectDataLayer repo, ILoggingHelper loggingHelper)
     {
         _repo = repo;
-        _loggingHelper = logginghelper;
+        _loggingHelper = loggingHelper;
     }
 
     public JSONDataObject? CreateObject(int id)
@@ -41,35 +42,40 @@ class JSONObjectProcessor
         access_type = null;
         managing_organisation = null;
         access_details = null;
+        
         ds_record_keys = null;
         ds_deident_level = null;
         ds_consent = null;
 
-        object_titles = null; 
-        object_contributors = null;
-        object_dates = null; 
-        object_instances = null;
-        object_topics = null;
-        object_identifiers = null;
-        object_descriptions = null;
-        object_rights = null;
-        object_relationships = null;
-        linked_studies = null;
+        object_titles = new List<object_title>(); 
+        object_people = new List<object_person>();
+        object_organisations = new List<object_organisation>(); 
+        object_dates = new List<object_date>(); 
+        object_instances = new List<object_instance>(); 
+        object_topics = new List<object_topic>(); 
+        object_identifiers = new List<object_identifier>(); 
+        object_descriptions = new List<object_description>(); 
+        object_rights = new List<object_right>(); 
+        object_relationships = new List<object_relationship>(); 
+        linked_studies = new List<int>(); 
 
         // Get the singleton data object properties from DB
 
         ob = _repo.FetchDbDataObject(id);
+        if (ob is null)
+        {
+            return null;
+        }
 
         // First check there is at least one linked study
-        // (several hundred of the journal articles are not linked).
-
+       
         linked_studies = new List<int>(_repo.FetchLinkedStudies(id));
         if (linked_studies.Count == 0)
         {
-            // May occur in a few hundred cases, therefore
-            // if it does need to investigate further !!!!!!!
-            // Possible (minor) error in data object linkage with journal articles.
-            _loggingHelper.LogError("object " + ob.id + " does not appear to be linked to studies");
+            // May occur in a few cases, if it does need to investigate further !!!!!!!
+            // Seems to be due to a (minor) error in data object linkage with journal articles.
+            
+            _loggingHelper.LogError("object " + (ob?.id ?? 0).ToString() + " does not appear to be linked to studies");
             return null;
         }
 
@@ -118,168 +124,151 @@ class JSONObjectProcessor
 
         // Get object instances.
 
-        var db_object_instances = new List<DBObjectInstance>(_repo.FetchObjectInstances(id));
-        if (db_object_instances.Count > 0)
+        IEnumerable<DBObjectInstance> db_object_instances = _repo.FetchObjectInstances(id);
+        foreach (DBObjectInstance i in db_object_instances)
         {
-            object_instances = new List<object_instance>();
-            foreach (DBObjectInstance i in db_object_instances)
+            Lookup? repo_org = null;
+            access_details? access = null;
+            resource_details? resource = null;
+            if (i.system != null)
             {
-                Lookup? repo_org = null;
-                access_details? access = null;
-                resource_details? resource = null;
-                if (i.system != null)
-                {
-                    repo_org = new Lookup(i.system_id, i.system);
-                }
-                if (i.url != null || i.url_accessible != null)
-                {
-                    access = new access_details(i.url, i.url_accessible, i.url_last_checked);
-                }
-                if (i.resource_type_id != null || i.comments != null)
-                {
-                    resource = new resource_details(i.resource_type_id, i.resource_type,
-                                            i.resource_size, i.resource_size_units, i.comments);
-                }
-                object_instances.Add(new object_instance(i.id, repo_org, access, resource));
+                repo_org = new Lookup(i.system_id, i.system);
             }
+            if (i.url != null || i.url_accessible != null)
+            {
+                access = new access_details(i.url, i.url_accessible, i.url_last_checked);
+            }
+            if (i.resource_type_id != null || i.comments != null)
+            {
+                resource = new resource_details(i.resource_type_id, i.resource_type,
+                                        i.resource_size, i.resource_size_units, i.comments);
+            }
+            object_instances.Add(new object_instance(i.id, repo_org, access, resource));
         }
 
 
         // Get object titles.
 
-        var db_object_titles = new List<DBObjectTitle>(_repo.FetchObjectTitles(id));
-        if (db_object_titles.Count > 0)
+        IEnumerable<DBObjectTitle> db_object_titles = _repo.FetchObjectTitles(id);
+        foreach (DBObjectTitle t in db_object_titles)
         {
-            object_titles = new List<object_title>();
-            foreach (DBObjectTitle t in db_object_titles)
-            {
-                object_titles.Add(new object_title(t.id, new Lookup(t.title_type_id, t.title_type), t.title_text,
-                                    t.lang_code, t.comments));
-            }
+            object_titles.Add(new object_title(t.id, new Lookup(t.title_type_id, t.title_type), t.title_text,
+                                t.lang_code, t.comments));
         }
 
 
         // Get object dates.
 
-        var db_object_dates = new List<DBObjectDate>(_repo.FetchObjectDates(id));
-        if (db_object_dates.Count > 0)
-        {
-            object_dates = new List<object_date>();
+        IEnumerable<DBObjectDate> db_object_dates = _repo.FetchObjectDates(id);
+        foreach (DBObjectDate d in db_object_dates)
+        {        
             sdate_as_ints? start_date = null;
             edate_as_ints? end_date = null;
-            foreach (DBObjectDate d in db_object_dates)
+            if (d.start_year != null || d.start_month != null || d.start_day != null)
             {
-                if (d.start_year != null || d.start_month != null || d.start_day != null)
-                {
-                    start_date = new sdate_as_ints(d.start_year, d.start_month, d.start_day);
-                }
-                if (d.end_year != null || d.end_month != null || d.end_day != null)
-                {
-                    end_date = new edate_as_ints(d.end_year, d.end_month, d.end_day);
-                }
-                object_dates.Add(new object_date(d.id, new Lookup(d.date_type_id, d.date_type), d.date_is_range,
-                                            d.date_as_string, start_date, end_date, d.comments));
+                start_date = new sdate_as_ints(d.start_year, d.start_month, d.start_day);
             }
+            if (d.end_year != null || d.end_month != null || d.end_day != null)
+            {
+                end_date = new edate_as_ints(d.end_year, d.end_month, d.end_day);
+            }
+            object_dates.Add(new object_date(d.id, new Lookup(d.date_type_id, d.date_type), d.date_is_range,
+                                        d.date_as_string, start_date, end_date, d.comments));
         }
 
-
-        // Get object contributors - 
-
-        var db_object_contributors = new List<DBObjectContributor>(_repo.FetchObjectContributors(id,  ob.add_study_contribs));
-        if (db_object_contributors.Count > 0)
-        {
-            object_contributors = new List<object_contributor>();
-            foreach (DBObjectContributor c in db_object_contributors)
-            {
-                Individual? person = null; 
-                Organisation? org = null;
-                if (c.is_individual is true)
-                {
-                    person = new Individual(c.person_family_name, c.person_given_name, c.person_full_name,
-                                            c.orcid_id, c.person_affiliation, 
-                                            c.organisation_id, c.organisation_name, c.organisation_ror_id);
-                }
-                else
-                {
-                    org = new Organisation(c.organisation_id, c.organisation_name, c.organisation_ror_id);
-                }
-                object_contributors.Add(new object_contributor(c.id, new Lookup(c.contrib_type_id, c.contrib_type),
-                                            c.is_individual, person, org));
-            }
-        }
-
-
-        // Get object topics - 
-        // source will depend on boolean flag, itself dependent on the type of object.
-
-        var db_object_topics = new List<DBObjectTopic>(_repo.FetchObjectTopics(id, ob.add_study_topics));
-        if (db_object_topics.Count > 0)
-        {
-            object_topics = new List<object_topic>();
-            foreach (DBObjectTopic t in db_object_topics)
-            {
-                object_topics.Add(new object_topic(t.id, new Lookup(t.topic_type_id, t.topic_type), 
-                                      t.mesh_code, t.mesh_value,
-                                      t.original_ct_id, t.original_ct_code, t.original_value));
-            }
-        }
-
-
-        // Get object identifiers.
-
-        var db_object_identifiers = new List<DBObjectIdentifier>(_repo.FetchObjectIdentifiers(id));
-        if (db_object_identifiers.Count > 0)
-        {
-            object_identifiers = new List<object_identifier>();
-            foreach (DBObjectIdentifier i in db_object_identifiers)
-            {
-                object_identifiers.Add(new object_identifier(i.id, i.identifier_value, 
-                                      new Lookup(i.identifier_type_id, i.identifier_type),
-                                      new Organisation(i.source_id, i.source, i.source_ror_id),
-                                      i.identifier_date));
-            }
-        }
-
-
+        
         // Get object descriptions.
 
-        var db_object_descriptions = new List<DBObjectDescription>(_repo.FetchObjectDescriptions(id));
-        if (db_object_descriptions.Count > 0)
+        IEnumerable<DBObjectDescription> db_object_descriptions = _repo.FetchObjectDescriptions(id);
+        foreach (DBObjectDescription i in db_object_descriptions)
         {
-            object_descriptions = new List<object_description>();
-            foreach (DBObjectDescription i in db_object_descriptions)
+            object_descriptions.Add(new object_description(i.id, new Lookup(i.description_type_id, i.description_type),
+                                 i.label, i.description_text, i.lang_code));
+        }
+        
+        // The 4 functions below are currently only required for Pubmed objects. To save time
+        // it is easier to therefore only apply them to these objects. In the core tables an object's source
+        // is no longer apparent, but - AT THE MOMENT AT LEAST - the add_study_contribs and add_study_topics
+        // can be used as a proxy for a PubMed object, as these are false only for these objects.
+
+        if (ob.add_study_contribs == false && ob.add_study_topics == false)
+        {
+            // Get object people 
+
+            IEnumerable<DBObjectPerson> db_object_people = _repo.FetchObjectPeople(id);
+            foreach (DBObjectPerson t in db_object_people)
             {
-                object_descriptions.Add(new object_description(i.id, new Lookup(i.description_type_id, i.description_type),
-                                     i.label, i.description_text, i.lang_code));
+                object_people.Add(new object_person(t.id, new Lookup(t.contrib_type_id, t.contrib_type),
+                    t.person_full_name, t.orcid_id, t.person_affiliation,
+                    new Organisation(t.organisation_id, t.organisation_name, t.organisation_ror_id)));
+            }
+
+            // Get object organisations
+
+            IEnumerable<DBObjectOrganisation> db_object_organisations = _repo.FetchObjectOrganisations(id);
+            foreach (DBObjectOrganisation t in db_object_organisations)
+            {
+                object_organisations.Add(new object_organisation(t.id, new Lookup(t.contrib_type_id, t.contrib_type),
+                    new Organisation(t.organisation_id, t.organisation_name, t.organisation_ror_id)));
+            }
+
+            // Get object topics 
+
+            IEnumerable<DBObjectTopic> db_object_topics = _repo.FetchObjectTopics(id);
+            foreach (DBObjectTopic t in db_object_topics)
+            {
+                MeshData? md = null;
+                CTData? ct = null;
+                if (t.mesh_code is not null && t.mesh_value is not null)
+                {
+                    md = new MeshData(t.mesh_code, t.mesh_value);
+                }
+
+                if (t.original_ct_type_id is not null && t.original_ct_code is not null)
+                {
+                    ct = new CTData(t.original_ct_type_id, t.original_ct_type, t.original_ct_code);
+                }
+
+                object_topics.Add(new object_topic(t.id, new Lookup(t.topic_type_id, t.topic_type),
+                    t.original_value, ct, md));
+            }
+
+
+            // Get object identifiers.
+
+            IEnumerable<DBObjectIdentifier> db_object_identifiers = _repo.FetchObjectIdentifiers(id);
+            foreach (DBObjectIdentifier i in db_object_identifiers)
+            {
+                object_identifiers.Add(new object_identifier(i.id, i.identifier_value,
+                    new Lookup(i.identifier_type_id, i.identifier_type),
+                    new Organisation(i.source_id, i.source, i.source_ror_id),
+                    i.identifier_date));
             }
         }
 
+
+        /*
+         * The two routines below not currently used as there are no object rights or
+         * relationships in the system. Uncomment the lines below to support these if and
+         * when required in the future.
 
         // Get object rights.
 
-        var db_object_rights = new List<DBObjectRight>(_repo.FetchObjectRights(id));
-        if (db_object_rights.Count > 0)
+        IEnumerable<DBObjectRight> db_object_rights = _repo.FetchObjectRights(id);
+        foreach (DBObjectRight i in db_object_rights)
         {
-            object_rights = new List<object_right>();
-            foreach (DBObjectRight i in db_object_rights)
-            {
-                object_rights.Add(new object_right(i.id, i.rights_name, i.rights_uri, i.comments));
-            }
+            object_rights.Add(new object_right(i.id, i.rights_name, i.rights_uri, i.comments));
         }
-
 
         // Get object relationships.
 
-        var db_object_relationships = new List<DBObjectRelationship>(_repo.FetchObjectRelationships(id));
-        if (db_object_relationships.Count > 0)
+        IEnumerable<DBObjectRelationship> db_object_relationships =_repo.FetchObjectRelationships(id);
+        foreach (DBObjectRelationship i in db_object_relationships)
         {
-            object_relationships = new List<object_relationship>();
-            foreach (DBObjectRelationship i in db_object_relationships)
-            {
-                object_relationships.Add(new object_relationship(i.id, new Lookup(i.relationship_type_id, i.relationship_type),
-                                                                 i.target_object_id));
-            }
+            object_relationships.Add(new object_relationship(i.id, new Lookup(i.relationship_type_id, i.relationship_type),
+                                                             i.target_object_id));
         }
+        */
 
 
         // Construct the final data object by setting the composite 
@@ -288,24 +277,27 @@ class JSONObjectProcessor
         dobj.dataset_consent = ds_consent;
         dobj.dataset_record_keys = ds_record_keys;
         dobj.dataset_deident_level = ds_deident_level;
-
-        dobj.object_identifiers = object_identifiers;
-        dobj.object_titles = object_titles;
-        dobj.object_contributors = object_contributors;
-        dobj.object_dates = object_dates;
-        dobj.object_instances = object_instances;
-        dobj.object_descriptions = object_descriptions;
-        dobj.object_rights = object_rights;
-        dobj.object_topics = object_topics;
-        dobj.object_relationships = object_relationships;
-        dobj.linked_studies = linked_studies;
-
+        
+        dobj.object_instances = object_instances.Any() ? object_instances : null;
+        dobj.object_titles = object_titles.Any() ? object_titles : null;
+        dobj.object_dates = object_dates.Any() ? object_dates : null;
+        dobj.object_descriptions = object_descriptions.Any() ? object_descriptions : null;
+        
+        dobj.object_identifiers = object_identifiers.Any() ? object_identifiers : null;
+        dobj.object_people = object_people.Any() ? object_people : null;
+        dobj.object_organisations = object_organisations.Any() ? object_organisations : null;
+        dobj.object_topics = object_topics.Any() ? object_topics : null;
+        
+        dobj.object_relationships = object_relationships.Any() ? object_relationships : null;
+        dobj.object_rights = object_rights.Any() ? object_rights : null;     
+        
+        dobj.linked_studies = linked_studies.Any() ? linked_studies : null;
         return dobj;
     }
 
     public void StoreJSONObjectInDB(int id, string object_json)
     {
-        _repo.StoreJSONObjectInDB(id, object_json); ;
+        _repo.StoreJSONObjectInDB(id, object_json);
     }
 
 }

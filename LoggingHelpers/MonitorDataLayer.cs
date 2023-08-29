@@ -13,7 +13,7 @@ public class MonDataLayer : IMonDataLayer
     public MonDataLayer(ICredentials credentials)
     {
         _credentials = credentials;
-        monConnString = credentials.GetConnectionString("mon", false);
+        monConnString = credentials.GetConnectionString("mon");
     }
 
     public ICredentials Credentials => _credentials;
@@ -24,9 +24,9 @@ public class MonDataLayer : IMonDataLayer
         return Conn.Get<Source>(source_id);
     }
 
-    public string GetConnectionString(string databaseName, bool testing)
+    public string GetConnectionString(string databaseName)
     {
-        return _credentials.GetConnectionString(databaseName, testing);
+        return _credentials.GetConnectionString(databaseName);
     }
     
     

@@ -5,7 +5,7 @@ namespace MDR_Aggregator;
 public interface IMonDataLayer
 {
     ICredentials Credentials { get; }
-    string GetConnectionString(string databaseName, bool testing);
+    string GetConnectionString(string databaseName);
 
     IEnumerable<Source> RetrieveDataSources();
     IEnumerable<Source> RetrieveIECDataSources();
