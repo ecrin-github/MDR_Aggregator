@@ -24,7 +24,8 @@ public class JSONDataObject
 
     public List<object_instance>? object_instances { get; set; }
     public List<object_title>? object_titles { get; set; }
-    public List<object_contributor>? object_contributors { get; set; }
+    public List<object_person>? object_people { get; set; }
+    public List<object_organisation>? object_organisations { get; set; }
     public List<object_date>? object_dates { get; set; }
     public List<object_topic>? object_topics { get; set; }
     public List<object_description>? object_descriptions { get; set; }
@@ -33,11 +34,12 @@ public class JSONDataObject
     public List<object_relationship>? object_relationships { get; set; }
     public List<int>? linked_studies { get; set; }
 
+    
     public JSONDataObject(int _id, string? _doi, string? _display_title, string? _version,
         Lookup? _object_class, Lookup? _object_type, int? _publication_year,
         Organisation? _managing_organisation, string? _lang_code,
         Lookup? _access_type, object_access? _access_details,
-                int? _eosc_category, string? _provenance_string)
+        int? _eosc_category, string? _provenance_string)
     {
         file_type = "data_object";
         id = _id;
@@ -69,6 +71,47 @@ public class Lookup
     {
         id = _id;
         name = _name;
+    }
+}
+
+// these three small composite classes also used within the data model, for topic and condition data
+
+public class MeshData
+{
+    public string? mesh_code { get; set; }
+    public string? mesh_value { get; set; }
+
+    public MeshData(string? _mesh_code, string? _mesh_value)
+    {
+        mesh_code = _mesh_code;
+        mesh_value = _mesh_value;
+    }
+}
+
+public class ICDData
+{
+    public string? icd_code { get; set; }
+    public string? icd_name { get; set; }
+
+    public ICDData(string? _icd_code, string? _icd_name)
+    {
+        icd_code = _icd_code;
+        icd_name = _icd_name;
+    }
+}
+
+
+public class CTData
+{
+    public int? ct_type_id { get; set; }
+    public string? ct_type { get; set; }
+    public string? ct_code { get; set; }
+
+    public CTData(int? _ct_type_id, string? _ct_type, string? _ct_code)
+    {
+        ct_type_id = _ct_type_id;
+        ct_type = _ct_type;
+        ct_code = _ct_code;
     }
 }
 
@@ -227,7 +270,6 @@ public class resource_details
 }
 
 
-
 // Corresponds to the repeating composite object_title json element
 // and is therefore part of the data object class as a List<> 
 
@@ -319,79 +361,56 @@ public class object_topic
 {
     public int id { get; set; }
     public Lookup? topic_type { get; set; }
-    public string? mesh_code { get; set; }
-    public string? mesh_value { get; set; }
-    public int? original_ct_id { get; set; }
-    public string? original_ct_code { get; set; }
-    public string? original_value { get; set; }
+    public string? original_value { get; set; }   
+    public CTData? ct_data { get; set; }
+    public MeshData? mesh_data { get; set; }
 
-    public object_topic(int _id, Lookup _topic_type,
-                         string? _mesh_code,
-                         string? _mesh_value, int? _original_ct_id,
-                         string? _original_ct_code, string? _original_value)
+    public object_topic(int _id, Lookup _topic_type, string? _original_value,
+        CTData? _ct_data, MeshData? _mesh_data)
     {
         id = _id;
         topic_type = _topic_type;
-        mesh_code = _mesh_code;
-        mesh_value = _mesh_value;
-        original_ct_id = _original_ct_id;
-        original_ct_code = _original_ct_code;
         original_value = _original_value;
+        ct_data = _ct_data;
+        mesh_data = _mesh_data;
     }
-
 }
 
 
-// Corresponds to the repeating composite object_contributor json element
-// and is therefore part of the data object class as a List<> 
-
-public class object_contributor
+public class object_person
 {
     public int id { get; set; }
-    public Lookup? contribution_type { get; set; }
-    public bool? is_individual { get; set; }
-    public Individual? person { get; set; }
-    public Organisation? organisation { get; set; }
+    public Lookup? contrib_type { get; set; }
+    public string? person_full_name { get; set; }
+    public string? orcid_id { get; set; }
+    public string? person_affiliation { get; set; }
+    public Organisation? affiliation_org { get; set; }
 
-    public object_contributor(int _id, Lookup? _contribution_type, bool? _is_individual,
-        Individual? _person, Organisation? _organisation)
+    public object_person(int _id, Lookup? _contrib_type,
+        string? _person_full_name, string? _orcid_id, 
+        string? _person_affiliation, Organisation? _affiliation_org)
     {
         id = _id;
-        contribution_type = _contribution_type;
-        is_individual = _is_individual;
-        person = _person;
-        organisation = _organisation;
+        contrib_type = _contrib_type;
+        person_full_name = _person_full_name;
+        orcid_id = _orcid_id;
+        person_affiliation = _person_affiliation;
+        affiliation_org = _affiliation_org;
     }
 }
 
-
-// A composite element within the object_contributor class
-
-public class Individual
+public class object_organisation
 {
-    public string? family_name { get; set; }
-    public string? given_name { get; set; }
-    public string?full_name { get; set; }
-    public string? orcid { get; set; }
-    public string? affiliation_string { get; set; }
-    public int? affiliation_org_id { get; set; }
-    public string? affiliation_org_name { get; set; }
-    public string? affiliation_org_ror_id { get; set; }
+    public int id { get; set; }
+    public Lookup? contrib_type { get; set; }
+    public Organisation? org_details { get; set; }
 
-
-    public Individual(string? _family_name, string? _given_name, string? _full_name,
-                     string? _orcid, string? _affiliation_string,
-                     int? _affiliation_org_id, string? _affiliation_org_name,
-                     string? _affiliation_org_ror_id)
+    public object_organisation(int _id, Lookup? _contrib_type,
+        Organisation? _org_details)
     {
-        family_name = _family_name;
-        given_name = _given_name;
-        full_name = _full_name;
-        orcid = _orcid;
-        affiliation_string = _affiliation_string;
-        affiliation_org_id = _affiliation_org_id;
-        affiliation_org_name = _affiliation_org_name;
-        affiliation_org_ror_id = _affiliation_org_ror_id;
+        id = _id;
+        contrib_type = _contrib_type;
+        org_details = _org_details;
     }
 }
 
@@ -483,13 +502,11 @@ public class object_relationship
 }
 
 
-// These classes correspond to the data returned by the various
-// 'Fetch' routines in the DataLayer class - each DB class matches
-// the structure of the corresponding table.
+// These classes correspond to the data returned by the various 'Fetch' routines in the DataLayer
+// class - each DB class matches the structure of the corresponding table.
 // They represent the form in which data is presented to the Processor's CreateObject routine.
-// That routine modifies the data as and when necessary, and then
-// aggregates it, to make it conform to the structure required in the final 
-// data object class that is delivered back to the main program.
+// That routine modifies the data as and when necessary, and then aggregates it, to make it conform
+// to the structure required in the final data object that is delivered back to the main program.
 
 [Table("core.data_objects")]
 public class DBDataObject
@@ -607,19 +624,27 @@ public class DBObjectIdentifier
 }
 
 
-[Table("core.object_contributors")]
-public class DBObjectContributor
+[Table("core.object_people")]
+public class DBObjectPerson
 {
     public int id { get; set; }
     public int? contrib_type_id { get; set; }
     public string? contrib_type { get; set; }
-    public bool? is_individual { get; set; }
-    public int? person_id { get; set; }
-    public string? person_given_name { get; set; }
-    public string? person_family_name { get; set; }
     public string? person_full_name { get; set; }
     public string? orcid_id { get; set; }
     public string? person_affiliation { get; set; }
+    public int? organisation_id { get; set; }
+    public string? organisation_name { get; set; }
+    public string? organisation_ror_id { get; set; }
+}
+
+
+[Table("core.object_organisations")]
+public class DBObjectOrganisation
+{
+    public int id { get; set; }
+    public int? contrib_type_id { get; set; }
+    public string? contrib_type { get; set; }
     public int? organisation_id { get; set; }
     public string? organisation_name { get; set; }
     public string? organisation_ror_id { get; set; }
@@ -632,12 +657,12 @@ public class DBObjectTopic
     public int id { get; set; }
     public int? topic_type_id { get; set; }
     public string? topic_type { get; set; }
-    public bool? mesh_coded { get; set; }
+    public string? original_value { get; set; }    
+    public int? original_ct_type_id { get; set; }
+    public string? original_ct_type { get; set; }
+    public string? original_ct_code { get; set; }
     public string? mesh_code { get; set; }
     public string? mesh_value { get; set; }
-    public int? original_ct_id { get; set; }
-    public string? original_ct_code { get; set; }
-    public string? original_value { get; set; }
 }
 
 

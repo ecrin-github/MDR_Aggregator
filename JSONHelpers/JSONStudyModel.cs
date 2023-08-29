@@ -18,8 +18,14 @@ public class JSONStudy
 
     public List<study_identifier>? study_identifiers { get; set; }
     public List<study_title>? study_titles { get; set; }
+    public List<study_person>? study_people { get; set; }
+    public List<study_organisation>? study_organisations { get; set; }
     public List<study_topic>? study_topics { get; set; }
     public List<study_feature>? study_features { get; set; }
+    public List<study_condition>? study_conditions { get; set; }
+    public List<study_icd>? study_icds { get; set; }
+    public List<study_country>? study_countries { get; set; }
+    public List<study_location>? study_locations { get; set; }
     public List<study_relationship>? study_relationships { get; set; }
     public List<int>? linked_data_objects { get; set; }
 
@@ -102,27 +108,88 @@ public class study_title
 }
 
 
+public class study_person
+{
+    public int id { get; set; }
+    public Lookup? contrib_type { get; set; }
+    public string? person_full_name { get; set; }
+    public string? orcid_id { get; set; }
+    public string? person_affiliation { get; set; }
+    public Organisation? affiliation_org { get; set; }
+
+    public study_person(int _id, Lookup? _contrib_type,
+        string? _person_full_name, string? _orcid_id, 
+        string? _person_affiliation, Organisation? _affiliation_org)
+    {
+        id = _id;
+        contrib_type = _contrib_type;
+        person_full_name = _person_full_name;
+        orcid_id = _orcid_id;
+        person_affiliation = _person_affiliation;
+        affiliation_org = _affiliation_org;
+    }
+}
+
+
+public class study_organisation
+{
+    public int id { get; set; }
+    public Lookup? contrib_type { get; set; }
+    public Organisation? org_details { get; set; }
+
+    public study_organisation(int _id, Lookup? _contrib_type,
+        Organisation? _org_details)
+    {
+        id = _id;
+        contrib_type = _contrib_type;
+        org_details = _org_details;
+    }
+}
+
+
 public class study_topic
 {
     public int id { get; set; }
     public Lookup? topic_type { get; set; }
-    public string? mesh_code { get; set; }
-    public string? mesh_value { get; set; }
-    public int? original_ct_id { get; set; }
-    public string? original_ct_code { get; set; }
-    public string? original_value { get; set; }
+    public string? original_value { get; set; }    
+    public CTData? ct_data { get; set; }
+    public MeshData? mesh_data { get; set; }
 
-    public study_topic(int _id, Lookup? _topic_type, string? _mesh_code,
-                         string? _mesh_value, int? _original_ct_id,
-                         string? _original_ct_code, string? _original_value)
+    public study_topic(int _id, Lookup? _topic_type, string? _original_value,
+        CTData? _ct_data, MeshData? _mesh_data)
     {
         id = _id;
-        topic_type = _topic_type;
-        mesh_code = _mesh_code;
-        mesh_value = _mesh_value;
-        original_ct_id = _original_ct_id;
-        original_ct_code = _original_ct_code;
+        topic_type = _topic_type; 
         original_value = _original_value;
+        ct_data = _ct_data;   
+        mesh_data = _mesh_data;
+    }
+} 
+
+
+public class study_condition
+{
+    public int id { get; set; }
+    public string? original_value { get; set; }    
+    public CTData? ct_data { get; set; }
+
+    public study_condition(int _id, string? _original_value, CTData? _ct_data)
+    {
+        id = _id;
+        original_value = _original_value;        
+        ct_data = _ct_data;       
+    }
+} 
+
+public class study_icd
+{
+    public int id { get; set; }
+    public ICDData? icd_data { get; set; }
+
+    public study_icd(int _id, ICDData? _icd_data)
+    {
+        id = _id;
+        icd_data = _icd_data;
     }
 } 
 
@@ -140,6 +207,49 @@ public class study_feature
         feature_value = _feature_value;
     }
 }
+
+
+public class study_country
+{
+    public int id { get; set; }
+    public int? country_id { get; set; }
+    public string? country_name { get; set; }
+    public Lookup? status { get; set; }
+
+    public study_country(int _id, int? _country_id,
+        string? _country_name, Lookup? _status)
+    {
+        id = _id;
+        country_id = _country_id;
+        country_name = _country_name;
+        status = _status;
+    }
+}
+
+
+public class study_location
+{
+    public int id { get; set; }
+    public Organisation? facility { get; set; }
+    public int? city_id { get; set; }
+    public string? city_name { get; set; }
+    public int? country_id { get; set; }
+    public string? country_name { get; set; }
+    public Lookup? status { get; set; }
+
+    public study_location(int _id, Organisation? _facility, int? _city_id,
+        string? _city_name, int? _country_id, string? _country_name, Lookup? _status)
+    {
+        id = _id;
+        facility = _facility;
+        city_id = _city_id;
+        city_name = _city_name;
+        country_id = _country_id;
+        country_name = _country_name;
+        status = _status;
+    }
+}
+
 
 public class study_relationship
 {
@@ -214,6 +324,30 @@ public class DBStudyTitle
     public string? comments { get; set; }
 }
 
+[Table("core.study_people")]
+public class DBStudyPerson
+{
+    public int id { get; set; }
+    public int? contrib_type_id { get; set; }
+    public string? contrib_type { get; set; }
+    public string? person_full_name { get; set; }
+    public string? orcid_id { get; set; }
+    public string? person_affiliation { get; set; }
+    public int? organisation_id { get; set; }
+    public string? organisation_name { get; set; }
+    public string? organisation_ror_id { get; set; }
+}
+
+[Table("core.study_organisations")]
+public class DBStudyOrganisation
+{
+    public int id { get; set; }
+    public int? contrib_type_id { get; set; }
+    public string? contrib_type { get; set; }
+    public int? organisation_id { get; set; }
+    public string? organisation_name { get; set; }
+    public string? organisation_ror_id { get; set; }
+}
 
 
 [Table("core.study_topics")]
@@ -222,11 +356,34 @@ public class DBStudyTopic
     public int id { get; set; }
     public int? topic_type_id { get; set; }
     public string? topic_type { get; set; }
+    public string? original_value { get; set; }
+    public int? original_ct_type_id { get; set; }
+    public string? original_ct_type { get; set; }
+    public string? original_ct_code { get; set; }
     public string? mesh_code { get; set; }
     public string? mesh_value { get; set; }
-    public int? original_ct_id { get; set; }
+}
+
+
+[Table("core.study_conditions")]
+public class DBStudyCondition
+{
+    public int id { get; set; }
+    public string? original_value { get; set; }    
+    public int? original_ct_type_id { get; set; }
+    public string? original_ct_type { get; set; }
     public string? original_ct_code { get; set; }
-    public string? original_value { get; set; }
+    public string? icd_code { get; set; }
+    public string? icd_name { get; set; }
+}
+
+
+[Table("core.study_icd")]
+public class DBStudyICD
+{
+    public int id { get; set; }
+    public string? icd_code { get; set; }
+    public string? icd_name { get; set; }
 }
 
 
@@ -238,6 +395,33 @@ public class DBStudyFeature
     public string? feature_type { get; set; }
     public int? feature_value_id { get; set; }
     public string? feature_value { get; set; }
+}
+
+
+[Table("core.study_countries")]
+public class DBStudyCountry
+{
+    public int id { get; set; }
+    public int? country_id { get; set; }
+    public string? country_name { get; set; }
+    public int? status_id { get; set; }
+    public string? status { get; set; }
+}
+
+
+[Table("core.study_locations")]
+public class DBStudyLocation
+{
+    public int id { get; set; }
+    public int? facility_org_id { get; set; }
+    public string? facility { get; set; }
+    public string? facility_ror_id { get; set; }
+    public int? city_id { get; set; }
+    public string? city_name { get; set; }
+    public int? country_id { get; set; }
+    public string? country_name { get; set; }
+    public int? status_id { get; set; }
+    public string? status { get; set; }
 }
 
 

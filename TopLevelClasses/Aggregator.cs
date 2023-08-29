@@ -302,18 +302,18 @@ public class Aggregator
             
             if (opts.create_json)
             {
-                //string conn_string = _credentials.GetConnectionString("mdr", opts.testing);
-                //JSONHelper jh = new JSONHelper(conn_string, _loggingHelper);
+                string conn_string = _credentials.GetConnectionString("mdr", opts.testing);
+                JSONHelper jh = new JSONHelper(conn_string, _loggingHelper);
 
                 // Create json fields. If tables are to be left as they are, add false as an
                 // additional boolean (default = true). if tables are to have further data appended
                 // add an integer offset that represents the records to skip (default = 0)
 
-                //_loggingHelper.LogHeader("Creating JSON study data");
-                //jh.CreateJSONStudyData();
+                _loggingHelper.LogHeader("Creating JSON study data");
+                jh.CreateJSONStudyData();
                 //jh.LoopThroughOAStudyRecords();
-                //_loggingHelper.LogHeader("Creating JSON object data");
-                //jh.CreateJSONObjectData();
+                _loggingHelper.LogHeader("Creating JSON object data");
+                jh.CreateJSONObjectData();
                 //jh.LoopThroughOAObjectRecords();
             }
 

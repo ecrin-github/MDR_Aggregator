@@ -40,7 +40,7 @@ public class CoreDataTransferrer
         { "study_conditions", @"id, study_id, original_value, original_ct_type_id, original_ct_code, 
         icd_code, icd_name " },
         { "study_iec", @"id, study_id, seq_num, iec_type_id, split_type, leader, indent_level,
-          sequence_string, iec_tex " }
+          sequence_string, iec_text " }
     };
     
 

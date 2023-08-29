@@ -183,6 +183,23 @@ public class StudyTableBuilder
     }
     
     
+    public void create_table_study_icd()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS st.study_icd;
+        CREATE TABLE st.study_icd(
+            id                     INT             GENERATED ALWAYS AS IDENTITY (START WITH 20000001 INCREMENT BY 1) PRIMARY KEY
+          , study_id               INT             NOT NULL
+          , icd_code               VARCHAR         NULL
+          , icd_name               VARCHAR         NULL
+          , aggregated_on          TIMESTAMPTZ     NOT NULL DEFAULT Now()
+        );
+        CREATE INDEX study_study_icd_study_id ON st.study_icd(study_id);";
+
+        ExecuteSQL(sql_string);
+    }
+
+    
+    
     public void create_table_study_features()
     {
         string sql_string = @"DROP TABLE IF EXISTS st.study_features;

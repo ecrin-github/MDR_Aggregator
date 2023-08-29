@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using Microsoft.Extensions.Configuration;
 using Npgsql;
 using NpgsqlTypes;
 namespace MDR_Aggregator;
@@ -7,8 +6,7 @@ namespace MDR_Aggregator;
 public class JSONStudyDataLayer
 {
     private readonly string _connString;
-    private readonly string _study_json_folder;
-    private readonly ILoggingHelper _loggingHelper;
+
 
     // These strings are used as the base of each query.
     // They are constructed once in the class constructor,
@@ -18,38 +16,14 @@ public class JSONStudyDataLayer
     private string? study_query_string, study_identifier_query_string, study_title_query_string;
     private string? study_object_link_query_string, study_relationship_query_string;
     private string? study_feature_query_string, study_topics_query_string;
-
-    public JSONStudyDataLayer(ILoggingHelper logginghelper, string connString)
+    private string? study_people_query_string, study_organisation_query_string;
+    private string? study_condition_query_string, study_icd_query_string;
+    private string? study_country_query_string, study_location_query_string;
+    
+    public JSONStudyDataLayer(string connString)
     {
-        _loggingHelper = logginghelper;
         _connString = connString;
-
-        IConfigurationRoot settings = new ConfigurationBuilder()
-        .SetBasePath(AppContext.BaseDirectory)
-        .AddJsonFile("appsettings.json")
-        .Build();
-
-        _study_json_folder = settings["study json folder"]!;
-
         ConstructStudyQueryStrings();
-
-    }
-
-    public string ConnString => _connString;
-    public string StudyJsonFolder => _study_json_folder;
-
-    public int ExecuteSQL(string sql_string)
-    {
-        using var conn = new NpgsqlConnection(_connString);
-        try
-        {
-            return conn.Execute(sql_string);
-        }
-        catch (Exception e)
-        {
-            _loggingHelper.LogError("In ExecuteSQL; " + e.Message + ", \nSQL was: " + sql_string);
-            return 0;
-        }
     }
 
     public int FetchMinId()
@@ -77,7 +51,6 @@ public class JSONStudyDataLayer
 
     private void ConstructStudyQueryStrings()
     {
-        // study query string
         study_query_string = @"Select s.id, display_title, title_lang_code,
             brief_description, data_sharing_statement, 
             study_type_id, st.name as study_type,
@@ -95,8 +68,6 @@ public class JSONStudyDataLayer
             left join context_lup.time_units tu2 on s.max_age_units_id = tu2.id
             where s.id ";
 
-
-        // study identifier query string 
         study_identifier_query_string = @"select
             si.id, identifier_value,
             identifier_type_id, it.name as identifier_type,
@@ -106,8 +77,6 @@ public class JSONStudyDataLayer
             left join context_lup.identifier_types it on si.identifier_type_id = it.id
             where study_id ";
 
-
-        //study title query string
         study_title_query_string = @"select
             st.id, title_type_id, tt.name as title_type, title_text,
             lang_code, comments
@@ -115,18 +84,30 @@ public class JSONStudyDataLayer
             left join context_lup.title_types tt on st.title_type_id = tt.id
             where study_id ";
 
-
-        // study topics query string
-        study_topics_query_string = @"select
-            st.id, topic_type_id, tt.name as topic_type, 
-            mesh_coded, mesh_code, mesh_value, 
-            original_ct_id, original_ct_code, original_value
-            from core.study_topics st
-            left join context_lup.topic_types tt on st.topic_type_id = tt.id
+        study_people_query_string = @"select 
+            sp.id, sp.contrib_type_id, ct.name as contrib_type, sp.person_full_name,
+            sp.orcid_id, sp.person_affiliation, sp.organisation_id, 
+            sp.organisation_name, sp.organisation_ror_id
+            from core.study_people sp 
+            left join context_lup.contribution_types ct on sp.contrib_type_id = ct.id
             where study_id ";
 
+        study_organisation_query_string = @"select
+            sg.id, sg.contrib_type_id, ct.name as contrib_type, sg.organisation_id, 
+            sg.organisation_name, sg.organisation_ror_id
+            from core.study_organisations sp 
+            left join context_lup.contribution_types ct on sg.contrib_type_id = ct.id
+            where study_id ";
+        
+        study_topics_query_string = @"select
+            st.id, topic_type_id, tt.name as topic_type, original_value,
+            original_ct_type_id, tv.name as original_ct_type, original_ct_code,
+            mesh_code, mesh_value 
+            from core.study_topics st
+            left join context_lup.topic_types tt on st.topic_type_id = tt.id
+            left join context_lup.topic_vocabularies tv on st.original_ct_type_id = tv.id
+            where study_id ";
 
-        // study feature query string
         study_feature_query_string = @"select
             sf.id, sf.feature_type_id, ft.name as feature_type,
             sf.feature_value_id, fv.name as feature_value
@@ -135,8 +116,33 @@ public class JSONStudyDataLayer
             left join context_lup.study_feature_categories fv on sf.feature_value_id = fv.id
             where study_id ";
 
+        study_condition_query_string = @"select
+            sc.id, sc.original_value, sc.original_ct_type_id, 
+            tv.name as original_ct_type, sc.original_ct_code
+            from core.study_conditions sc
+            left join context_lup.topic_vocabularies tv on st.original_ct_type_id = tv.id
+            where study_id ";
 
-        // study_relationship query string
+        study_icd_query_string = @"select 
+            id, icd_code, icd_code 
+            from core.study_icd 
+            where study_id ";
+        
+        study_country_query_string = @"select 
+             sc.id, sc.country_id, sc.country_name, 
+             sc.status_id, ss.name as status
+             from core.study_countries sc
+             left join context_lup.study_statuses ss on sc.status_id = ss.id
+             where study_id ";
+        
+        study_location_query_string = @"select
+             sn.id, sn.facility_org_id, sn.facility, sn.facility_ror_id,
+             sn.city_id, sn.city_name, sn.country_id, sn.country_name, 
+             sn.status_id, ss.name as status
+             from core.study_locations sn
+             left join context_lup.study_statuses ss on sc.status_id = ss.id
+             where study_id ";
+        
         study_relationship_query_string = @"select
             sr.id, relationship_type_id, rt.name as relationship_type,
             target_study_id
@@ -145,16 +151,13 @@ public class JSONStudyDataLayer
             on sr.relationship_type_id = rt.id
             where study_id ";
 
-
-        // study object link query string
         study_object_link_query_string = @"select object_id
             from core.study_object_links
             where study_id ";
-
     }
 
 
-    public DBStudy FetchDbStudy(int id)
+    public DBStudy? FetchDbStudy(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = study_query_string + " = " + id;
@@ -177,15 +180,31 @@ public class JSONStudyDataLayer
         return Conn.Query<DBStudyTitle>(sql_string);
     }
 
+    
+    public IEnumerable<DBStudyPerson> FetchDbStudyPeople(int id)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = study_people_query_string + " = " + id;
+        return Conn.Query<DBStudyPerson>(sql_string);
+    }
 
+    
+    public IEnumerable<DBStudyOrganisation> FetchDbStudyOrganisations(int id)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = study_organisation_query_string + " = " + id;
+        return Conn.Query<DBStudyOrganisation>(sql_string);
+    }
+    
+    
     public IEnumerable<DBStudyFeature> FetchDbStudyFeatures(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = study_feature_query_string + " = " + id;
         return Conn.Query<DBStudyFeature>(sql_string);
     }
-
-
+    
+    
     public IEnumerable<DBStudyTopic> FetchDbStudyTopics(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
@@ -194,6 +213,36 @@ public class JSONStudyDataLayer
     }
 
 
+    public IEnumerable<DBStudyCondition> FetchDbStudyConditions(int id)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = study_condition_query_string + " = " + id;
+        return Conn.Query<DBStudyCondition>(sql_string);
+    }
+
+    
+    public IEnumerable<DBStudyICD> FetchDbStudyICDs(int id)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = study_icd_query_string + " = " + id;
+        return Conn.Query<DBStudyICD>(sql_string);
+    }
+ 
+    public IEnumerable<DBStudyCountry> FetchDbStudyCountries(int id)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = study_country_query_string + " = " + id;
+        return Conn.Query<DBStudyCountry>(sql_string);
+    }
+    
+    
+    public IEnumerable<DBStudyLocation> FetchDbStudyLocations(int id)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = study_location_query_string + " = " + id;
+        return Conn.Query<DBStudyLocation>(sql_string);
+    }
+    
     public IEnumerable<DBStudyRelationship> FetchDbStudyRelationships(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);

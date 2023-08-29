@@ -22,6 +22,7 @@ public class SchemaBuilder
         study_tablebuilder.create_table_study_titles();
         study_tablebuilder.create_table_study_topics();
         study_tablebuilder.create_table_study_conditions();
+        study_tablebuilder.create_table_study_icd();
         study_tablebuilder.create_table_study_features();
         study_tablebuilder.create_table_study_people();
         study_tablebuilder.create_table_study_organisations();

@@ -2,13 +2,13 @@
 
 public class JSONHelper
 {
-    string connString;
-    DBUtilities db;
-    ILoggingHelper _loggingHelper;
+    private readonly string _connString;
+    private readonly DBUtilities db;
+    private readonly ILoggingHelper _loggingHelper;
 
-    public JSONHelper(string _connString, ILoggingHelper logginghelper)
+    public JSONHelper(string connString, ILoggingHelper logginghelper)
     {
-        connString = _connString;
+        _connString = connString;
         _loggingHelper = logginghelper;
         db = new DBUtilities(connString, _loggingHelper);
     }
@@ -16,7 +16,7 @@ public class JSONHelper
 
     public void CreateJSONStudyData(bool create_table = true, int offset = 0)
     {
-        JSONStudyDataLayer repo = new JSONStudyDataLayer(_loggingHelper, connString);
+        JSONStudyDataLayer repo = new JSONStudyDataLayer(_connString);
 
         if (create_table)
         {
@@ -37,7 +37,7 @@ public class JSONHelper
 
     public void CreateJSONObjectData(bool create_table = true, int offset = 0)
     {
-        JSONObjectDataLayer repo = new JSONObjectDataLayer(_loggingHelper, connString);
+        JSONObjectDataLayer repo = new JSONObjectDataLayer(_connString);
 
         if (create_table)
         {
@@ -129,10 +129,12 @@ public class JSONHelper
         }
     }
 
-    /*
+/*
+ * The two methods below no longer used - not clear if they might be useful at some point!
+
     public void UpdateJSONStudyData(bool also_do_files, int offset = 0)
     {
-        JSONStudyDataLayer repo = new JSONStudyDataLayer(logging_repo);
+        JSONStudyDataLayer repo = new JSONStudyDataLayer(_loggingHelper, _connString);
         JSONStudyProcessor processor = new JSONStudyProcessor(repo);
 
         int min_id = repo.FetchMinId();
@@ -179,7 +181,7 @@ public class JSONHelper
                 }
 
                 k++;
-                if (k % 1000 == 0) logging_repo.LogLine(k.ToString() + " records processed");
+                if (k % 1000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
             }
         }
     }
@@ -187,8 +189,8 @@ public class JSONHelper
 
     public void UpdateJSONObjectData(bool also_do_files, int offset = 0)
     {
-        JSONObjectDataLayer repo = new JSONObjectDataLayer(logging_repo);
-        JSONObjectProcessor processor = new JSONObjectProcessor(repo, logging_repo);
+        JSONObjectDataLayer repo = new JSONObjectDataLayer(_loggingHelper, _connString);
+        JSONObjectProcessor processor = new JSONObjectProcessor(repo, _loggingHelper);
 
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
@@ -238,11 +240,11 @@ public class JSONHelper
                 }
 
                 k++;
-                if (k % 1000 == 0) logging_repo.LogLine(k.ToString() + " records processed");
+                if (k % 1000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
             }
         }
     }
-    */
+*/
 
 }
 
