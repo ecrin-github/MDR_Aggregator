@@ -69,7 +69,10 @@ catch (Exception e)
     // A file should normally have been created (but just in case...).
     
     loggingHelper.LogHeader("UNHANDLED EXCEPTION");
-    loggingHelper.LogCodeError("MDR_Aggregator application aborted", e.Message, e.StackTrace);
+    string message = (e.InnerException is null) ? e.Message
+        : e.Message + "\nInnerException Message:\n" + e.InnerException.Message;
+    loggingHelper.LogCodeError("MDR_Tester application aborted", message, e.StackTrace);
     loggingHelper.CloseLog();
     return -1;
+
 }

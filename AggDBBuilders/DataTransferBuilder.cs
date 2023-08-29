@@ -78,7 +78,7 @@ public class DataTransferBuilder
         }
         if (_source.has_study_relationships is true)
         {
-            srce_summ.study_relationships_recs = st_tr.LoadStudyRelationShips(_ftw_schema_name);
+            srce_summ.study_relationships_recs = st_tr.LoadStudyRelationShips(_ftw_schema_name, _source_id);
         }
         if (_source.has_study_countries is true)
         {
@@ -91,7 +91,7 @@ public class DataTransferBuilder
         st_tr.DropTempStudyIdsTable();
         return study_number;
     }
-
+    
     
     public void ProcessStudyObjectIds()
     {

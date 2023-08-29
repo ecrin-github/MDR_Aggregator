@@ -5,16 +5,16 @@ namespace MDR_Aggregator;
 
 public class StudyDataTransferrer
 {
-    readonly string _connString;
-    readonly DBUtilities db;
-    readonly ILoggingHelper _loggingHelper;
-    int nonpref_number;
-    int status1number, status2number, status3number;
+    private readonly string _connString;
+    private readonly DBUtilities db;
+    private readonly ILoggingHelper _loggingHelper;
+    private int non_pref_number;
+    private int status1number, status2number, status3number;
     
-    public StudyDataTransferrer(string connString, ILoggingHelper logginghelper)
+    public StudyDataTransferrer(string connString, ILoggingHelper loggingHelper)
     {
         _connString = connString;
-        _loggingHelper = logginghelper;
+        _loggingHelper = loggingHelper;
         db = new DBUtilities(connString, _loggingHelper);
     }
    
@@ -80,29 +80,15 @@ public class StudyDataTransferrer
         conn.Open();
         return copyHelper.SaveAll(conn, entities);
     }
-
     
     public void MatchExistingStudyIds()
     {
-        // Do these source id-study id combinations already exist in the system, i.e. have a known id?
+        // Do these source id / sd_sid combinations already exist in the system, i.e. have a known study id?
         // If they do they can be matched, to leave only the new study ids to process.
+        // Update the study_ids table: indicate has been matched previously and update the data fetch date.
         
-        using var conn = new NpgsqlConnection(_connString);
-        string sql_string = @"UPDATE nk.temp_study_ids t
-                    SET study_id = si.study_id, is_preferred = si.is_preferred,
-                    match_status = 1
-                    from nk.study_ids si
-                    where t.source_id = si.source_id
-                    and t.sd_sid = si.sd_sid ";
-
-        int res = db.Update_UsingTempTable("nk.temp_study_ids", "nk.temp_study_ids", sql_string, " and ", 
-                                          25000, ", with study id, status = 1, for matched studies");
-        _loggingHelper.LogLine($"{res} Existing studies matched in temp table");
-        _loggingHelper.LogLine("");
-        
-        // Also update the study_ids table: indicate has been matched and update the data fetch date.
-
-        sql_string = @"UPDATE nk.study_ids si
+        using var conn = new NpgsqlConnection(_connString);        
+        string sql_string = @"UPDATE nk.study_ids si
             set match_status = 1,
             datetime_of_data_fetch = t.datetime_of_data_fetch
             from nk.temp_study_ids t
@@ -113,17 +99,33 @@ public class StudyDataTransferrer
                                             25000, ", with last data fetch time, status 1, for matched studies");
         _loggingHelper.LogLine($"{status1number} existing studies matched in study_ids table");
         _loggingHelper.LogLine("");
+        
+        // Discard these matched study ids - first update the records with a flag and then delete them.
+        
+        sql_string = @"UPDATE nk.temp_study_ids t
+                    SET match_status = 1
+                    from nk.study_ids si
+                    where t.source_id = si.source_id
+                    and t.sd_sid = si.sd_sid ";
+
+        int res = db.Update_UsingTempTable("nk.temp_study_ids", "nk.temp_study_ids", sql_string, " and ", 
+                                          25000, ", with study id, status = 1, for matched studies");
+        
+        sql_string = @"Delete from nk.temp_study_ids t
+                    where match_status = 1";
+        db.ExecuteSQL(sql_string);
+        _loggingHelper.LogLine($"{res} Existing studies matched in temp table");
+        _loggingHelper.LogLine("");
     }
 
 
     public void IdentifyNewLinkedStudyIds()
     {
         // For the new studies...where match_status still 0...
-        // Does any study id correspond to a study already in study_identifiers table, that is
-        // linked to it via study-study link table. Such a study will match the left hand side
-        // of the study-study link table (the 'least preferred', the one to be replaced), and
-        // take on the study_id used for the 'preferred' right hand side. This should already 
-        // exist because addition of studies is done in the order 'more preferred first'.
+        
+        // Does any source / sd_sid id correspond to a study in the study-study links table,
+        // as a 'non-preferred' version of a previously added study (more preferred sources always
+        // being added first. The study id in the links table should be applied.
 
         string sql_string = @"UPDATE nk.temp_study_ids t
                        SET study_id = k.study_id, is_preferred = false,
@@ -141,8 +143,11 @@ public class StudyDataTransferrer
 
     public void AddNewStudyIds(int source_id)
     {
-        // Add all the new study id records to the all Ids table. This includes those identified
-        // above (match_status = 2) and those yet to be added to the system (match_status = 0)
+        // Add ALL the new study id records to the all Ids table. This includes those identified
+        // above (match_status = 2) and those completely new to the system (match_status = 0).
+        // The latter must be 'preferred' because any non-preferred have already been identified.
+        // They cannot be 'non-preferred' within their own source data, only in relation to an earlier
+        // source.
         
         using var conn = new NpgsqlConnection(_connString);
         string sql_string = @"INSERT INTO nk.study_ids
@@ -166,33 +171,25 @@ public class StudyDataTransferrer
                         match_status = 3
                         WHERE study_id is null
                         AND source_id = {source_id}";
-        conn.Execute(sql_string);
-
-        // 'Back-update' the study temp table using the newly created study_ids
-        // now all records in this table should have a match and preferred status
-
-        sql_string = $@"UPDATE nk.temp_study_ids t
-                       SET study_id = si.study_id, is_preferred = true,
-                       match_status = 3
-                       FROM nk.study_ids si
-                       WHERE si.sd_sid = t.sd_sid
-                       AND si.source_id = t.source_id
-                       AND t.study_id is null ";
-        status3number = db.Update_UsingTempTable("nk.temp_study_ids", "nk.temp_study_ids", sql_string, " and "
-                                      , 25000, ", with study id and status = 3");
+        status3number = conn.Execute(sql_string);
         _loggingHelper.LogLine($"{status3number} new study ids found");
         _loggingHelper.LogLine("");
 
-        // Also update any new entries in study links table that still have 
-        // no study id attached - update from the updated study_ids table
-
-        sql_string = @"UPDATE nk.study_study_links ssk
+        // Also update any new entries in study links table that still have no study id -
+        // update from the updated study_ids table. Will only apply to the records from this source.
+        
+        sql_string = $@"UPDATE nk.study_study_links ssk
                   SET study_id = s.study_id
                   FROM nk.study_ids s
                   WHERE ssk.preferred_sd_sid = s.sd_sid 
-                  AND ssk.preferred_source_id = s.source_id
+                  AND ssk.preferred_source_id = {source_id}
                   AND ssk.study_id is null ";
         conn.Execute(sql_string);
+        
+        // Can drop the temp Ids table
+        sql_string = @"Drop table nk.temp_study_ids;";
+        conn.Execute(sql_string);
+
     }
 
     public void CreateTempStudyIdTables(int source_id)
@@ -224,7 +221,7 @@ public class StudyDataTransferrer
         db.ExecuteSQL(sql_string);
         res = db.GetCount("nk.existing_studies");
         _loggingHelper.LogLine($"{res} existing studies (additional data added)");
-        nonpref_number = res;
+        non_pref_number = res;
     }
    
     private readonly Dictionary<string, string> studyDestFields = new() 
@@ -357,7 +354,7 @@ public class StudyDataTransferrer
         
         // For 'existing studies' study Ids, if there are any, add only new identifiers.
 
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -401,7 +398,7 @@ public class StudyDataTransferrer
 
         // For 'existing studies' study Ids, if there are any, add only new titles.
 
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -459,7 +456,7 @@ public class StudyDataTransferrer
         
         // For 'existing studies' study Ids, if there are any, add only new people.
         
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -502,7 +499,7 @@ public class StudyDataTransferrer
         
         // For 'existing studies' study Ids, if there are any, add only new organisations.
 
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -545,7 +542,7 @@ public class StudyDataTransferrer
   
         // For 'existing studies' study Ids, if there are any, add only new topics.
 
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -616,7 +613,7 @@ public class StudyDataTransferrer
         
         // For 'existing studies' study Ids, if there are any, add only new conditions.
        
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -687,7 +684,7 @@ public class StudyDataTransferrer
         
         // For 'existing studies' study Ids, if there are any, add only new features.
         
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -711,7 +708,7 @@ public class StudyDataTransferrer
     }
 
 
-    public int LoadStudyRelationShips(string ftw_schema_name)
+    public int LoadStudyRelationShips(string ftw_schema_name, int source_id)
     {
         string destFields = studyDestFields["study_relationships"];
         string sourceFields = studySourceFields["study_relationships"];
@@ -737,10 +734,11 @@ public class StudyDataTransferrer
                         select sd_sid, relationship_type_id, target_sd_sid from {ftw_schema_name}.study_relationships ";
         db.ExecuteSQL(sql_string);
 
-        sql_string = @"UPDATE st.temp_relationships tr
-                       SET target_study_id = tsi.study_id
-                       from nk.temp_study_ids tsi
-                       where tr.target_sd_sid = tsi.sd_sid ";
+        sql_string = $@"UPDATE st.temp_relationships tr
+                       SET target_study_id = sids.study_id
+                       from nk.study_ids sids
+                       where tr.target_sd_sid = sids.sd_sid 
+                       and sids.source_id = {source_id}";
         db.ExecuteSQL(sql_string);
                    
         // For 'preferred' study Ids add all relationships.
@@ -756,7 +754,7 @@ public class StudyDataTransferrer
         
         // For 'existing studies' study Ids, if there are any, add only new relationships.
         
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -801,7 +799,7 @@ public class StudyDataTransferrer
        
         // For 'existing studies' study Ids, if there are any, add only new countries.
         
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -842,7 +840,7 @@ public class StudyDataTransferrer
         
         // For 'existing studies' study Ids, if there are any, add only new locations.
 
-        if (nonpref_number == 0)
+        if (non_pref_number == 0)
         {
             _loggingHelper.LogLine("");
             return res1;
@@ -864,11 +862,21 @@ public class StudyDataTransferrer
         _loggingHelper.LogLine("");
         return res1 + res2;
     }
+    
+    public int LoadStudyICDs()
+    {
+        string sql_string = @"TRUNCATE TABLE st.study_icd;";
+        db.ExecuteSQL(sql_string);
+        
+        sql_string = @"Insert into st.study_icd (study_id, icd_code, icd_name)
+                       select distinct study_id, icd_code, icd_name 
+                       from st.study_conditions where ";
+        return db.ExecuteTransferSQL(sql_string, "st", "study_conditions", " where ", "conditions to icd");
+    }
 
     public void DropTempStudyIdsTable()
     {
-        string sql_string = @"DROP TABLE IF EXISTS nk.temp_study_ids;
-                                  DROP TABLE IF EXISTS nk.new_studies;
+        string sql_string = @"DROP TABLE IF EXISTS nk.new_studies;
                                   DROP TABLE IF EXISTS nk.existing_studies;
                                   DROP TABLE IF EXISTS nk.source_data;
                                   DROP TABLE IF EXISTS nk.existing_data;";

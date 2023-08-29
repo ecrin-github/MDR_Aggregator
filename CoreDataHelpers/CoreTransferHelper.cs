@@ -39,6 +39,7 @@ public class CoreDataTransferrer
         city_id, city_name, country_id, country_name, status_id " },
         { "study_conditions", @"id, study_id, original_value, original_ct_type_id, original_ct_code, 
         icd_code, icd_name " },
+        { "study_icd", @"id, study_id, icd_code, icd_name " },
         { "study_iec", @"id, study_id, seq_num, iec_type_id, split_type, leader, indent_level,
           sequence_string, iec_text " }
     };
@@ -125,6 +126,15 @@ public class CoreDataTransferrer
         return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_conditions");
     }
     
+    public int LoadCoreStudyICDs(string schema_name)
+    {
+        string field_string = addFields["study_icd"];
+        string sql_string = $@"INSERT INTO core.study_icd({field_string})
+                SELECT {field_string}
+                FROM {schema_name}.study_icd";
+        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_icd");
+    }
+    
     public int LoadCoreStudyCountries(string schema_name)
     {
         string field_string = addFields["study_countries"];
@@ -175,7 +185,6 @@ public class CoreDataTransferrer
         { "object_rights", @"id, object_id, rights_name, rights_uri, comments" },
         { "object_relationships", @"id, object_id, relationship_type_id, target_object_id" },
         { "study_object_links", @"id, study_id, object_id" },
-
     };
     
     public int LoadCoreDataObjects(string schema_name)

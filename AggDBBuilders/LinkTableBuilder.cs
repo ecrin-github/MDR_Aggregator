@@ -16,12 +16,59 @@ public class LinkTableBuilder
         using var conn = new NpgsqlConnection(db_conn);
         conn.Execute(sql_string);
     }
+    
+    public void create_table_linked_study_groups()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS nk.linked_study_groups;
+        CREATE TABLE nk.linked_study_groups(
+            source_id                INT             NULL
+          , sd_sid                   VARCHAR         NULL
+          , relationship_id          INT             NULL
+          , target_sd_sid            VARCHAR         NULL
+          , target_source_id         INT             NULL
+        );";
 
+        ExecuteSQL(sql_string);
+    }
+
+
+    public void create_table_study_object_links()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS nk.study_object_links;
+        CREATE TABLE nk.study_object_links(
+            id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 10000001 INCREMENT BY 1) PRIMARY KEY
+          , study_id                 INT             NOT NULL
+          , object_id                INT             NOT NULL
+        );
+        CREATE INDEX study_object_links_objectid ON nk.study_object_links(object_id);
+        CREATE INDEX study_object_links_studyid ON nk.study_object_links(study_id);";
+
+        ExecuteSQL(sql_string);
+    }
+
+
+    public void create_table_new_inter_study_links()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS nk.new_inter_study_links;
+        CREATE TABLE nk.new_inter_study_links(
+            source_id                INT             NULL
+          , sd_sid                   VARCHAR         NULL
+          , preferred_sd_sid         VARCHAR         NULL
+          , preferred_source_id      INT             NULL
+          , study_id                 INT             NULL
+          );";
+
+        ExecuteSQL(sql_string);
+    }
+    
     /*
     // ***************************** DO NOT RUN IN CODE ************************************
+    // ***************************** DO NOT RUN IN CODE ************************************
+    
     // One off builds.
     // Included here only for info - if run will reset ECRIN Identifiers for studies and objects
     // Should be run - rarely if at all  - from Postgres Admin
+    
     DROP TABLE IF EXISTS nk.study_ids;
     CREATE TABLE nk.study_ids(
        id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 2000001 INCREMENT BY 1) PRIMARY KEY
@@ -56,39 +103,7 @@ public class LinkTableBuilder
     );
     CREATE INDEX object_ids_objectid ON nk.data_object_ids(object_id);
     CREATE INDEX object_ids_sdidsource ON nk.data_object_ids(source_id, sd_oid);
-    // ***************************** DO NOT RUN IN CODE ************************************
-    */
-
-    public void create_table_linked_study_groups()
-    {
-        string sql_string = @"DROP TABLE IF EXISTS nk.linked_study_groups;
-        CREATE TABLE nk.linked_study_groups(
-            source_id                INT             NULL
-          , sd_sid                   VARCHAR         NULL
-          , relationship_id          INT             NULL
-          , target_sd_sid            VARCHAR         NULL
-          , target_source_id         INT             NULL
-        );";
-
-        ExecuteSQL(sql_string);
-    }
-
-
-    public void create_table_study_object_links()
-    {
-        string sql_string = @"DROP TABLE IF EXISTS nk.study_object_links;
-        CREATE TABLE nk.study_object_links(
-            id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 10000001 INCREMENT BY 1) PRIMARY KEY
-          , study_id                 INT             NOT NULL
-          , object_id                INT             NOT NULL
-    );
-    CREATE INDEX study_object_links_objectid ON nk.study_object_links(object_id);
-    CREATE INDEX study_object_links_studyid ON nk.study_object_links(study_id);";
-
-        ExecuteSQL(sql_string);
-    }
-
-
+    
     public void create_table_study_study_links()
     {
         string sql_string = @"DROP TABLE IF EXISTS nk.study_study_links;
@@ -102,4 +117,9 @@ public class LinkTableBuilder
 
         ExecuteSQL(sql_string);
     }
+    
+    // ***************************** DO NOT RUN IN CODE ************************************
+    // ***************************** DO NOT RUN IN CODE ************************************
+    */
+    
 }

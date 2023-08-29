@@ -13,7 +13,19 @@ public class StudyLinkBuilder
         _credentials = credentials;
         slh = new LinksDataHelper(aggs_connString, _loggingHelper);
     }
-        
+    
+    // There is a permanent nk.study_study_links table, which holds all the links found so far.
+    // Most of these links come from examining the lists of 'secondary ids' that are registry Ids,
+    // and this is done on each aggregation. Some also come from examining sponsor and other Ids
+    // that are identical (and given from the same source) in different registries. These are 
+    // using the aggregated data from the previous aggregation - but once identified cannot be 
+    // identified again, because on the next aggregation the records will already have the same study Id.
+    // A few links may even be added manually after unrelated work using the data set.
+    
+    // Because of this the set of study-study links identified at aggregation may be smaller than the 
+    // total number known to the system. That is why a separate permanent table is used to hold 
+    // this data, which is augmented by any new links each aggregation.
+    
     public void CollectStudyStudyLinks(List<Source> sources)
     {
         // Establish temp tables and then loop through each source.
@@ -39,16 +51,14 @@ public class StudyLinkBuilder
 
                 if (source.id == 100120)
                 {
-                    IEnumerable<OldNewLink> ctg_ids = slh.GetOldAndNewids(source.id, 
-                                                      source_conn_string, 44);
+                    IEnumerable<OldNewLink> ctg_ids = slh.GetOldAndNewids(source_conn_string, 44);
                     ulong ctg_num = slh.StoreLinksInCTGLInksTable(CopyHelpers.oldnewlink_ctg_helper, ctg_ids);
                     _loggingHelper.LogLine($"{ctg_num} old / new id pairs transferred from CTG database");
                 }
 
                 if (source.id == 100132)
                 {
-                    IEnumerable<OldNewLink> dutch_ids = slh.GetOldAndNewids(source.id, 
-                                                      source_conn_string, 45);
+                    IEnumerable<OldNewLink> dutch_ids = slh.GetOldAndNewids(source_conn_string, 45);
                     ulong dutch_num = slh.StoreLinksInDutchLinksTable(CopyHelpers.oldnewlink_ntr_helper, dutch_ids);
                     _loggingHelper.LogLine($"{dutch_num} old / new id pairs transferred from NTR database");
                 }
@@ -67,6 +77,12 @@ public class StudyLinkBuilder
         slh.TidyIds1();
         slh.TidyIds2();
         slh.TidyIds3();
+
+        // Add in additional pairs found by comparing non-registry ids from the previous aggregation.
+        // They must have the same value, from the same source, and be at least 4 characters long, but 
+        // have been cited in different registries, and not identified as the same study using registry Ids.
+        
+        slh.AddAdditionalLinksUsuingIdenticalSponsorIds();
     }
 
     
@@ -118,10 +134,22 @@ public class StudyLinkBuilder
 
         slh.TransferNewLinksToDataTable();
         slh.UpdateLinksWithStudyIds();
+        
         slh.DropTempTables();
     }
 
+    // Creates the ICD data (rather than being about study linking!)
+    // This function places here to make it more easily visible to the calling Aggregator function
+    // The normal data transfer helpers are instantiated within and using the loop for each source.
+    
+    public void LoadStudyICDs(string agg_conn_string)
+    {
+        StudyDataTransferrer st_tr = new StudyDataTransferrer(agg_conn_string, _loggingHelper);
+        int res = st_tr.LoadStudyICDs();
+        _loggingHelper.LogLine($"Created {res} study ICD records, from study conditions");
+    }
 
+    
     public void AddStudyStudyRelationshipRecords()
     {
         // Adds the study relationship records previously created.
