@@ -50,6 +50,22 @@ public class DBUtilities
         using var conn = new NpgsqlConnection(connstring);
         return conn.ExecuteScalar<int>(sql_string);
     }
+    
+    public int GetMinStudyId(string full_table_name)
+    {
+        string sql_string = $"select min(study_id) from {full_table_name}";
+        using var conn = new NpgsqlConnection(connstring);
+        return conn.ExecuteScalar<int>(sql_string);
+    }
+
+    
+    public int GetMaxStudyId(string full_table_name)
+    {
+        string sql_string = $"select max(study_id) from {full_table_name}";
+        using var conn = new NpgsqlConnection(connstring);
+        return conn.ExecuteScalar<int>(sql_string);
+    }
+
 
     
     public int GetCount(string full_table_name)
@@ -170,6 +186,38 @@ public class DBUtilities
             {
                 transferred = ExecuteSQL(sql_string);
                 _loggingHelper.LogLine($"Transferred {transferred} {fbc}, as a single batch");
+            }
+            return transferred;
+        }
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In data transfer ({full_table_name} to core table: {e.Message}");
+            return 0;
+        }
+    }
+    
+    // Used just for transferring study condition icd data to the icd table
+    
+    public int TransferICDSQL(string sql_string, string full_table_name)
+    {
+        try
+        {
+            int transferred = 0;
+            int min_id = GetMinStudyId(full_table_name);
+            int max_id = GetMaxStudyId(full_table_name);
+            int rec_batch = 100000;
+            string fbc = $"ICD data records from {full_table_name} data";
+            for (int r = min_id; r <= max_id; r += rec_batch)
+            {
+                string batch_sql_string = sql_string + $" study_id >= {r} and study_id < {r + rec_batch} ";
+                int res = ExecuteSQL(batch_sql_string);
+                if (res > 0)
+                {
+                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
+                    string feedback = $"Transferred {res} {fbc}, study ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    transferred += res;
+                }
             }
             return transferred;
         }

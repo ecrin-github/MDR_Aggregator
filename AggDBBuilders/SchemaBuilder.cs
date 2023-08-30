@@ -58,7 +58,7 @@ public class SchemaBuilder
     {
         link_tablebuilder.create_table_linked_study_groups();
         link_tablebuilder.create_table_study_object_links();
-        link_tablebuilder.create_table_new_inter_study_links();
+        link_tablebuilder.create_table_study_study_links();
     }
     
 }

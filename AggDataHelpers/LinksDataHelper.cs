@@ -99,7 +99,7 @@ public class LinksDataHelper
         
     }
 
-    public IEnumerable<OldNewLink> GetOldAndNewids(string source_conn_string, int id_type)
+    public IEnumerable<OldNewLink> GetOldAndNewIds(string source_conn_string, int id_type)
     {
         using var conn = new NpgsqlConnection(source_conn_string);
         string sql_string = $@"select sd_sid as new_id, 
@@ -135,7 +135,7 @@ public class LinksDataHelper
     public void CleanDutchSecIds()
     {
         // Identify the Dutch ids in nk.temp_study_links_collector on the RHS
-        // where secondary id details have been stored, as these are the oes that
+        // where secondary id details have been stored, as these are the ones that
         // need to be checked.
         using var conn = new NpgsqlConnection(_aggs_connString);
         string sql_string = @"update nk.temp_study_links_collector 
@@ -148,7 +148,7 @@ public class LinksDataHelper
     public void CleanCGTSecIds()
     {
         // Identify the CTG ids in nk.temp_study_links_collector on the RHS
-        // where secondary id details have been stored, as these are the oes that
+        // where secondary id details have been stored, as these are the ones that
         // need to be checked.
         using var conn = new NpgsqlConnection(_aggs_connString);
         string sql_string = @"update nk.temp_study_links_collector 
@@ -437,7 +437,7 @@ public class LinksDataHelper
     }
 
 
-    public void AddAdditionalLinksUsuingIdenticalSponsorIds()
+    public void AddAdditionalLinksUsingIdenticalSponsorIds()
     {
         // Using the data from the previous aggregation, this set of sql statements identifies and
         // adds studies that have the same identifier from the ame source (if at least 4 characters long)
@@ -453,9 +453,10 @@ public class LinksDataHelper
         on si.study_id = sids.study_id
         where identifier_type_id not in (0, 11, 44, 45)
         and identifier_value is not null 
-            and length(identifier_value)>= 4
-        and sids.is_preferred = true;";
+            and length(identifier_value)>= 4 ;";
+        
         conn.Execute(sql_string);
+        _loggingHelper.LogLine($"Table of sponsor and similar identifiers created");
         
         // The statement above creates a table with (about) 645,000 records
         // It is necessary to remove some identifiers (chiefly NIH budget IDs),
@@ -468,7 +469,8 @@ public class LinksDataHelper
             group by source, identifier
             having count(identifier) > 2";
         conn.Execute(sql_string);
-
+        _loggingHelper.LogLine($"Table of identifiers with count > 2 created");
+        
         // This drops 13,000 or so records
 
         sql_string = @"delete from nk.temp_ids_of_interest t
@@ -476,7 +478,8 @@ public class LinksDataHelper
             where t.source = mi.source
             and t.identifier = mi.identifier";
         conn.Execute(sql_string);
-
+        _loggingHelper.LogLine($"Identifiers with count > 2 removed from identifier table");
+        
         // This initially gave 7,700+ records, so about 3750 pairs
         // that were not picked up previously (or they would have had the same study id)
         // this number will go down to a very small increment once the initial
@@ -495,13 +498,15 @@ public class LinksDataHelper
             and s1.source = s2.source
             and s1.reg_id <> s2.reg_id";
         conn.Execute(sql_string);
+        _loggingHelper.LogLine($"Table of links identified by sponsor ids created");
         
         // Add the pairings found to links already found using secondary ids.
 
         sql_string = @"insert into nk.temp_study_links_collector(source_1, sd_sid_1, sd_sid_2, source_2)
             select s1, sid1, sid2, s2
             from nk.temp_pairs_from_last_agg;";
-        conn.Execute(sql_string);
+        int res = conn.Execute(sql_string);
+        _loggingHelper.LogLine($"{res} additional link records, derived from sponsor ids, added to temporary table");
 
         // Tidy up.
 
@@ -553,7 +558,8 @@ public class LinksDataHelper
 
     public void CreateDistinctSourceLinksTable()
     {
-        // The nk.temp_study_links_sorted table will have many duplicates. Create a distinct version of the data.
+        // The nk.temp_study_links_sorted table will have many duplicates.
+        // Create a distinct version of the data.
 
         using var conn = new NpgsqlConnection(_aggs_connString);
         string sql_string = @"DROP TABLE IF EXISTS nk.temp_distinct_links;
@@ -917,11 +923,11 @@ public class LinksDataHelper
                     // the rest of the studies in the list - add the reverse relationship also. Repeat
                     // until the penultimate study - which has just one pairing, with the last study.
 
-                    int studynum = study_group.Count;
-                    for (int i = 0; i < studynum - 1; i++)
+                    int study_num = study_group.Count;
+                    for (int i = 0; i < study_num - 1; i++)
                     {
                         ComplexStudy s = study_group[i];
-                        for (int j = i + 1; j < studynum; j++)
+                        for (int j = i + 1; j < study_num; j++)
                         {
                             ComplexStudy t = study_group[j];
                             links.Add(new ComplexLink(s.src_id, s.sid_id, 30, t.src_id, t.sid_id));
@@ -1142,41 +1148,31 @@ public class LinksDataHelper
         int diff = res1 - res2;
         _loggingHelper.LogLine($"{res2} records now in temp distinct links table, having dropped {diff}");
     }
-        
 
-    public void TransferNewLinksToDataTable()
+    
+    public void TransferLinksToPermanentTable()
     {
         // Select the processed study-study into the permanent table (re-created at the beginning of the
-        // Aggregation process). A distinct selection is first used as a final check against duplicates. 
-        // The resultant table is then reduced by removing any links already in the permanent table.
-        // The usually much reduced dataset is then added to the permanent table.
-
+        // Aggregation process). A distinct selection is used as a final check against duplicates. 
+        
         using var conn = new NpgsqlConnection(_aggs_connString);
-        string sql_string = @"Insert into nk.new_inter_study_links
+        
+        string sql_string = @"DROP TABLE IF EXISTS nk.study_study_links;
+        CREATE TABLE nk.study_study_links(
+            source_id                INT             NULL
+          , sd_sid                   VARCHAR         NULL
+          , preferred_sd_sid         VARCHAR         NULL
+          , preferred_source_id      INT             NULL
+          , study_id                 INT             NULL
+          );";
+        conn.Execute(sql_string);
+
+        sql_string = @"Insert into nk.study_study_links
                   (source_id, sd_sid, preferred_sd_sid, preferred_source_id)
                   select distinct source_id, sd_sid, preferred_sd_sid, preferred_source_id
                   from nk.temp_distinct_links";
-
         int res = conn.Execute(sql_string);
-        _loggingHelper.LogLine($"{res} study-study links transferred to this aggregation's table");
-        
-        sql_string = @"Delete from nk.new_inter_study_links tk
-                  using nk.study_study_links pk
-                  where pk.source_id = tk.source_id
-                  and pk.sd_sid = tk.sd_sid
-                  and pk.preferred_sd_sid = tk.preferred_sd_sid
-                  and pk.preferred_source_id = tk.preferred_source_id";
-        
-        res = conn.Execute(sql_string);
-        _loggingHelper.LogLine($"{res} study-study links removed from this aggregation's table (they already exist)");
-        
-        sql_string = @"Insert into nk.study_study_links
-                  (source_id, sd_sid, preferred_sd_sid, preferred_source_id)
-                  select source_id, sd_sid, preferred_sd_sid, preferred_source_id
-                  from nk.new_inter_study_links ";
-        
-        res = conn.Execute(sql_string);
-        _loggingHelper.LogLine($"{res} new study-study added to the study-study link table");
+        _loggingHelper.LogLine($"{res} study-study links created");
     }
 
     
@@ -1184,42 +1180,68 @@ public class LinksDataHelper
     {
         // New links may have been added which means that the study_ids table need to be updated.
         // First ensure that all the studies identifies as 'preferred' in the links table are listed as such
-        // in the Study_ids table, (where they exist in that table) and store the study Id in the links table.
+        // in the Study_ids table, (where they exist in that table) with a study_id that equals the Id and
+        // an is_preferred status of true. Then ensure that study Id is stored in the links table.
         
         using var conn = new NpgsqlConnection(_aggs_connString);
-        string sql_string = @"Update nk.study_ids sids
-                              set is_preferred = true
-                              from nk.study_study_links ssk
-                              where sids.source_id = ssk.preferred_source_id
-                              and sids.sd_sid = ssk.preferred_sd_sid; ";
-        conn.Execute(sql_string);   
-        
-        sql_string = @"Update nk.study_study_links ssk
-                              set study_id = sids.study_id
-                              from nk.study_ids sids
-                              where ssk.preferred_source_id = sids.source_id 
-                              and ssk.preferred_sd_sid = sids.sd_sid; ";
+        string sql_string = @"update nk.study_ids si 
+                        set study_id = si.id,
+                        is_preferred = true
+                        from nk.study_study_links ssk
+                        where si.source_id = ssk.preferred_source_id 
+                        and si.sd_sid = ssk.preferred_sd_sid ";
         int res = conn.Execute(sql_string);
-        _loggingHelper.LogLine($"{res} study Ids inserted into study-study links table");
+        string message = "preferred studies in study_ids checked / modified to ensure correct data";
+        _loggingHelper.LogLine($"{res} {message}");
+
+        sql_string = @"update nk.study_study_links ssk
+                  set study_id = si.study_id
+                  from nk.study_ids si 
+                  where ssk.preferred_source_id  = si.source_id
+                  and ssk.preferred_sd_sid = si.sd_sid ";
+        res = conn.Execute(sql_string);
+        message = "study_ids added to the link table using the preferred study's id";
+        _loggingHelper.LogLine($"{res} {message}");
         
-        // Similarly ensure that all the studies on the non preferred side (where their preferred side
-        // exists in the table) are listed in the study_ids table as non-preferred and they have the study id
-        // of their preferred side in the study_ids table (it should already be in the links table).
-       
-        sql_string = @"Update nk.study_ids sids
-                              set is_preferred = false,
-                              study_id = ssk.study_id
-                              from nk.study_study_links ssk
-                              where sids.source_id = ssk.source_id
-                              and sids.sd_sid = ssk.sd_sid
-                              and ssk.study_id is not null ";
-        conn.Execute(sql_string);   
-        _loggingHelper.LogLine($"{res} study Id records confirmed as non-preferred");
+        // This function repairs any cases of any non preferred studies in the links table that 
+        // are not linked to a correct study_id entry. These study_id entries should have
+        // is_preferred = false and the study_id should be equal to that in the links table.
         
-        // The only rows in the links table that will not have a linked study will be the ones where
-        // the preferred study is not yet in the study_ids table. Both the preferred and non-preferred
-        // studies in these rows can only be properly sorted out in the study_ids table during (at the
-        // start of) each source based addition.
+         sql_string = @"Update nk.study_ids sids
+                  set is_preferred = false,
+                  study_id = ssk.study_id
+                  from nk.study_study_links ssk
+                  where sids.source_id = ssk.source_id
+                  and sids.sd_sid = ssk.sd_sid
+                  and ssk.study_id is not null ";
+         res = conn.Execute(sql_string);   
+         message = "non-preferred studies in study_ids checked / modified to ensure correct data";
+         _loggingHelper.LogLine($"{res} {message}");
+
+         // identify any non-preferred in the study_ids table that do not match a non-preferred entry
+         // in the link table - (May have been part of a simple link arrangement in the past but now 
+         // probably part of a different type of relationship)
+
+         sql_string = @"update nk.study_ids si 
+                  set is_preferred = true,
+                  study_id = si.id
+                  where id in
+                      (select si.id from nk.study_ids si 
+                    left join nk.study_study_links ssk
+                    on si.source_id = ssk.source_id 
+                    and si.sd_sid = ssk.sd_sid 
+                    where is_preferred is false
+                    and ssk.sd_sid is null ) ";
+
+         res = conn.Execute(sql_string);
+         message = "non-preferred study_ids records not in the non-preferred side modified to correct data";
+         _loggingHelper.LogLine($"{res} {message}");
+ 
+         // study_ids and link_link table should now be in sync.
+         // The only rows in the links table that will not have a linked study will be the ones where
+         // the preferred study is not yet in the study_ids table. Both the preferred and non-preferred
+         // studies in these rows can only be properly sorted out in the study_ids table during (at the
+         // start of) each source based addition.
     }
 
     public void DropTempTables()

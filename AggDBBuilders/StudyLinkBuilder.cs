@@ -22,7 +22,7 @@ public class StudyLinkBuilder
     // identified again, because on the next aggregation the records will already have the same study Id.
     // A few links may even be added manually after unrelated work using the data set.
     
-    // Because of this the set of study-study links identified at aggregation may be smaller than the 
+    // Because of this the set of study-study links identified at each aggregation may be smaller than the 
     // total number known to the system. That is why a separate permanent table is used to hold 
     // this data, which is augmented by any new links each aggregation.
     
@@ -51,14 +51,14 @@ public class StudyLinkBuilder
 
                 if (source.id == 100120)
                 {
-                    IEnumerable<OldNewLink> ctg_ids = slh.GetOldAndNewids(source_conn_string, 44);
+                    IEnumerable<OldNewLink> ctg_ids = slh.GetOldAndNewIds(source_conn_string, 44);
                     ulong ctg_num = slh.StoreLinksInCTGLInksTable(CopyHelpers.oldnewlink_ctg_helper, ctg_ids);
                     _loggingHelper.LogLine($"{ctg_num} old / new id pairs transferred from CTG database");
                 }
 
                 if (source.id == 100132)
                 {
-                    IEnumerable<OldNewLink> dutch_ids = slh.GetOldAndNewids(source_conn_string, 45);
+                    IEnumerable<OldNewLink> dutch_ids = slh.GetOldAndNewIds(source_conn_string, 45);
                     ulong dutch_num = slh.StoreLinksInDutchLinksTable(CopyHelpers.oldnewlink_ntr_helper, dutch_ids);
                     _loggingHelper.LogLine($"{dutch_num} old / new id pairs transferred from NTR database");
                 }
@@ -77,12 +77,13 @@ public class StudyLinkBuilder
         slh.TidyIds1();
         slh.TidyIds2();
         slh.TidyIds3();
-
+        _loggingHelper.LogLine($"Common format errors in secondary Ids corrected");
+        
         // Add in additional pairs found by comparing non-registry ids from the previous aggregation.
         // They must have the same value, from the same source, and be at least 4 characters long, but 
         // have been cited in different registries, and not identified as the same study using registry Ids.
         
-        slh.AddAdditionalLinksUsuingIdenticalSponsorIds();
+        slh.AddAdditionalLinksUsingIdenticalSponsorIds();
     }
 
     
@@ -126,13 +127,23 @@ public class StudyLinkBuilder
         slh.CascadeLinks();
                         
         // Again, identify and remove studies that have links to more than 1 study in another registry.
-        // Repeated because a small number (about 30) are formed by the cascade process above
+        // Repeated because a small number (about 30) are formed by the cascade process above. Also repeat
+        // the missing link / cascade process.
 
         slh.ProcessGroupedStudies();
-
+        slh.AddMissingLinks();
+        slh.CascadeLinks();
+        
         // Transfer the resultant set into the main links table and tidy up
 
-        slh.TransferNewLinksToDataTable();
+        slh.TransferLinksToPermanentTable();
+        
+        // Keep the is_preferred true / false status in the study_ids table in sync with the 
+        // links data. Links may not just be simple added - they may be differently classified
+        // with additional data, e.g. become a 1 to N or N to N relationship, and thus drop out
+        // of the links table. The study_ids table needs to reflect the current state of the links
+        // (at least for those where the sd_sid is already in the study_ids table).
+        
         slh.UpdateLinksWithStudyIds();
         
         slh.DropTempTables();

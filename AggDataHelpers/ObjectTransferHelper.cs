@@ -99,8 +99,8 @@ public class ObjectDataTransferrer
             else
             {
                 IEnumerable<ObjectId> object_ids = conn.Query<ObjectId>(sql_string);
-                ulong num_stored = StoreObjectIds(CopyHelpers.object_ids_helper, object_ids);
-                _loggingHelper.LogLine($"Obtained {num_stored} object ids as a single batch");
+                stored = StoreObjectIds(CopyHelpers.object_ids_helper, object_ids);
+                _loggingHelper.LogLine($"Obtained {stored} object ids as a single batch");
             }
             return stored;
         } 

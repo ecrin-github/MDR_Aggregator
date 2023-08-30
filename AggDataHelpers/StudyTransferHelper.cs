@@ -81,23 +81,30 @@ public class StudyDataTransferrer
         return copyHelper.SaveAll(conn, entities);
     }
     
-    public void MatchExistingStudyIds()
+    public void MatchExistingStudyIds(int source_id)
     {
         // Do these source id / sd_sid combinations already exist in the system, i.e. have a known study id?
-        // If they do they can be matched, to leave only the new study ids to process.
+        // If they do they can be simply matched, to leave only the new study ids to process.
         // Update the study_ids table: indicate has been matched previously and update the data fetch date.
         
         using var conn = new NpgsqlConnection(_connString);        
-        string sql_string = @"UPDATE nk.study_ids si
+        string sql_string = $@"UPDATE nk.study_ids si
             set match_status = 1,
             datetime_of_data_fetch = t.datetime_of_data_fetch
             from nk.temp_study_ids t
-            where t.source_id = si.source_id
-            and t.sd_sid = si.sd_sid ";
+            where si.source_id = {source_id} 
+            and si.sd_sid = t.sd_sid ";
 
         status1number = db.Update_UsingTempTable("nk.temp_study_ids", "nk.study_ids", sql_string, " and ", 
                                             25000, ", with last data fetch time, status 1, for matched studies");
-        _loggingHelper.LogLine($"{status1number} existing studies matched in study_ids table");
+        _loggingHelper.LogLine($"{status1number} existing studies already present and updated in study_ids table");
+        
+        sql_string = $"select count(*) FROM nk.study_ids where source_id = {source_id} and is_preferred = true";
+        int preferred = conn.ExecuteScalar<int>(sql_string);
+        sql_string = $"select count(*) FROM nk.study_ids where source_id = {source_id} and is_preferred = false";
+        int nonpreferred = conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"{preferred} records are studies new to the system.");
+        _loggingHelper.LogLine($"{nonpreferred} records are studies already loaded from a different registry.");
         _loggingHelper.LogLine("");
         
         // Discard these matched study ids - first update the records with a flag and then delete them.
@@ -109,12 +116,11 @@ public class StudyDataTransferrer
                     and t.sd_sid = si.sd_sid ";
 
         int res = db.Update_UsingTempTable("nk.temp_study_ids", "nk.temp_study_ids", sql_string, " and ", 
-                                          25000, ", with study id, status = 1, for matched studies");
-        
-        sql_string = @"Delete from nk.temp_study_ids t
+                                          25000, ", status = 1, for those matching existing source / sd_sid combinations");
+        sql_string = @"Delete from nk.temp_study_ids t 
                     where match_status = 1";
         db.ExecuteSQL(sql_string);
-        _loggingHelper.LogLine($"{res} Existing studies matched in temp table");
+        _loggingHelper.LogLine($"{res} matching studies deleted from nk.temp_study_ids table");
         _loggingHelper.LogLine("");
     }
 
@@ -136,7 +142,7 @@ public class StudyDataTransferrer
                        AND t.match_status = 0;";
 
         status2number = db.ExecuteSQL(sql_string);
-        _loggingHelper.LogLine($"{status2number} existing studies found under other study source ids");
+        _loggingHelper.LogLine($"{status2number} of the new studies found under other study source ids.");
         _loggingHelper.LogLine("");
     }
 
@@ -161,7 +167,6 @@ public class StudyDataTransferrer
                          where (match_status = 0 or match_status = 2) ";
         db.Update_UsingTempTable("nk.temp_study_ids", "nk.study_ids", sql_string, " and "
                                  , 25000, ", inserting new studies");
-        _loggingHelper.LogLine("");
 
         // Where the study_ids are null they can take on the value of the 
         // record id. The 3 indicates they are new on this addition.
@@ -172,7 +177,7 @@ public class StudyDataTransferrer
                         WHERE study_id is null
                         AND source_id = {source_id}";
         status3number = conn.Execute(sql_string);
-        _loggingHelper.LogLine($"{status3number} new study ids found");
+        _loggingHelper.LogLine($"{status3number} of the new studies completely new to the system.");
         _loggingHelper.LogLine("");
 
         // Also update any new entries in study links table that still have no study id -
@@ -200,7 +205,7 @@ public class StudyDataTransferrer
         
         using var conn = new NpgsqlConnection(_connString);   
         int total_studies = status1number + status2number + status3number;
-        _loggingHelper.LogLine($"{total_studies} total studies found");
+        _loggingHelper.LogLine($"{total_studies} is the total number of studies found");
 
         string sql_string = $@"DROP TABLE IF EXISTS nk.new_studies;
                            CREATE TABLE nk.new_studies as 
@@ -210,7 +215,7 @@ public class StudyDataTransferrer
                                    and is_preferred = true";
         db.ExecuteSQL(sql_string);
         int res = db.GetCount("nk.new_studies");
-        _loggingHelper.LogLine($"{res} new studies to be added");
+        _loggingHelper.LogLine($"{res} studies to be fully transferred from the source with all data added");
 
         sql_string = $@"DROP TABLE IF EXISTS nk.existing_studies;
                            CREATE TABLE nk.existing_studies as 
@@ -220,7 +225,7 @@ public class StudyDataTransferrer
                                    and is_preferred = false";
         db.ExecuteSQL(sql_string);
         res = db.GetCount("nk.existing_studies");
-        _loggingHelper.LogLine($"{res} existing studies (additional data added)");
+        _loggingHelper.LogLine($"{res} existing studies to be transferred with only additional data added");
         non_pref_number = res;
     }
    
@@ -870,8 +875,9 @@ public class StudyDataTransferrer
         
         sql_string = @"Insert into st.study_icd (study_id, icd_code, icd_name)
                        select distinct study_id, icd_code, icd_name 
-                       from st.study_conditions where ";
-        return db.ExecuteTransferSQL(sql_string, "st", "study_conditions", " where ", "conditions to icd");
+                       from st.study_conditions s where 
+                       icd_code is not null and ";
+        return db.TransferICDSQL(sql_string, "st.study_conditions");
     }
 
     public void DropTempStudyIdsTable()

@@ -42,7 +42,7 @@ public class DataTransferBuilder
         // Match existing studies, then do the check of the temp table ids against the study_study links.
         // Change the table to mark the 'preferred' Ids and back load the correct study ids into the temporary table.
 
-        st_tr.MatchExistingStudyIds();
+        st_tr.MatchExistingStudyIds(_source_id);
         st_tr.IdentifyNewLinkedStudyIds();
         st_tr.AddNewStudyIds(_source_id);
         st_tr.CreateTempStudyIdTables(_source_id);

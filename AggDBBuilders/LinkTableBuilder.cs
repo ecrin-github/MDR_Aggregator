@@ -46,7 +46,22 @@ public class LinkTableBuilder
         ExecuteSQL(sql_string);
     }
 
+    
+    public void create_table_study_study_links()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS nk.study_study_links;
+        CREATE TABLE nk.study_study_links(
+            source_id                INT             NULL
+          , sd_sid                   VARCHAR         NULL
+          , preferred_sd_sid         VARCHAR         NULL
+          , preferred_source_id      INT             NULL
+          , study_id                 INT             NULL
+          );";
 
+        ExecuteSQL(sql_string);
+    }
+
+    /*
     public void create_table_new_inter_study_links()
     {
         string sql_string = @"DROP TABLE IF EXISTS nk.new_inter_study_links;
@@ -60,7 +75,7 @@ public class LinkTableBuilder
 
         ExecuteSQL(sql_string);
     }
-    
+    */
     /*
     // ***************************** DO NOT RUN IN CODE ************************************
     // ***************************** DO NOT RUN IN CODE ************************************
@@ -103,21 +118,7 @@ public class LinkTableBuilder
     );
     CREATE INDEX object_ids_objectid ON nk.data_object_ids(object_id);
     CREATE INDEX object_ids_sdidsource ON nk.data_object_ids(source_id, sd_oid);
-    
-    public void create_table_study_study_links()
-    {
-        string sql_string = @"DROP TABLE IF EXISTS nk.study_study_links;
-        CREATE TABLE nk.study_study_links(
-            source_id                INT             NULL
-          , sd_sid                   VARCHAR         NULL
-          , preferred_sd_sid         VARCHAR         NULL
-          , preferred_source_id      INT             NULL
-          , study_id                 INT             NULL
-          );";
-
-        ExecuteSQL(sql_string);
-    }
-    
+        
     // ***************************** DO NOT RUN IN CODE ************************************
     // ***************************** DO NOT RUN IN CODE ************************************
     */

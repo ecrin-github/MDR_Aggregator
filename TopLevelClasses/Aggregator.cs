@@ -24,20 +24,12 @@ public class Aggregator
         {
             // Obtain connection string to the database where aggregation will occur - the 'aggs'.
             // aggregating database. Set up the context DB as two schemas of foreign
-            // tables (ctx & lup), then establish new tables for the three schemas st, ob, nk
-            // and construct a new aggregation event record.
+            // tables (ctx & lup), 
                      
             string agg_conn_string = _credentials.GetConnectionString("aggs");
             List<string> source_schemas = new(){"ctx", "lup"};
             _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", "context", source_schemas);
             _loggingHelper.LogLine("Context data established as FTWs in aggs DB");
-            SchemaBuilder sb = new SchemaBuilder(agg_conn_string);
-            sb.BuildNewStudyTables();
-            sb.BuildNewObjectTables();
-            sb.BuildNewLinkTables();
-            _loggingHelper.LogLine("Study, object and link aggregate tables recreated");
-            _loggingHelper.LogLine("");
-            AggregationEvent agg_event = new AggregationEvent(agg_event_id);
 
             // Derive a new table of inter-study relationships - First get a list of all
             // the study sources and ensure it is sorted correctly, then use the study link
@@ -53,9 +45,19 @@ public class Aggregator
             slb.CheckStudyStudyLinks(sources);
             _loggingHelper.LogLine("");
             slb.ProcessStudyStudyLinks();
-            
             _loggingHelper.LogLine("Study-study links identified");
+            _loggingHelper.LogLine("");            
+            
+            // Only then establish new tables for the three schemas st, ob, nk
+            // and construct a new aggregation event record.
+            
+            SchemaBuilder sb = new SchemaBuilder(agg_conn_string);
+            sb.BuildNewStudyTables();
+            sb.BuildNewObjectTables();
+            sb.BuildNewLinkTables();
+            _loggingHelper.LogLine("Study, object and link aggregate tables recreated");
             _loggingHelper.LogLine("");
+            AggregationEvent agg_event = new AggregationEvent(agg_event_id);
 
             // Loop through the study sources (in preference order).
             // In each case establish and then drop the source AD tables as an FTW.
@@ -86,12 +88,15 @@ public class Aggregator
                     dtb.ProcessStudyIds();
                     _loggingHelper.LogHeader("Transfer study data");
                     num_studies_imported += dtb.TransferStudyData(srce_summ);
+                    _loggingHelper.LogHeader("Process object Ids");
                     dtb.ProcessStudyObjectIds();
                 }
                 else
                 {
+                    _loggingHelper.LogHeader("Process object Ids");
                     dtb.ProcessStandaloneObjectIds(); // for now, just PubMed
                 }
+                
                 _loggingHelper.LogHeader("Transfer object data");
                 num_objects_imported += dtb.TransferObjectData(srce_summ);
 

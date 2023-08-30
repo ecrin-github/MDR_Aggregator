@@ -80,7 +80,7 @@ internal class PubmedTransferHelper
            string sql_string = $"select max(id) FROM {ftw_schema_name}.object_db_links";
            using var conn = new NpgsqlConnection(_connString);
            int max_id = conn.ExecuteScalar<int>(sql_string);
-           int batch_size = 50000;
+           int batch_size = 25000;
            try
            {
                   int obtained = 0;
@@ -890,19 +890,20 @@ internal class PubmedTransferHelper
         // for this PMID. This means only one 'new' pubmed record will be identified as such (several
         // Study-PMID combinations may have been added at the same time.)
 
-        string sql_string = @"UPDATE nk.distinct_temp_object_ids t
+        string sql_string = @"UPDATE nk.distinct_temp_object_ids s
                               SET is_preferred_object = true
                               FROM 
                                   (select sd_oid, min(parent_study_id) as min_study
                                    from nk.distinct_temp_object_ids 
                                    where match_status = 3
                                    group by sd_oid) m
-                              where t.sd_oid = m.sd_oid
-                              and t.parent_study_id = m.min_study
-                              and t.match_status = 3 ";
-        int res = db.ExecuteSQL(sql_string);
+                              where s.sd_oid = m.sd_oid
+                              and s.parent_study_id = m.min_study
+                              and s.match_status = 3 ";
+        int res = db.Update_UsingTempTable("nk.distinct_temp_object_ids", "nk.distinct_temp_object_ids", 
+               sql_string, " and ", 50000, "with preferred status, for min of parent study ids");
         _loggingHelper.LogLine($"{res} objects set as 'preferred' for new PMIDs");
-
+        
         // Put the remaining study-PMID combinations as non-preferred.
 
         sql_string = @"UPDATE nk.distinct_temp_object_ids t

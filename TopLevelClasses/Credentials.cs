@@ -22,6 +22,7 @@ public class Credentials : ICredentials
         builder.Username = Username;
         builder.Password = Password;
         builder.Database = database_name;
+        builder.IncludeErrorDetail = true;
         return builder.ConnectionString;
     }
 }
