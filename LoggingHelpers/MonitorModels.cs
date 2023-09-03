@@ -37,6 +37,7 @@ public class Source
     public bool? has_object_rights { get; }
     public bool? has_object_relationships { get; }
     public bool? has_object_pubmed_set { get; }
+    public bool? has_object_bbmri_set { get; }
 }
 
 

@@ -135,7 +135,7 @@ public class DataTransferBuilder
         // process the data using available object-study links (may be multiple study links per object).
         // Exact process likely to differ with different object sources - at present only PubMed in this category
 
-        if (_source_id == 100135)
+        if (_source_id == 100135)  // PubMed publication data
         {
             // Get the source-study-pmid link data. A table of PMID bank data was created during
             // data download, but this may have been date limited (probably was) so the total of records 
@@ -157,7 +157,6 @@ public class DataTransferBuilder
             // A table of DB references data was created during pubmed data download, (mn.dbrefs_all).
             // This holds all known trial registry sourced references, most of which have PMIDs. There is no 
             // to recapture it - it should always reflect the state of the DBs during the most recent download.
-
             
             ulong res2 = pm_tr.FetchSourceReferences(_source_id, _source_conn_string);
             _loggingHelper.LogLine($"{res2} PMID Ids obtained from DB sources");
@@ -195,6 +194,44 @@ public class DataTransferBuilder
             
             pm_tr.DropTempPMIDTables();
         }
+
+        if (_source_id == 110426) // BBMRI sample data
+        {
+            // This is far simpler than the pubmed data above.
+            // The links between the objects and studies are already established, because identifying such a link
+            // is the basis for identifying the data. The known sd_sid has been used to construct an sd_oid. 
+            // The data objects table includes a reference to the parent sd_sid, (but not the parent source id).
+            // The data objects table is also assumed to have a value for the datetime_of_data_fetch.
+            
+            // In general, only a trial registry id will have been provided. The source trial registry will
+            // therefore need to be identified, as well as an sd_oid constructed. These steps can occur 
+            // as part of the preceding download and / or harvest phases. The current retrospective data has
+            // been imported directly into the ad tables, so by-passing the import process, but can (and has
+            // been) coded there. At the moment, the source id can be derived from the sd_sid.
+            
+            // N.B. It is assumed that the data_object and object_index data will only have distinct
+            // study-sample combinations, so there is no need to do preliminary 'select distinct' operations.
+            
+            // Establish the helper class and use it to first identify existing known sample-study links. 
+            // These are matched in the nk.data_object_ids table. Datetime of data fetch is updated,
+            // but little else is required.
+            
+            BBMRITransferHelper bb_tr = new BBMRITransferHelper(_ftw_schema_name, _dest_conn_string, _loggingHelper);
+            bb_tr.MatchExistingBBMRILinks();
+            _loggingHelper.LogLine("");
+            
+            // Non-matched sample set records may be completely new to the system, or represent new
+            // sample-study combinations for existing samples. The functions below identify these
+            // different types of samples and code and add them accordingly.
+
+            bb_tr.IdentifyNewBBMRILinks();
+            bb_tr.AddNewBBMRIStudyLinks();
+            bb_tr.AddCompletelyNewBBMRIObjects();
+            bb_tr.IdentifyBBMRIDataForImport(_source_id);
+            _loggingHelper.LogLine("");
+            
+            bb_tr.DropTempBBMRITables();
+        }
     }
 
 
@@ -208,7 +245,17 @@ public class DataTransferBuilder
         {
             srce_summ.object_datasets_recs = ob_tr.LoadObjectDatasets(_ftw_schema_name);
         }
-        srce_summ.object_instances_recs = ob_tr.LoadObjectInstances(_ftw_schema_name);
+
+        if (!_source.has_object_bbmri_set is true)
+        {
+            // Instances available for all object sets apart from the BBMRI samples
+            // Needs a better (positive rather than negative) way of referring to this though.
+            // Source parameters table needs to be changed to refer to all tables...
+            // But this will affect all modules / phases
+            
+            srce_summ.object_instances_recs = ob_tr.LoadObjectInstances(_ftw_schema_name);
+        }
+
         srce_summ.object_titles_recs = ob_tr.LoadObjectTitles(_ftw_schema_name);
         if (_source.has_object_dates is true)
         {
@@ -227,6 +274,11 @@ public class DataTransferBuilder
             srce_summ.object_people_recs = ob_tr.LoadObjectPeople(_ftw_schema_name);
             srce_summ.object_organisations_recs = ob_tr.LoadObjectOrganisations(_ftw_schema_name);
             srce_summ.object_topics_recs = ob_tr.LoadObjectTopics(_ftw_schema_name);
+            srce_summ.object_descriptions_recs = ob_tr.LoadObjectDescriptions(_ftw_schema_name);
+            srce_summ.object_identifiers_recs = ob_tr.LoadObjectIdentifiers(_ftw_schema_name);
+        }
+        if (_source.has_object_bbmri_set is true)
+        {
             srce_summ.object_descriptions_recs = ob_tr.LoadObjectDescriptions(_ftw_schema_name);
             srce_summ.object_identifiers_recs = ob_tr.LoadObjectIdentifiers(_ftw_schema_name);
         }

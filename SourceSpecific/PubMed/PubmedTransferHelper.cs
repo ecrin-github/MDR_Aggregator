@@ -478,13 +478,11 @@ internal class PubmedTransferHelper
                WHERE parent_study_source_id = 100128;";
         conn.Execute(sql_string);
 
-
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = 'PACTR' || parent_study_sd_sid
                WHERE parent_study_source_id = 100128
                and parent_study_sd_sid not ilike 'PACTR%';";
         conn.Execute(sql_string);
-
 
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = replace(parent_study_sd_sid, '/', '-')
@@ -496,7 +494,6 @@ internal class PubmedTransferHelper
                WHERE parent_study_source_id = 100130
                and parent_study_sd_sid not ilike 'SLCTR-%';";
         conn.Execute(sql_string);
-
 
         sql_string = @"UPDATE nk.temp_pmids
                SET parent_study_sd_sid = replace(parent_study_sd_sid, '-', '')
@@ -545,43 +542,6 @@ internal class PubmedTransferHelper
     }
 
     
-/*
-    public void TransferTestingReferencesData(int source_id)
-    {
-        // This called only during testing
-        // Transfers the study and study reference records so that they can be used to
-        // obtain pmids, in imitation of the normal process
-
-        using var conn = new NpgsqlConnection(_connString);
-        string sql_string = @"truncate table ad.studies; 
-                INSERT INTO ad.studies (sd_sid, display_title,
-                title_lang_code, brief_description, data_sharing_statement,
-                study_start_year, study_start_month, study_type_id,
-                study_status_id, study_enrolment, study_gender_elig_id, 
-                min_age, min_age_units_id, max_age, max_age_units_id, datetime_of_data_fetch,
-                record_hash, study_full_hash) 
-                SELECT sd_sid, display_title,
-                title_lang_code, brief_description, data_sharing_statement,
-                study_start_year, study_start_month, study_type_id, 
-                study_status_id, study_enrolment, study_gender_elig_id, 
-                min_age, min_age_units_id, max_age, max_age_units_id, datetime_of_data_fetch,
-                record_hash, study_full_hash 
-                FROM adcomp.studies
-                where source_id = " + source_id.ToString();
-        conn.Execute(sql_string);
-
-
-        sql_string = @"truncate table ad.study_references; 
-                INSERT INTO ad.study_references(sd_sid,
-                   pmid, citation, doi, comments, record_hash)
-                SELECT sd_sid,
-                   pmid, citation, doi, comments, record_hash
-                   FROM adcomp.study_references
-                   where source_id = " + source_id.ToString();
-        conn.Execute(sql_string);
-    }
-*/
-
     public ulong FetchSourceReferences(int source_id, string source_conn_string)
     {
            string sql_string = $"select max(id) FROM mn.dbrefs_all";
@@ -590,32 +550,33 @@ internal class PubmedTransferHelper
            int batch_size = 50000;
            try
            {
-                  ulong stored = 0;
-                  sql_string = $@"select {source_id} as source_id, pmid as sd_oid, 
-                        source_id as parent_study_source_id,
-                        sd_sid as parent_study_sd_sid, 
-                        type_id, datetime_of_data_fetch
-                        from mn.dbrefs_all k
-                        where pmid is not null "; 
-                  if (max_id > batch_size)
+               ulong stored = 0;
+               sql_string = $@"select {source_id} as source_id, pmid as sd_oid, 
+                   source_id as parent_study_source_id,
+                   sd_sid as parent_study_sd_sid, 
+                   type_id, datetime_of_data_fetch
+                   from mn.dbrefs_all k
+                   where pmid is not null "; 
+               
+               if (max_id > batch_size)
+               {
+                  for (int r = 1; r <= max_id; r += batch_size)
                   {
-                         for (int r = 1; r <= max_id; r += batch_size)
-                         {
-                                string batch_sql_string = sql_string + $" and k.id >= {r} and k.id < {r + batch_size} ";
-                                IEnumerable<PMIDLink> pmid_ids = conn.Query<PMIDLink>(batch_sql_string);
-                                ulong num_stored = StorePMIDLinks(CopyHelpers.pmid_links_helper, pmid_ids);
-                                stored += num_stored;
-                                int e = r + batch_size < max_id ? r + batch_size - 1 : max_id;
-                                _loggingHelper.LogLine($"Obtained {num_stored} pmid ids, from ids {r} to {e}");
-                         }
+                      string batch_sql_string = sql_string + $" and k.id >= {r} and k.id < {r + batch_size} ";
+                      IEnumerable<PMIDLink> pmid_ids = conn.Query<PMIDLink>(batch_sql_string);
+                      ulong num_stored = StorePMIDLinks(CopyHelpers.pmid_links_helper, pmid_ids); 
+                      stored += num_stored;
+                      int e = r + batch_size < max_id ? r + batch_size - 1 : max_id;
+                      _loggingHelper.LogLine($"Obtained {num_stored} pmid ids, from ids {r} to {e}");
                   }
-                  else
-                  {
-                         IEnumerable<PMIDLink> pmid_ids = conn.Query<PMIDLink>(sql_string);
-                         stored = StorePMIDLinks(CopyHelpers.pmid_links_helper, pmid_ids);
-                         _loggingHelper.LogLine($"Obtained {stored} pmid ids as a single batch");
-                  }
-                  return stored;
+               }
+               else
+               { 
+                  IEnumerable<PMIDLink> pmid_ids = conn.Query<PMIDLink>(sql_string);
+                  stored = StorePMIDLinks(CopyHelpers.pmid_links_helper, pmid_ids);
+                  _loggingHelper.LogLine($"Obtained {stored} pmid ids as a single batch");
+               }
+               return stored;
            } 
            catch (Exception e)
            {
@@ -628,16 +589,16 @@ internal class PubmedTransferHelper
     public void TransferPMIDLinksToTempObjectIds()
     {
          string sql_string = @"INSERT INTO nk.temp_object_ids(
-                     source_id, sd_oid, object_type_id, 
-                     parent_study_source_id, 
-                     parent_study_sd_sid, datetime_of_data_fetch)
-                     SELECT  
-                     source_id, trim(sd_oid), type_id, 
-                     parent_study_source_id, 
-                     parent_study_sd_sid, datetime_of_data_fetch
-                     FROM nk.temp_pmids t ";
+                source_id, sd_oid, object_type_id, 
+                parent_study_source_id, 
+                parent_study_sd_sid, datetime_of_data_fetch)
+                SELECT  
+                source_id, trim(sd_oid), type_id, 
+                parent_study_source_id, 
+                parent_study_sd_sid, datetime_of_data_fetch
+                FROM nk.temp_pmids t ";
         int res = db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_object_ids", sql_string, " where "
-                   , 50000, ", with temp_pmid records");
+                    , 50000, ", with temp_pmid records");
         _loggingHelper.LogLine($"{res} PMID-study references passed to temp object table");
     }
 
@@ -790,7 +751,7 @@ internal class PubmedTransferHelper
                                            sql_string, " and ", 50000, ", with article title for new objects");
         _loggingHelper.LogLine($"{res} new PMID-study combinations updated with article titles");
 
-        // There are still currently a few PMIDs that do not match any entry in the Pubmed table (reason not clear). 
+        // There are still currently some PMIDs that do not match any entry in the Pubmed table (reason not clear). 
         // Indicates that they need to be downloaded and imported, or that they no longer exist, or were errors
 
         sql_string = @"Delete from nk.distinct_temp_object_ids t
@@ -865,7 +826,7 @@ internal class PubmedTransferHelper
                       and t.match_status = 2 ";
 
          int res = db.Update_UsingTempTable("nk.distinct_temp_object_ids", "nk.distinct_temp_object_ids", 
-                                            sql_string, " and ", 50000, "with object id, for existing objects");
+                                            sql_string, " and ", 50000, ", with object id, for existing objects");
          _loggingHelper.LogLine($"{res} new PMID-study combinations updated");
 
          sql_string = @"Insert into nk.data_object_ids
@@ -901,7 +862,7 @@ internal class PubmedTransferHelper
                               and s.parent_study_id = m.min_study
                               and s.match_status = 3 ";
         int res = db.Update_UsingTempTable("nk.distinct_temp_object_ids", "nk.distinct_temp_object_ids", 
-               sql_string, " and ", 50000, "with preferred status, for min of parent study ids");
+               sql_string, " and ", 50000, ", with preferred status, for min of parent study ids");
         _loggingHelper.LogLine($"{res} objects set as 'preferred' for new PMIDs");
         
         // Put the remaining study-PMID combinations as non-preferred.

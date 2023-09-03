@@ -231,8 +231,9 @@ public class DBUtilities
     // Used once for studies and twice for data objects (pubmed and non pubmed) to create and 
     // insert the provenance strings for the data in the core schema.
 
-    public int ExecuteProvenanceSQL(string sql_string, string full_table_name)
+    public int ExecuteProvenanceSQL(string sql_string, string full_table_name, string type_qualifier)
     {
+        string feedback_name = full_table_name + type_qualifier;
         try
         {
             int transferred = 0;
@@ -246,20 +247,20 @@ public class DBUtilities
                     string batch_sql_string = sql_string + $" and s.id >= {r} and s.id < {r + rec_batch} ";
                     transferred += ExecuteSQL(batch_sql_string);
                     int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {full_table_name} with provenance data, ids {r} to {e}";
+                    string feedback = $"Updated {feedback_name} with provenance data, ids {r} to {e}";
                     _loggingHelper.LogLine(feedback);
                 }
             }
             else
             {
                 transferred = ExecuteSQL(sql_string);
-                _loggingHelper.LogLine($"Updated {full_table_name} with provenance data, as a single batch");
+                _loggingHelper.LogLine($"Updated {feedback_name} with provenance data, as a single batch");
             }
             return transferred;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In updating provenance data in {full_table_name}: {e.Message}");
+            _loggingHelper.LogError($"In updating provenance data in {feedback_name}: {e.Message}");
             return 0;
         }
     }

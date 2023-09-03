@@ -329,7 +329,7 @@ public class CoreDataTransferrer
                     set provenance_string = tt.provenance
                     from core.temp_study_provenance tt
                     where s.id = tt.study_id ";
-        db.ExecuteProvenanceSQL(sql_string, "core.studies");
+        db.ExecuteProvenanceSQL(sql_string, "core.studies", "");
 
         sql_string = @"drop table core.temp_study_provenance;";
         db.ExecuteSQL(sql_string);
@@ -378,7 +378,7 @@ public class CoreDataTransferrer
                     set provenance_string = tt.provenance
                     from core.temp_object_provenance tt
                     where s.id = tt.object_id ";
-            db.ExecuteProvenanceSQL(sql_string, "core.data_objects");
+            db.ExecuteProvenanceSQL(sql_string, "core.data_objects", " (non pubmed records) ");
 
             // update pubmed objects
             sql_string = @"update core.data_objects s
@@ -387,7 +387,7 @@ public class CoreDataTransferrer
                     inner join aggs_nk.data_object_ids k
                     on tt.sd_oid = k.sd_oid
                     where s.id = k.object_id ";
-            db.ExecuteProvenanceSQL(sql_string, "core.data_objects");
+            db.ExecuteProvenanceSQL(sql_string, "core.data_objects", " (pubmed records) ");
 
             sql_string = @"drop table core.temp_object_provenance;
             drop table core.temp_pubmed_object_provenance;";

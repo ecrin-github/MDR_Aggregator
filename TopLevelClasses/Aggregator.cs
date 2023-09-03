@@ -94,7 +94,7 @@ public class Aggregator
                 else
                 {
                     _loggingHelper.LogHeader("Process object Ids");
-                    dtb.ProcessStandaloneObjectIds(); // for now, just PubMed
+                    dtb.ProcessStandaloneObjectIds(); // for now, just PubMed and BBMRI
                 }
                 
                 _loggingHelper.LogHeader("Transfer object data");
@@ -119,8 +119,8 @@ public class Aggregator
 
             agg_event.num_studies_imported = num_studies_imported;
             agg_event.num_objects_imported = num_objects_imported;
-            agg_event.num_total_studies = _monDatalayer.GetAggregateRecNum("studies", "st", agg_conn_string);
-            agg_event.num_total_objects = _monDatalayer.GetAggregateRecNum("data_objects", "ob", agg_conn_string);
+            agg_event.num_total_studies = _monDatalayer.GetAggregateRecNum("study_ids", "nk", agg_conn_string);
+            agg_event.num_total_objects = _monDatalayer.GetAggregateRecNum("data_object_ids", "nk", agg_conn_string);
             agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_object_ids", 
                                                                                   "nk", agg_conn_string);
 
