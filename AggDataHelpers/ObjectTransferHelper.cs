@@ -73,7 +73,7 @@ public class ObjectDataTransferrer
 
     public ulong FetchObjectIds(int source_id, string source_conn_string)
     {
-        string sql_string = $"select max(id) FROM ad.data_objects";
+        string sql_string = "select max(id) FROM ad.data_objects";
         using var conn = new NpgsqlConnection(source_conn_string);
         int max_id = conn.ExecuteScalar<int>(sql_string);
         int batch_size = 100000;
@@ -137,7 +137,7 @@ public class ObjectDataTransferrer
         db.Update_UsingTempTable("nk.temp_object_ids", "nk.temp_object_ids", sql_string, " and "
                                  , 25000, ", with object details, status = 1, for matched objects");
         _loggingHelper.LogLine("Existing objects matched in temp table");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         
         // Also update the data_object_identifiers table. Indicates has been matched
         // and updates the data fetch date
@@ -152,7 +152,7 @@ public class ObjectDataTransferrer
         status1number = db.Update_UsingTempTable("nk.temp_object_ids", "data_object_identifiers", 
                   sql_string, " and ", 25000, ", with status = 1, latest data fetch time");
         _loggingHelper.LogLine($"{status1number} existing objects matched in identifiers table");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
     }
 
 
@@ -179,7 +179,7 @@ public class ObjectDataTransferrer
                         WHERE parent_study_id is null;";
         res = db.ExecuteSQL(sql_string);
         _loggingHelper.LogLine($"{res} objects dropped because of a missing matching study");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
     }
 
 
@@ -201,7 +201,7 @@ public class ObjectDataTransferrer
         int res = db.Update_UsingTempTable("nk.temp_object_ids", "data_object_identifiers", sql_string, " and "
                                  , 25000, ", adding new data object ids");
         _loggingHelper.LogLine($"{res} Non-matched objects inserted into object identifiers table");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         
         // For study based data, if the study is 'preferred' it is the first time that it
         // and related data objects can be added to the database, so set the object id to
@@ -216,7 +216,7 @@ public class ObjectDataTransferrer
 
         status2number = db.ExecuteSQL(sql_string);
         _loggingHelper.LogLine($"{status2number} objects identified as new additions from 'preferred' studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         
         // For data objects from 'non-preferred' studies, there may be duplicate data objects
         // already in the system, though that will not apply to registry linked objects such as
@@ -461,7 +461,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name,  "data_objects", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} data_objects");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -479,7 +479,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_datasets", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object datasets");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -502,7 +502,7 @@ public class ObjectDataTransferrer
         
         if (num_to_check == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
         
@@ -543,7 +543,7 @@ public class ObjectDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_instances", " and ", "existing objects");
         _loggingHelper.LogLine($"Transferred {res2} object instances, from 'non-preferred' objects");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res1 + res2;
     }
 
@@ -560,11 +560,12 @@ public class ObjectDataTransferrer
         on s.sd_oid = t.sd_oid ";
 
         int res1 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_titles", " where ", "new objects");
+        
         _loggingHelper.LogLine($"Loaded {res1} object titles");
         
         if (num_to_check == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
 
@@ -617,7 +618,7 @@ public class ObjectDataTransferrer
 
             int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_titles", " and ", "existing objects");
             _loggingHelper.LogLine($"Transferred {res2} object titles, from 'non-preferred' objects");
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1 + res2;
     }
 
@@ -638,7 +639,7 @@ public class ObjectDataTransferrer
         
         if (num_to_check == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
 
@@ -676,7 +677,7 @@ public class ObjectDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_dates", " and ", "existing objects");
         _loggingHelper.LogLine($"Transferred {res2} object dates, from 'non-preferred' objects");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res1 + res2;
     }
 
@@ -694,7 +695,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_people", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object people");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -712,7 +713,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_organisations", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object organisations");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -730,7 +731,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_topics", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object topics");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -748,7 +749,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_descriptions", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object descriptions");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -766,7 +767,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_identifiers"," where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object identifiers");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -786,7 +787,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_relationships", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object relationships");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -804,7 +805,7 @@ public class ObjectDataTransferrer
 
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "object_rights", " where ", "new objects");
         _loggingHelper.LogLine($"Loaded {res} object rights");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
     

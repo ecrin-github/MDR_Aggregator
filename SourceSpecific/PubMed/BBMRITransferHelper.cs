@@ -52,11 +52,11 @@ internal class BBMRITransferHelper
         // discovered and derived from earlier in the extraction process, as an additional table.
 
         sql_string =  @"Update nk.temp_bbmris b
-                       set parent_study_source_id = source_id,
-                       parent_study_id = study_id,
-                       is_preferred_study = is_preferred
+                       set parent_study_source_id = ids.source_id,
+                       parent_study_id = ids.study_id,
+                       is_preferred_study = ids.is_preferred
                        from nk.study_ids ids
-                       where b.sd_sid = ids.sd_sid ";
+                       where b.parent_study_sd_sid = ids.sd_sid ";
         db.ExecuteSQL(sql_string);
         
         // Identify the matched records in the temp table. Matching is against sd_oid and study.
@@ -75,12 +75,12 @@ internal class BBMRITransferHelper
 
         sql_string = @"UPDATE nk.data_object_ids doi
         set match_status = 1,
-        datetime_of_data_fetch = t.datetime_of_data_fetch
-        from nk.distinct_temp_object_ids t
-        where doi.parent_study_id = t.parent_study_id
-        and doi.sd_oid = t.sd_oid ";
+        datetime_of_data_fetch = b.datetime_of_data_fetch
+        from nk.temp_bbmris b
+        where doi.parent_study_id = b.parent_study_id
+        and doi.sd_oid = b.sd_oid ";
         res = db.ExecuteSQL(sql_string);
-        _loggingHelper.LogLine($"{res} existing PMID objects matched in identifiers table");
+        _loggingHelper.LogLine($"{res} existing BBMRI sample objects matched in identifiers table");
 
         // Delete the matched records from the temp table
         
@@ -96,7 +96,7 @@ internal class BBMRITransferHelper
         // These should be deleted
         
         string sql_string = @"Delete from nk.temp_bbmris t
-                              where study_id is null";
+                              where parent_study_id is null";
         int res = db.ExecuteSQL(sql_string);
         _loggingHelper.LogLine($"{res} records deleted from BBMRI-study combinations as sd_sid could not be matched");
 
@@ -124,7 +124,7 @@ internal class BBMRITransferHelper
 
         sql_string = @"Drop table if exists nk.new_bbmri_links;
         Create table nk.new_bbmri_links as 
-        select p.id
+        select b.id
         from nk.temp_bbmris b
         left join nk.data_object_ids doi
         on b.sd_oid = doi.sd_oid
@@ -141,11 +141,8 @@ internal class BBMRITransferHelper
         and b.id = n.id ";
 
         res = db.ExecuteSQL(sql_string);
-        _loggingHelper.LogLine($"{res} new BBMRI-study combinations found for existing PMIDs");
-        
-        // Drop the temporary tables
-        sql_string = @"DROP TABLE nk.new_bbmris; DROP TABLE nk.new_bbmri_links;";
-        db.ExecuteSQL(sql_string);
+        _loggingHelper.LogLine($"{res} new BBMRI-study combinations found for existing BBMRI samples");
+
     }
 
     public void AddNewBBMRIStudyLinks()
@@ -162,7 +159,7 @@ internal class BBMRITransferHelper
                       and b.match_status = 2 ";
 
          int res = db.ExecuteSQL(sql_string);
-         _loggingHelper.LogLine($"{res} new PMID-study combinations updated");
+         _loggingHelper.LogLine($"{res} new BBMRI sample-study combinations updated");
 
          sql_string = @"Insert into nk.data_object_ids
          (object_id, source_id, sd_oid, object_type_id, title, is_preferred_object,
@@ -195,16 +192,16 @@ internal class BBMRITransferHelper
                               and b.parent_study_id = m.min_study
                               and b.match_status = 3 ";
         int res = db.ExecuteSQL(sql_string);
-        _loggingHelper.LogLine($"{res} objects set as 'preferred' for new PMIDs");
+        _loggingHelper.LogLine($"{res} objects set as 'preferred' for new BBMRI samples");
         
-        // Put the remaining study-PMID combinations as non-preferred.
+        // Put the remaining study-sample combinations as non-preferred.
 
         sql_string = @"UPDATE nk.temp_bbmris b
                              SET is_preferred_object = false
                              where is_preferred_object is null
                              and b.match_status = 3 ";
         res = db.ExecuteSQL(sql_string);
-        _loggingHelper.LogLine($"{res} objects set as 'non-preferred' for new PMIDs");
+        _loggingHelper.LogLine($"{res} objects set as 'non-preferred' for new BBMRI samples");
 
         // Add in the 'preferred' new sample records. Note that the match status (3) is included.
 
@@ -222,7 +219,7 @@ internal class BBMRITransferHelper
          and is_preferred_object = true";
 
          res = db.ExecuteSQL(sql_string);
-         _loggingHelper.LogLine($"{res} new 'preferred' PMID-study combinations added for new PMIDs");
+         _loggingHelper.LogLine($"{res} new 'preferred' sample-study combinations added for new BBMRI samples");
 
          // Update newly added records with object ids, if the 'preferred' object record.
 
@@ -247,7 +244,7 @@ internal class BBMRITransferHelper
         res = db.ExecuteSQL(sql_string);
         _loggingHelper.LogLine($"{res} object ids applied to new sample links with 'non-preferred' objects");
 
-        // Add remaining matching study-PMIDs records. Note object_id is included in the add this time.
+        // Add remaining matching study-sample records. Note object_id is included in the add this time.
 
         sql_string = @"Insert into nk.data_object_ids
         (object_id, source_id, sd_oid, object_type_id, title, is_preferred_object,
@@ -263,13 +260,13 @@ internal class BBMRITransferHelper
          and is_preferred_object = false ";
 
          res = db.ExecuteSQL(sql_string);
-        _loggingHelper.LogLine($"{res} new 'non-preferred' PMID-study combinations added");
+        _loggingHelper.LogLine($"{res} new 'non-preferred' sample-study combinations added");
     }
 
     public void IdentifyBBMRIDataForImport(int source_id)
     {
-        string sql_string = $@"Insert into nk.temp_objects_to_add
-             (object_id, sd_oid)
+        string sql_string = $@"DROP TABLE IF EXISTS nk.temp_objects_to_add;
+             CREATE TABLE nk.temp_objects_to_add as 
              select distinct object_id, sd_oid
              from nk.data_object_ids doi
              WHERE is_preferred_object = true and 

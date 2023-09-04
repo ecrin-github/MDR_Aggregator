@@ -51,6 +51,10 @@ public class CoreTransferBuilder
         core_summ.study_conditions_recs = res;
         _loggingHelper.LogLine($"{res} core study conditions transferred");
         
+        res = core_tr.LoadCoreStudyICDs(study_schema);
+        core_summ.study_icd_recs = res;
+        _loggingHelper.LogLine($"{res} core study conditions transferred");
+        
         res = core_tr.LoadCoreStudyFeatures(study_schema);
         core_summ.study_features_recs = res;
         _loggingHelper.LogLine($"{res} core study features transferred");
@@ -135,16 +139,10 @@ public class CoreTransferBuilder
         core_tr.GenerateObjectProvenanceData();
         _loggingHelper.LogLine("Core object provenance data created");
     }
-    
-    public void StoreSourceSummaryStatistics()
-    {
-        //_monDatalayer.StoreCoreSummary();
-        // 
-    }
-    
-
+   
     public void StoreCoreSummaryStatistics(CoreSummary core_summ)
     {
+        _monDatalayer.DeleteSameEventSummaryStats(core_summ.agg_event_id);
         _monDatalayer.StoreCoreSummary(core_summ);
     }
     
@@ -153,20 +151,8 @@ public class CoreTransferBuilder
         _monDatalayer.DeleteSameEventObjectStats(last_agg_event_id);
         List<AggregationObjectNum> object_numbers = _monDatalayer.GetObjectTypes(last_agg_event_id, _connString);
         _monDatalayer.StoreObjectNumbers(CopyHelpers.object_numbers_helper, object_numbers);
-        _loggingHelper.LogLine("Statistics done for different data objects");
+        _loggingHelper.LogLine("Statistics created for different data objects");
     }
-    
-    public void StoreStudyStudyLinkStatistics(int last_agg_event_id)
-    {
-        _monDatalayer.RecreateStudyStudyLinksTable();
-        List<StudyStudyLinkData> study_link_numbers = _monDatalayer.GetStudyStudyLinkData(last_agg_event_id, _connString);
-        _monDatalayer.StoreStudyLinkNumbers(CopyHelpers.study_link_numbers_helper, study_link_numbers);
-        study_link_numbers = _monDatalayer.GetStudyStudyLinkData2(last_agg_event_id, _connString);
-        _monDatalayer.StoreStudyLinkNumbers(CopyHelpers.study_link_numbers_helper, study_link_numbers);
-        _loggingHelper.LogLine("Statistics done for study-study links");
-    }
-    
-    
 
 }
 

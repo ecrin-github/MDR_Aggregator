@@ -4,16 +4,13 @@ public class SchemaBuilder
 {
     private readonly StudyTableBuilder study_tablebuilder;
     private readonly ObjectTableBuilder object_tablebuilder;
-    private readonly LinkTableBuilder link_tablebuilder;
 
     public SchemaBuilder(string _connString)
     {
         var connString = _connString;
         study_tablebuilder = new StudyTableBuilder(connString);
         object_tablebuilder = new ObjectTableBuilder(connString);
-        link_tablebuilder = new LinkTableBuilder(connString);
     }
-    
     
     public void BuildNewStudyTables()
     {
@@ -31,16 +28,11 @@ public class SchemaBuilder
         study_tablebuilder.create_table_study_locations();
     }
 
-
     public void BuildNewObjectTables()
     {
-        // these common to all databases
-
         object_tablebuilder.create_table_data_objects();
         object_tablebuilder.create_table_object_instances();
         object_tablebuilder.create_table_object_titles();
-
-        // these are database dependent		
 
         object_tablebuilder.create_table_object_datasets();
         object_tablebuilder.create_table_object_dates();
@@ -52,13 +44,7 @@ public class SchemaBuilder
         object_tablebuilder.create_table_object_topics();
         object_tablebuilder.create_table_object_descriptions();
         object_tablebuilder.create_table_object_identifiers();
+        
+        object_tablebuilder.create_table_study_object_links();
     }
-
-    public void BuildNewLinkTables()
-    {
-        link_tablebuilder.create_table_linked_study_groups();
-        link_tablebuilder.create_table_study_object_links();
-        link_tablebuilder.create_table_study_study_links();
-    }
-    
 }

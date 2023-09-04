@@ -277,5 +277,21 @@ public class ObjectTableBuilder
 
         ExecuteSQL(sql_string);
     }
+    
+    
+    public void create_table_study_object_links()
+    {
+        string sql_string = @"DROP TABLE IF EXISTS nk.study_object_links;
+        CREATE TABLE nk.study_object_links(
+            id                       INT             NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 10000001 INCREMENT BY 1) PRIMARY KEY
+          , study_id                 INT             NOT NULL
+          , object_id                INT             NOT NULL
+        );
+        CREATE INDEX study_object_links_objectid ON nk.study_object_links(object_id);
+        CREATE INDEX study_object_links_studyid ON nk.study_object_links(study_id);";
+
+        ExecuteSQL(sql_string);
+    }
+
 
 }

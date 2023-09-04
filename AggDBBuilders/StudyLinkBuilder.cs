@@ -2,13 +2,15 @@
 
 public class StudyLinkBuilder
 {
+    private readonly IMonDataLayer _monDatalayer;
     private readonly ILoggingHelper _loggingHelper;
     private readonly LinksDataHelper slh;
     private readonly ICredentials _credentials;
 
-    public StudyLinkBuilder(ILoggingHelper loggingHelper, ICredentials credentials, 
+    public StudyLinkBuilder(IMonDataLayer monDatalayer, ILoggingHelper loggingHelper, ICredentials credentials, 
            string aggs_connString)
     {
+        _monDatalayer = monDatalayer;
         _loggingHelper = loggingHelper;
         _credentials = credentials;
         slh = new LinksDataHelper(aggs_connString, _loggingHelper);
@@ -167,5 +169,38 @@ public class StudyLinkBuilder
         // But first use the study_ids table to insert the correct study Ids for the linked sources / sd_sids.
         
         slh.AddStudyStudyRelationshipRecords();
+    }
+
+    public void StoreStudyLinkStatistics(int agg_event_id)
+    {
+        // ensure no existing data for this agg_event_id 
+        // for these two types of data
+        
+        _monDatalayer.DeleteSameEventStudy1to1LinkData(agg_event_id);
+        _monDatalayer.DeleteSameEventStudy1toNLinkData(agg_event_id);
+        
+        // get data for 1-to-1 study links and store using copy helpers in appropriate table
+        
+        ulong res = 0;
+        List<Study1To1LinkData>? study_1to1_link_numbers = _monDatalayer.FetchStudy1to1LinkData(agg_event_id);
+        if (study_1to1_link_numbers is not null)
+        {
+            res = _monDatalayer.Store1to1LinkNumbers(CopyHelpers.study_1to1_link_numbers_helper, study_1to1_link_numbers);
+        }
+        study_1to1_link_numbers = _monDatalayer.FetchStudy1to1LinkData2(agg_event_id);
+        if (study_1to1_link_numbers is not null)
+        {
+            res += _monDatalayer.Store1to1LinkNumbers(CopyHelpers.study_1to1_link_numbers_helper, study_1to1_link_numbers);
+           _loggingHelper.LogLine($"Statistics created for 1-to-1 study links ({res} records)");  
+        }
+
+        // get data for 1-to-n study links and store using copy helpers in appropriate table
+        
+        List<Study1ToNLinkData>? study_1ton_link_numbers = _monDatalayer.FetchStudy1toNLinkData(agg_event_id);
+        if (study_1ton_link_numbers is not null)
+        {
+            res = _monDatalayer.Store1toNLinkNumbers(CopyHelpers.study_1ton_link_numbers_helper, study_1ton_link_numbers);
+            _loggingHelper.LogLine($"Statistics created for 1-to-n study links ({res} records)");
+        }
     }
 }

@@ -71,7 +71,7 @@ catch (Exception e)
     loggingHelper.LogHeader("UNHANDLED EXCEPTION");
     string message = (e.InnerException is null) ? e.Message
         : e.Message + "\nInnerException Message:\n" + e.InnerException.Message;
-    loggingHelper.LogCodeError("MDR_Tester application aborted", message, e.StackTrace);
+    loggingHelper.LogCodeError("MDR_Aggregator application aborted", message, e.StackTrace);
     loggingHelper.CloseLog();
     return -1;
 

@@ -70,11 +70,11 @@ public class LoggingHelper : ILoggingHelper
     public void LogStudyHeader(string leadText, string studyName)
     {
         string dividerLine = new string('-', 70);
-        LogLine("");
+        LogBlank();
         LogLine(dividerLine);
         LogLine($"{leadText} {studyName} data".ToUpper());
         LogLine(dividerLine);
-        LogLine("");
+        LogBlank();
     }
 
 
@@ -112,10 +112,15 @@ public class LoggingHelper : ILoggingHelper
         Transmit("+++++++++++++++++++++++++++++++++++++++");
         Transmit("");
     }
+    
+    public void LogBlank()
+    {
+        Transmit("");
+    }
 
     public void SpacedInformation(string header_text)
     {
-        LogLine("");
+        LogBlank();
         LogLine(header_text);
     }
     
@@ -124,62 +129,6 @@ public class LoggingHelper : ILoggingHelper
         string dt_prefix = DateTime.Now.ToShortDateString() + " : " + DateTime.Now.ToShortTimeString() + " :   ";
         string error_message = dt_prefix + "***ERROR*** " + "Error " + errorNum + ": " + header + " " + errorType;
         Transmit(error_message);
-    }
-
-
-    public void LogSummaryStatistics(CoreSummary summ)
-    {
-        // Logs the record count for each table in the core schema
-        
-        LogHeader("study tables");
-        LogLine($"Studies: {summ.study_recs:n0}");
-        LogLine($"Study Identifiers: {summ.study_identifiers_recs:n0}");
-        LogLine($"Study Titles: {summ.study_titles_recs:n0}");
-            
-        LogLine($"Study Topics: {summ.study_topics_recs:n0}");
-        LogLine($"Study Features: {summ.study_features_recs:n0}");
-        LogLine($"Study Conditions: {summ.study_conditions_recs:n0}");
-            
-        LogLine($"Study People: {summ.study_people_recs:n0}");
-        LogLine($"Study Organisations: {summ.study_organisations_recs:n0}");
-        LogLine($"Study Relationships: {summ.study_relationships_recs:n0}");
-            
-        LogLine($"Study Countries: {summ.study_countries_recs:n0}");
-        LogLine($"Study Locations: {summ.study_locations_recs:n0}");
-
-        LogHeader("object tables");
-
-        LogLine($"Data Objects: {summ.data_object_recs:n0}");
-        LogLine($"Object Instances: {summ.object_instances_recs:n0}");
-        LogLine($"Object titles: {summ.object_titles_recs:n0}");
-
-        LogLine($"Object Datasets: {summ.object_datasets_recs:n0}");
-        LogLine($"Object Dates: {summ.object_dates_recs:n0}");
-        LogLine($"Object Relationships: {summ.object_relationships_recs:n0}");
-        LogLine($"Object Rights: {summ.object_rights_recs:n0}");
-        
-        LogLine($"Object People: {summ.object_people_recs:n0}");
-        LogLine($"Object Organisations: {summ.object_organisations_recs:n0}");
-        
-        LogLine($"Object Topics: {summ.object_topics_recs:n0}");
-        LogLine($"Object Descriptions: {summ.object_descriptions_recs:n0}");
-        LogLine($"Object Identifiers: {summ.object_identifiers_recs:n0}");
-        
-        LogHeader("Study-Object Linkage");
-        LogLine($"Study-Object Links: {summ.study_object_link_recs:n0}");
-        
-    }
-
-    public void LogDataObjectTypeStatistics(int lastAggEventId)
-    {
-        // Logs the number of each data object type, where n > 10,
-        // from the last aggregation event
-        
-        // input a list of object type - total objects, obtained from a
-        // DB call to the monitor DB layer. Loop through and log each line.
-        
-        LogLine("");
-        LogLine("DATA OBJECT NUMBERS");
     }
 
     public void CloseLog()

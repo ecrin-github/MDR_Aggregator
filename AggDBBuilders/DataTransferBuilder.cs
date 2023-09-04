@@ -14,13 +14,13 @@ public class DataTransferBuilder
     private readonly int _source_id;
 
     public DataTransferBuilder(Source source, string ftw_schema_name, string dest_conn_string, 
-                               IMonDataLayer monDatalayer, ILoggingHelper logginghelper)
+                               IMonDataLayer monDatalayer, ILoggingHelper loggingHelper)
     {
         _source = source;
         _source_id = source.id;
         _source_conn_string = source.db_conn!;   
         
-        _loggingHelper = logginghelper;
+        _loggingHelper = loggingHelper;
         _monDatalayer = monDatalayer;
         _ftw_schema_name = ftw_schema_name;
         _dest_conn_string = dest_conn_string;
@@ -50,43 +50,43 @@ public class DataTransferBuilder
     }
     
 
-    public int TransferStudyData(SourceSummary srce_summ)
+    public int TransferStudyData(SourceSummary srce_summary)
     {
         int study_number = st_tr.LoadStudies(_ftw_schema_name);
-        srce_summ.study_recs = study_number;
-        srce_summ.study_identifiers_recs = st_tr.LoadStudyIdentifiers(_ftw_schema_name);
-        srce_summ.study_titles_recs = st_tr.LoadStudyTitles(_ftw_schema_name);
+        srce_summary.study_recs = study_number;
+        srce_summary.study_identifiers_recs = st_tr.LoadStudyIdentifiers(_ftw_schema_name);
+        srce_summary.study_titles_recs = st_tr.LoadStudyTitles(_ftw_schema_name);
         if (_source.has_study_people is true)
         {
-            srce_summ.study_people_recs = st_tr.LoadStudyPeople(_ftw_schema_name);
+            srce_summary.study_people_recs = st_tr.LoadStudyPeople(_ftw_schema_name);
         }
         if (_source.has_study_organisations is true)
         {
-            srce_summ.study_organisations_recs = st_tr.LoadStudyOrganisations(_ftw_schema_name);
+            srce_summary.study_organisations_recs = st_tr.LoadStudyOrganisations(_ftw_schema_name);
         }
         if (_source.has_study_topics is true)
         {
-            srce_summ.study_topics_recs = st_tr.LoadStudyTopics(_ftw_schema_name);
+            srce_summary.study_topics_recs = st_tr.LoadStudyTopics(_ftw_schema_name);
         }
         if (_source.has_study_conditions is true)
         {
-            srce_summ.study_conditions_recs = st_tr.LoadStudyConditions(_ftw_schema_name);
+            srce_summary.study_conditions_recs = st_tr.LoadStudyConditions(_ftw_schema_name);
         }
         if (_source.has_study_features is true)
         {
-            srce_summ.study_features_recs = st_tr.LoadStudyFeatures(_ftw_schema_name);
+            srce_summary.study_features_recs = st_tr.LoadStudyFeatures(_ftw_schema_name);
         }
         if (_source.has_study_relationships is true)
         {
-            srce_summ.study_relationships_recs = st_tr.LoadStudyRelationShips(_ftw_schema_name, _source_id);
+            srce_summary.study_relationships_recs = st_tr.LoadStudyRelationShips(_ftw_schema_name, _source_id);
         }
         if (_source.has_study_countries is true)
         {
-            srce_summ.study_countries_recs = st_tr.LoadStudyCountries(_ftw_schema_name);
+            srce_summary.study_countries_recs = st_tr.LoadStudyCountries(_ftw_schema_name);
         }
         if (_source.has_study_locations is true)
         {
-            srce_summ.study_locations_recs = st_tr.LoadStudyLocations(_ftw_schema_name);
+            srce_summary.study_locations_recs = st_tr.LoadStudyLocations(_ftw_schema_name);
         }
         st_tr.DropTempStudyIdsTable();
         return study_number;
@@ -101,14 +101,14 @@ public class DataTransferBuilder
         ob_tr.SetUpTempObjectIdsTables();
         ulong res = ob_tr.FetchObjectIds(_source.id, _source_conn_string);
         _loggingHelper.LogLine($"{res} Object Ids obtained");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         
         // Update the object parent ids against the study_ids table.
 
         ob_tr.MatchExistingObjectIds(_source_id);
         ob_tr.UpdateNewObjectsWithStudyIds(_source_id);
         ob_tr.AddNewObjectsToIdentifiersTable(_source_id);
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         
         // Carry out a check for (currently very rare) duplicate objects (i.e. that have been imported
         // before with the data from another source). 
@@ -117,21 +117,19 @@ public class DataTransferBuilder
         ob_tr.CheckNewObjectsForDuplicateURLs(_source_id, _ftw_schema_name);
         ob_tr.CompleteNewObjectsStatuses(_source_id);
         _loggingHelper.LogLine("Object Ids updated");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
 
         // Update all objects ids table and derive a small table that lists the object Ids for all objects,
         // and one that lists the ids of possible duplicate objects, to check.
 
         ob_tr.FillObjectsToAddTables(_source_id);
         _loggingHelper.LogLine("Object Ids processed");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
     }
  
     
     public void ProcessStandaloneObjectIds()
     {
-        ob_tr.SetUpTempObjectIdsTables();
-
         // process the data using available object-study links (may be multiple study links per object).
         // Exact process likely to differ with different object sources - at present only PubMed in this category
 
@@ -160,14 +158,14 @@ public class DataTransferBuilder
             
             ulong res2 = pm_tr.FetchSourceReferences(_source_id, _source_conn_string);
             _loggingHelper.LogLine($"{res2} PMID Ids obtained from DB sources");
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             
             // Transfer data to 'standard' data_object_identifiers table and insert the 
             // 'correct' study_ids against the sd_sid (all are known as studies already added).
 
             pm_tr.TransferPMIDLinksToTempObjectIds();
             pm_tr.UpdateTempObjectIdsWithStudyDetails();  
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
 
             // Duplication of PMIDs is from
             // a) The same study-PMID combination in both trial registry record and Pubmed record
@@ -181,7 +179,7 @@ public class DataTransferBuilder
             // Match against existing records here and update status and date-time of data fetch
 
             pm_tr.MatchExistingPMIDLinks();
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             
             // New, unmatched combinations of PMID and studies may have PMIDs completely new to the system, or 
             // new PMID-study combinations for existing PMIDs
@@ -190,7 +188,7 @@ public class DataTransferBuilder
             pm_tr.AddNewPMIDStudyLinks();
             pm_tr.AddCompletelyNewPMIDs();
             pm_tr.IdentifyPMIDDataForImport(_source_id);
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             
             pm_tr.DropTempPMIDTables();
         }
@@ -218,7 +216,7 @@ public class DataTransferBuilder
             
             BBMRITransferHelper bb_tr = new BBMRITransferHelper(_ftw_schema_name, _dest_conn_string, _loggingHelper);
             bb_tr.MatchExistingBBMRILinks();
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             
             // Non-matched sample set records may be completely new to the system, or represent new
             // sample-study combinations for existing samples. The functions below identify these
@@ -228,67 +226,68 @@ public class DataTransferBuilder
             bb_tr.AddNewBBMRIStudyLinks();
             bb_tr.AddCompletelyNewBBMRIObjects();
             bb_tr.IdentifyBBMRIDataForImport(_source_id);
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             
             bb_tr.DropTempBBMRITables();
         }
     }
 
 
-    public int TransferObjectData(SourceSummary srce_summ)
+    public int TransferObjectData(SourceSummary srce_summary)
     {
         // Add new records where status indicates they are new.
         
         int object_number = ob_tr.LoadDataObjects(_ftw_schema_name);
-        srce_summ.data_object_recs = object_number;
+        srce_summary.data_object_recs = object_number;
+        srce_summary.object_titles_recs = ob_tr.LoadObjectTitles(_ftw_schema_name);
+        
         if (_source.has_object_datasets is true)
         {
-            srce_summ.object_datasets_recs = ob_tr.LoadObjectDatasets(_ftw_schema_name);
+            srce_summary.object_datasets_recs = ob_tr.LoadObjectDatasets(_ftw_schema_name);
         }
-
-        if (!_source.has_object_bbmri_set is true)
+        if (_source.has_object_instances is true)
         {
-            // Instances available for all object sets apart from the BBMRI samples
-            // Needs a better (positive rather than negative) way of referring to this though.
-            // Source parameters table needs to be changed to refer to all tables...
-            // But this will affect all modules / phases
-            
-            srce_summ.object_instances_recs = ob_tr.LoadObjectInstances(_ftw_schema_name);
+            srce_summary.object_instances_recs = ob_tr.LoadObjectInstances(_ftw_schema_name);
         }
-
-        srce_summ.object_titles_recs = ob_tr.LoadObjectTitles(_ftw_schema_name);
         if (_source.has_object_dates is true)
         {
-            srce_summ.object_dates_recs = ob_tr.LoadObjectDates(_ftw_schema_name);
+            srce_summary.object_dates_recs = ob_tr.LoadObjectDates(_ftw_schema_name);
         }
         if (_source.has_object_rights is true)
         {
-            srce_summ.object_rights_recs = ob_tr.LoadObjectRights(_ftw_schema_name);
+            srce_summary.object_rights_recs = ob_tr.LoadObjectRights(_ftw_schema_name);
         }
         if (_source.has_object_relationships is true)
         {
-            srce_summ.object_relationships_recs = ob_tr.LoadObjectRelationships(_ftw_schema_name);
+            srce_summary.object_relationships_recs = ob_tr.LoadObjectRelationships(_ftw_schema_name);
         }
-        if (_source.has_object_pubmed_set is true)
+        if (_source.has_object_descriptions is true)
         {
-            srce_summ.object_people_recs = ob_tr.LoadObjectPeople(_ftw_schema_name);
-            srce_summ.object_organisations_recs = ob_tr.LoadObjectOrganisations(_ftw_schema_name);
-            srce_summ.object_topics_recs = ob_tr.LoadObjectTopics(_ftw_schema_name);
-            srce_summ.object_descriptions_recs = ob_tr.LoadObjectDescriptions(_ftw_schema_name);
-            srce_summ.object_identifiers_recs = ob_tr.LoadObjectIdentifiers(_ftw_schema_name);
+            srce_summary.object_descriptions_recs = ob_tr.LoadObjectDescriptions(_ftw_schema_name);
         }
-        if (_source.has_object_bbmri_set is true)
+        if (_source.has_object_identifiers is true)
         {
-            srce_summ.object_descriptions_recs = ob_tr.LoadObjectDescriptions(_ftw_schema_name);
-            srce_summ.object_identifiers_recs = ob_tr.LoadObjectIdentifiers(_ftw_schema_name);
+            srce_summary.object_identifiers_recs = ob_tr.LoadObjectIdentifiers(_ftw_schema_name);
+        }
+        if (_source.has_object_people is true)
+        {
+            srce_summary.object_people_recs = ob_tr.LoadObjectPeople(_ftw_schema_name);
+        }
+        if (_source.has_object_organisations is true)
+        {
+            srce_summary.object_organisations_recs = ob_tr.LoadObjectOrganisations(_ftw_schema_name);
+        }
+        if (_source.has_object_topics is true)
+        {
+            srce_summary.object_topics_recs = ob_tr.LoadObjectTopics(_ftw_schema_name);
         }
         ob_tr.DropTempObjectIdsTable();
         return object_number;
     }
     
-    public void StoreSourceSummaryStatistics(SourceSummary srce_summ)
+    public void StoreSourceSummaryStatistics(SourceSummary srce_summary)
     {
-        _monDatalayer.StoreSourceSummary(srce_summ);
+        _monDatalayer.StoreSourceSummary(srce_summary);
     }
     
 }

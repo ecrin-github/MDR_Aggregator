@@ -33,7 +33,6 @@ public static class CopyHelpers
              .MapInteger("source_id", x => x.source_id)
              .MapVarchar("sd_sid", x => x.sd_sid)
              .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
-
     
     public static readonly PostgreSQLCopyHelper<ObjectId> object_ids_helper =
          new PostgreSQLCopyHelper<ObjectId>("nk", "temp_object_ids")
@@ -46,7 +45,7 @@ public static class CopyHelpers
              .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
     
     public static readonly PostgreSQLCopyHelper<PMIDLink> pmid_links_helper =
-         new PostgreSQLCopyHelper<PMIDLink>("nk", "temp_pmids")
+         new PostgreSQLCopyHelper<PMIDLink>("nk", "temp_collected_pmids")
              .MapInteger("source_id", x => x.source_id)
              .MapVarchar("sd_oid", x => x.sd_oid)
              .MapInteger("parent_study_source_id", x => x.parent_study_source_id)
@@ -55,20 +54,32 @@ public static class CopyHelpers
              .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
 
     public static readonly PostgreSQLCopyHelper<AggregationObjectNum> object_numbers_helper =
-         new PostgreSQLCopyHelper<AggregationObjectNum>("sf", "aggregation_object_numbers")
-             .MapInteger("aggregation_event_id", x => x.aggregation_event_id)
+         new PostgreSQLCopyHelper<AggregationObjectNum>("sf", "agg_object_numbers")
+             .MapInteger("agg_event_id", x => x.agg_event_id)
              .MapInteger("object_type_id", x =>  x.object_type_id)
              .MapVarchar("object_type_name", x => x.object_type_name)
              .MapInteger("number_of_type", x => x.number_of_type);
 
-    public static readonly PostgreSQLCopyHelper<StudyStudyLinkData> study_link_numbers_helper =
-         new PostgreSQLCopyHelper<StudyStudyLinkData>("sf", "study_study_link_data")
+    public static readonly PostgreSQLCopyHelper<Study1To1LinkData> study_1to1_link_numbers_helper =
+         new PostgreSQLCopyHelper<Study1To1LinkData>("sf", "agg_study_1to1_link_data")
+             .MapInteger("agg_event_id", x => x.agg_event_id)
              .MapInteger("source_id", x => x.source_id)
              .MapVarchar("source_name", x => x.source_name)
              .MapInteger("other_source_id", x => x.other_source_id)
              .MapVarchar("other_source_name", x => x.other_source_name)
              .MapInteger("number_in_other_source", x => x.number_in_other_source);
 
+    public static readonly PostgreSQLCopyHelper<Study1ToNLinkData> study_1ton_link_numbers_helper =
+        new PostgreSQLCopyHelper<Study1ToNLinkData>("sf", "agg_study_1ton_link_data")
+            .MapInteger("agg_event_id", x => x.agg_event_id)
+            .MapInteger("source_id", x => x.source_id)
+            .MapVarchar("source_name", x => x.source_name)
+            .MapInteger("relationship_id", x => x.relationship_id)
+            .MapVarchar("relationship", x => x.relationship)
+            .MapInteger("target_source_id", x => x.target_source_id)
+            .MapVarchar("target_source_name", x => x.target_source_name)
+            .MapInteger("number_in_other_source", x => x.number_in_other_source);
+    
     public static readonly PostgreSQLCopyHelper<OldNewLink> oldnewlink_ctg_helper =
         new PostgreSQLCopyHelper<OldNewLink>("nk", "ctg_id_checker")
             .MapVarchar("new_id", x => x.new_id)

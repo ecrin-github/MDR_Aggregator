@@ -10,15 +10,7 @@ public class Source
     public int? preference_rating { get; }
     public string? database_name { get; }
     public string? db_conn { get; set; }
-    public int? default_harvest_type_id { get; }
-    public bool? requires_file_name { get; }
-    public bool? uses_who_harvest { get; }
-    public int? harvest_chunk { get; }
-    public string? local_folder { get; }
-    public bool? local_files_grouped { get; }
-    public int? grouping_range_by_id { get; }
-    public string? local_file_prefix { get; }
-    public string? study_iec_storage_type { get; }
+    public string? repo_name { get; set; }
     public bool? has_study_tables { get; }
     public bool? has_study_topics { get; }
     public bool? has_study_conditions { get; }
@@ -30,23 +22,26 @@ public class Source
     public bool? has_study_relationships { get; }
     public bool? has_study_countries { get; }
     public bool? has_study_locations { get; }
-    public bool? has_study_links { get; }
+    public string? study_iec_storage_type { get; }
     public bool? has_object_datasets { get; }
-    public bool? has_study_ipd_available { get; }
+    public bool? has_object_instances { get; }
     public bool? has_object_dates { get; }
+    public bool? has_object_descriptions { get; }
+    public bool? has_object_identifiers { get; }
+    public bool? has_object_people { get; }
+    public bool? has_object_organisations { get; }
+    public bool? has_object_topics { get; }
     public bool? has_object_rights { get; }
     public bool? has_object_relationships { get; }
-    public bool? has_object_pubmed_set { get; }
-    public bool? has_object_bbmri_set { get; }
 }
+   
 
-
-[Table("sf.source_summaries")]
+[Table("sf.agg_source_summaries")]
 public class SourceSummary	
 {
-    public int aggregation_event_id { get; set; }
-    public DateTime aggregation_datetime { get; set; }
-    public string database_name { get; set; }
+    public int agg_event_id { get; set; }
+    public DateTime agg_datetime { get; set; }
+    public string? database_name { get; set; }
     public int study_recs { get; set; }
     public int study_identifiers_recs { get; set; }
     public int study_titles_recs { get; set; }
@@ -55,11 +50,9 @@ public class SourceSummary
     public int study_topics_recs { get; set; }
     public int study_conditions_recs { get; set; }
     public int study_features_recs { get; set; }
-    public int study_references_recs { get; set; }
     public int study_countries_recs { get; set; }
     public int study_locations_recs { get; set; }
     public int study_relationships_recs { get; set; }
-    
     public int data_object_recs { get; set; }
     public int object_datasets_recs { get; set; }
     public int object_instances_recs { get; set; }
@@ -75,19 +68,22 @@ public class SourceSummary
 
     public SourceSummary(int _aggregation_event_id, string _database_name)
     {
-        aggregation_event_id = _aggregation_event_id;
-        aggregation_datetime = DateTime.Now;
+        agg_event_id = _aggregation_event_id;
+        agg_datetime = DateTime.Now;
         database_name = _database_name;
     }
+
+    public SourceSummary()
+    { }
 }
 
-[Table("sf.aggregation_summaries")]
+[Table("sf.agg_summaries")]
 public class CoreSummary
 {
     [Key]
     public int id { get; set; }
-    public int aggregation_event_id { get; set; }
-    public DateTime aggregation_datetime { get; set; }
+    public int agg_event_id { get; set; }
+    public DateTime agg_datetime { get; set; }
     public int study_recs { get; set; }
     public int study_identifiers_recs { get; set; }
     public int study_titles_recs { get; set; }
@@ -95,6 +91,7 @@ public class CoreSummary
     public int study_organisations_recs { get; set; }
     public int study_topics_recs { get; set; }
     public int study_conditions_recs { get; set; }
+    public int study_icd_recs { get; set; }
     public int study_features_recs { get; set; }
     public int study_countries_recs { get; set; }
     public int study_locations_recs { get; set; }
@@ -120,28 +117,29 @@ public class CoreSummary
     
     public CoreSummary(int _aggregation_event_id)
     {
-        aggregation_event_id = _aggregation_event_id;
-        aggregation_datetime = DateTime.Now;
+        agg_event_id = _aggregation_event_id;
+        agg_datetime = DateTime.Now;
     }
 }
 
-[Table("sf.aggregation_object_numbers")]
+[Table("sf.agg_object_numbers")]
 public class AggregationObjectNum
 {
     [Key]
     public int id { get; set; }
-    public int aggregation_event_id { get; set; }
+    public int agg_event_id { get; set; }
     public int object_type_id { get; set; }
     public string? object_type_name { get; set; }
     public int number_of_type { get; set; }
 }
 
 
-[Table("sf.study_study_link_data")]
-public class StudyStudyLinkData
+[Table("sf.agg_study_1to1_link_data")]
+public class Study1To1LinkData
 {
     [Key]
     public int id { get; set; }
+    public int agg_event_id { get; set; }
     public int source_id { get; set; }
     public string? source_name { get; set; }
     public int other_source_id { get; set; }
@@ -150,7 +148,23 @@ public class StudyStudyLinkData
 }
 
 
-[Table("sf.aggregation_events")]
+[Table("sf.agg_study_1ton_link_data")]
+public class Study1ToNLinkData
+{
+    [Key]
+    public int id { get; set; }
+    public int agg_event_id { get; set; }
+    public int source_id { get; set; }
+    public string? source_name { get; set; }
+    public int relationship_id { get; set; }
+    public string? relationship { get; set; }
+    public int target_source_id { get; set; }
+    public string? target_source_name { get; set; }
+    public int number_in_other_source { get; set; }
+}
+
+
+[Table("sf.agg_events")]
 public class AggregationEvent
 {
     [ExplicitKey]
@@ -174,7 +188,7 @@ public class AggregationEvent
 }
 
 
-[Table("sf.iec_agg_events")]
+[Table("sf.agg_iec_events")]
 public class IECAggregationEvent
 {
     [ExplicitKey] public int id { get; set; }
@@ -214,7 +228,7 @@ public class IECAggregationEvent
     public IECAggregationEvent() { }
 }
 
-[Table("sf.iec_agg_source_numbers")]
+[Table("sf.agg_iec_source_numbers")]
 public class IECAggregationSourceNum
 {
     [Key]

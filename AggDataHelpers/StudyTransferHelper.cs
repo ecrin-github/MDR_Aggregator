@@ -105,7 +105,7 @@ public class StudyDataTransferrer
         int nonpreferred = conn.ExecuteScalar<int>(sql_string);
         _loggingHelper.LogLine($"{preferred} records are studies new to the system.");
         _loggingHelper.LogLine($"{nonpreferred} records are studies already loaded from a different registry.");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         
         // Discard these matched study ids - first update the records with a flag and then delete them.
         
@@ -121,7 +121,7 @@ public class StudyDataTransferrer
                     where match_status = 1";
         db.ExecuteSQL(sql_string);
         _loggingHelper.LogLine($"{res} matching studies deleted from nk.temp_study_ids table");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
     }
 
 
@@ -143,7 +143,7 @@ public class StudyDataTransferrer
 
         status2number = db.ExecuteSQL(sql_string);
         _loggingHelper.LogLine($"{status2number} of the new studies found under other study source ids.");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
     }
 
 
@@ -178,7 +178,7 @@ public class StudyDataTransferrer
                         AND source_id = {source_id}";
         status3number = conn.Execute(sql_string);
         _loggingHelper.LogLine($"{status3number} of the new studies completely new to the system.");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
 
         // Also update any new entries in study links table that still have no study id -
         // update from the updated study_ids table. Will only apply to the records from this source.
@@ -336,7 +336,7 @@ public class StudyDataTransferrer
         
         int res = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "studies", " where ", "new studies");
         _loggingHelper.LogLine($"Loaded {res} new studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res;
     }
 
@@ -361,7 +361,7 @@ public class StudyDataTransferrer
 
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
 
@@ -379,7 +379,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_identifiers", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study identifiers, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
         return res1 + res2;
     }
@@ -405,7 +405,7 @@ public class StudyDataTransferrer
 
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
 
@@ -437,7 +437,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_titles", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study titles, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
         return res1 + res2;
     }
@@ -463,7 +463,7 @@ public class StudyDataTransferrer
         
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
 
@@ -480,7 +480,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_people", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study people, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
         return res1 + res2;
     }
@@ -506,7 +506,7 @@ public class StudyDataTransferrer
 
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
         
@@ -523,7 +523,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_organisations", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study organisations, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
         return res1 + res2;
     }
@@ -549,7 +549,7 @@ public class StudyDataTransferrer
 
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
     
@@ -592,7 +592,7 @@ public class StudyDataTransferrer
 
         int res3 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_topics", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res3} non mesh coded study topics, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.existing_coded_data; " +
                       "DROP TABLE IF EXISTS nk.existing_non_coded_data;");
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
@@ -620,7 +620,7 @@ public class StudyDataTransferrer
        
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
         
@@ -663,7 +663,7 @@ public class StudyDataTransferrer
 
         int res3 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_conditions", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res3} non icd coded study conditions, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.existing_coded_data; " +
                       "DROP TABLE IF EXISTS nk.existing_non_coded_data;");
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
@@ -691,7 +691,7 @@ public class StudyDataTransferrer
         
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
         
@@ -707,7 +707,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_features", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study features, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
         return res1 + res2;
     }
@@ -761,7 +761,7 @@ public class StudyDataTransferrer
         
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
         
@@ -778,7 +778,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_relationships", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study relationships, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL(@"DROP TABLE IF EXISTS nk.source_data; 
                     DROP TABLE IF EXISTS nk.existing_data;
                     DROP TABLE IF EXISTS st.temp_relationships; ");
@@ -806,7 +806,7 @@ public class StudyDataTransferrer
         
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
         
@@ -822,7 +822,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_countries"," and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study_countries , for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
         return res1 + res2;
     }
@@ -847,7 +847,7 @@ public class StudyDataTransferrer
 
         if (non_pref_number == 0)
         {
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             return res1;
         }
         
@@ -864,7 +864,7 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_locations", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study locations, for existing studies");
-        _loggingHelper.LogLine("");
+        _loggingHelper.LogBlank();
         return res1 + res2;
     }
     

@@ -8,9 +8,9 @@ public class Aggregator
     
     private readonly int agg_event_id;
 
-    public Aggregator(ILoggingHelper logginghelper, IMonDataLayer monDatalayer)
+    public Aggregator(ILoggingHelper loggingHelper, IMonDataLayer monDatalayer)
     {
-        _loggingHelper = logginghelper;
+        _loggingHelper = loggingHelper;
         _monDatalayer = monDatalayer;
         _credentials = monDatalayer.Credentials;
         agg_event_id = _monDatalayer.GetNextAggEventId();
@@ -27,53 +27,53 @@ public class Aggregator
             // tables (ctx & lup), 
                      
             string agg_conn_string = _credentials.GetConnectionString("aggs");
-            List<string> source_schemas = new(){"ctx", "lup"};
-            _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", "context", source_schemas);
+            List<string> context_schemas = new(){"ctx", "lup"};
+            _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", "context", context_schemas);
             _loggingHelper.LogLine("Context data established as FTWs in aggs DB");
 
             // Derive a new table of inter-study relationships - First get a list of all
             // the study sources and ensure it is sorted correctly, then use the study link
             // builder to create a record of all current study - study links. At the end include
-            // additional links that have been identified manually, not using the registry identifiers.
+            // additional links that have been identified using non-registry identifiers.
           
             List<Source> sources = _monDatalayer.RetrieveDataSources()
                                        .OrderBy(s => s.preference_rating).ToList();
             _loggingHelper.LogLine("Sources obtained");
-            StudyLinkBuilder slb = new StudyLinkBuilder(_loggingHelper, _credentials, agg_conn_string);
+            StudyLinkBuilder slb = new StudyLinkBuilder(_monDatalayer, _loggingHelper, 
+                                                        _credentials, agg_conn_string);
             slb.CollectStudyStudyLinks(sources);
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             slb.CheckStudyStudyLinks(sources);
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             slb.ProcessStudyStudyLinks();
             _loggingHelper.LogLine("Study-study links identified");
-            _loggingHelper.LogLine("");            
+            _loggingHelper.LogBlank();            
             
-            // Only then establish new tables for the three schemas st, ob, nk
-            // and construct a new aggregation event record.
+            // Only then establish new tables and construct a new aggregation event record.
             
             SchemaBuilder sb = new SchemaBuilder(agg_conn_string);
             sb.BuildNewStudyTables();
             sb.BuildNewObjectTables();
-            sb.BuildNewLinkTables();
             _loggingHelper.LogLine("Study, object and link aggregate tables recreated");
-            _loggingHelper.LogLine("");
+            _loggingHelper.LogBlank();
             AggregationEvent agg_event = new AggregationEvent(agg_event_id);
-
+            _monDatalayer.DeleteSameEventDBStats(agg_event.id);  // in case needed
+            
             // Loop through the study sources (in preference order).
             // In each case establish and then drop the source AD tables as an FTW.
 
             _loggingHelper.LogHeader("Data Transfer");
             int num_studies_imported = 0;
             int num_objects_imported = 0;
+            
             foreach (Source source in sources)
             {
-                // in normal (non-testing) environment, schema name references the ad tables in a source FTW
-                // - i.e. <db name>_ad. Credentials are used here to also get the connection string for the 
-                // source database. Process in a testing environment to be revised!
+                // Schema name references the ad tables in a source FTW - i.e. <db name>_ad.
+                // Credentials are used here to also get the connection string for the source database. 
                 
                 string db_name = source.database_name!;
                 source.db_conn = _credentials.GetConnectionString(db_name);
-                source_schemas = new List<string>{"ad"};
+                List<string> source_schemas = new List<string>{"ad"};
                 _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", db_name, source_schemas);
                 string ftw_schema_name = $"{db_name}_ad";
 
@@ -108,23 +108,26 @@ public class Aggregator
             
             // Get the ICD data - simpler if all condition data to be added first
             // So this is done after the loop through the various sources
-            
+
             slb.LoadStudyICDs(agg_conn_string);
 
-            // Use the study groups data to insert additional study_relationship records.
-            
+            //Use the study groups data to insert additional study_relationship records.
+
             slb.AddStudyStudyRelationshipRecords();
 
-            // Update aggregation event record.
+            // Update and store aggregation event record.
 
             agg_event.num_studies_imported = num_studies_imported;
             agg_event.num_objects_imported = num_objects_imported;
-            agg_event.num_total_studies = _monDatalayer.GetAggregateRecNum("study_ids", "nk", agg_conn_string);
-            agg_event.num_total_objects = _monDatalayer.GetAggregateRecNum("data_object_ids", "nk", agg_conn_string);
-            agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_object_ids", 
-                                                                                  "nk", agg_conn_string);
-
+            agg_event.num_total_studies = _monDatalayer.GetAggregateRecNum("study_ids", "nk");
+            agg_event.num_total_objects = _monDatalayer.GetAggregateRecNum("data_object_ids", "nk");
+            agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_object_ids", "nk");
             _monDatalayer.StoreAggregationEvent(agg_event);
+            
+            // Also store summary statistics for 1-to-1 and 1-to-n linked records, before dropping FTWs
+            
+            slb.StoreStudyLinkStatistics(agg_event.id);
+            _monDatalayer.DropTempFTWs(agg_conn_string, "context", context_schemas);
         }           
 
 
@@ -148,6 +151,8 @@ public class Aggregator
             // Transfer data to core tables
             
             int last_agg_event_id = _monDatalayer.GetLastAggEventId();
+            _monDatalayer.DeleteSameEventSummaryStats(last_agg_event_id);  // ensure one record per event!
+            
             CoreSummary core_summ = new (last_agg_event_id);
             CoreTransferBuilder ctb = new CoreTransferBuilder(core_conn_string, _monDatalayer, _loggingHelper);
             _loggingHelper.LogHeader("Transferring study data");
@@ -168,7 +173,6 @@ public class Aggregator
             _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "context", context_schemas);
             ctb.StoreCoreSummaryStatistics(core_summ);
             ctb.StoreDataObjectStatistics(last_agg_event_id);
-            ctb.StoreStudyStudyLinkStatistics(last_agg_event_id);
             _monDatalayer.DropTempFTWs(core_conn_string, "context", context_schemas);
             
             // Drop FTW schemas.
@@ -215,35 +219,14 @@ public class Aggregator
 
         if (opts.do_statistics)
         {
-            // Find last agg event id. Use that to locate and write out most recent
-            // aggregate summary record to log, and then to obtain and write out breakdown 
-            // of data objects, and study-study links.
-           
-            CoreSummary? core_summ = _monDatalayer.GetLatestCoreSummary();
-            if (core_summ is not null)
-            {
-                _loggingHelper.LogHeader("TABLE RECORD NUMBERS");
-                _loggingHelper.LogSummaryStatistics(core_summ);
-            }
-
-            List<AggregationObjectNum>? objectNumbers = _monDatalayer.GetLatestObjectNumbers();
-            if (objectNumbers?.Any() is true)
-            {
-                int small_cats = 0;
-                _loggingHelper.LogHeader("OBJECT TYPE NUMBERS");
-                foreach (AggregationObjectNum a in objectNumbers)
-                {
-                    if (a.number_of_type >= 30)
-                    {
-                        _loggingHelper.LogLine($"\t{a.object_type_id}\t{a.object_type_name}: {a.number_of_type:n0}");
-                    }
-                    else
-                    {
-                        small_cats += a.number_of_type;
-                    }
-                }
-                _loggingHelper.LogLine($"\tXX\tTotal of smaller categories (n<30): {small_cats:n0}");
-            }
+            // Instantiate a Statistics Builder class and use that to generate the 
+            // three main sets of statistics. To be run after creation of a new core database.
+            
+            StatisticsBuilder sb = new StatisticsBuilder(_monDatalayer, _loggingHelper);
+            sb.WriteOutCoreDataSummary();
+            sb.WriteOutStudyLinkData();
+            sb.WriteOutCoreObjectTypes();
+            sb.WriteOutSourceDataTableSummaries();
         }
         
 

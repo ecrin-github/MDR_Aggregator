@@ -454,9 +454,11 @@ public class LinksDataHelper
         where identifier_type_id not in (0, 11, 44, 45)
         and identifier_value is not null 
             and length(identifier_value)>= 4 ;";
-        
         conn.Execute(sql_string);
-        _loggingHelper.LogLine($"Table of sponsor and similar identifiers created");
+        
+        sql_string = $"SELECT COUNT(*) FROM nk.temp_ids_of_interest";
+        int res = conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"Table of sponsor and similar identifiers created, {res} records");
         
         // The statement above creates a table with (about) 645,000 records
         // It is necessary to remove some identifiers (chiefly NIH budget IDs),
@@ -469,7 +471,10 @@ public class LinksDataHelper
             group by source, identifier
             having count(identifier) > 2";
         conn.Execute(sql_string);
-        _loggingHelper.LogLine($"Table of identifiers with count > 2 created");
+        
+        sql_string = $"SELECT COUNT(*) FROM nk.temp_multi_idents";
+        res = conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"Table of identifiers with count > 2 created, {res} records");
         
         // This drops 13,000 or so records
 
@@ -477,8 +482,8 @@ public class LinksDataHelper
             using nk.temp_multi_idents mi
             where t.source = mi.source
             and t.identifier = mi.identifier";
-        conn.Execute(sql_string);
-        _loggingHelper.LogLine($"Identifiers with count > 2 removed from identifier table");
+        res = conn.Execute(sql_string);
+        _loggingHelper.LogLine($"{res} Identifiers with count > 2 removed from 'identifiers of interest' table");
         
         // This initially gave 7,700+ records, so about 3750 pairs
         // that were not picked up previously (or they would have had the same study id)
@@ -498,14 +503,17 @@ public class LinksDataHelper
             and s1.source = s2.source
             and s1.reg_id <> s2.reg_id";
         conn.Execute(sql_string);
-        _loggingHelper.LogLine($"Table of links identified by sponsor ids created");
+
+        sql_string = $"SELECT COUNT(*) FROM nk.temp_pairs_from_last_agg";
+        res = conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"Table of links identified by sponsor ids created, {res} records");
         
         // Add the pairings found to links already found using secondary ids.
 
         sql_string = @"insert into nk.temp_study_links_collector(source_1, sd_sid_1, sd_sid_2, source_2)
             select s1, sid1, sid2, s2
             from nk.temp_pairs_from_last_agg;";
-        int res = conn.Execute(sql_string);
+        res = conn.Execute(sql_string);
         _loggingHelper.LogLine($"{res} additional link records, derived from sponsor ids, added to temporary table");
 
         // Tidy up.
@@ -661,7 +669,6 @@ public class LinksDataHelper
         _loggingHelper.LogLine($"{res} distinct study-study links remaining");
     }
         
-
     // A subset of inter-study linkages do not reflect 'the same study in a different registry',
     // link type, but are one-to-many linkages instead. These linkages need to be stored 
     // explicitly in the study relationships table, and must be removed from the current process,
@@ -671,6 +678,21 @@ public class LinksDataHelper
 
     public void ProcessGroupedStudies()
     {
+        // First ensure that this table exists and is empty. 
+        // It will be used to receive the 1-to-many study relationships
+        
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"DROP TABLE IF EXISTS nk.linked_study_groups;
+        CREATE TABLE nk.linked_study_groups(
+            source_id                INT             NULL
+          , sd_sid                   VARCHAR         NULL
+          , relationship_id          INT             NULL
+          , target_sd_sid            VARCHAR         NULL
+          , target_source_id         INT             NULL
+        );";
+
+        conn.Execute(sql_string);
+
         // The following steps are required to identify and remove the 1-to-many linked studies.
         
         Identify1ToNGroupedStudies();
@@ -911,6 +933,7 @@ public class LinksDataHelper
                                                 .ToList();
             
             // Each group can now be identified and treated separately 
+            
             List<ComplexLink> links = new();
             for (int g = 1; g <= next_group_num; g++)
             {
@@ -1152,8 +1175,8 @@ public class LinksDataHelper
     
     public void TransferLinksToPermanentTable()
     {
-        // Select the processed study-study into the permanent table (re-created at the beginning of the
-        // Aggregation process). A distinct selection is used as a final check against duplicates. 
+        // Select the processed study-study into a permanent table (at least until the next 
+        // aggregation process). A distinct selection is used as a final check against duplicates. 
         
         using var conn = new NpgsqlConnection(_aggs_connString);
         
@@ -1248,7 +1271,6 @@ public class LinksDataHelper
     {
         using var conn = new NpgsqlConnection(_aggs_connString);
         string sql_string = @"DROP TABLE IF EXISTS nk.temp_preferences;
-            DROP TABLE IF EXISTS nk.temp_distinct_links;
             DROP TABLE IF EXISTS nk.temp_distinct_links";
         conn.Execute(sql_string);
     }
@@ -1272,6 +1294,6 @@ public class LinksDataHelper
                       and g.target_sd_sid = s2.sd_sid";
 
         conn.Execute(sql_string);
-    }
+     }
 
 }
