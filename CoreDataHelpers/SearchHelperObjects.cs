@@ -85,7 +85,7 @@ public class SearchHelperObjects
           , access_type_id    int                 null
           , access_icon       varchar             null
           , provenance        varchar             null
-          , object_json       json               null
+          , object_json       json                null
         );
         create index so_study_id on core.search_objects(study_id);
         create index so_object_id on core.search_objects(object_id);";

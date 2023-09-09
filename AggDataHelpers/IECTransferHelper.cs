@@ -303,7 +303,7 @@ public class IECTransferrer
         
         int max_id = GetMaxId($"ad.studies");
         int updated = 0;
-        int rec_batch = 50000;
+        int rec_batch = 25000;
         string fbc = "study records, with study details,";
         try
         {

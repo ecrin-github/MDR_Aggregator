@@ -676,11 +676,11 @@ public class LinksDataHelper
     // The multiple studies in the 1 to n relationship often represent a linked project, programme,
     // or grant, that is registered elsewhere as a single study.
 
-    public void ProcessGroupedStudies()
+    public void CreateGroupedStudiesTable()
     {
         // First ensure that this table exists and is empty. 
         // It will be used to receive the 1-to-many study relationships
-        
+
         using var conn = new NpgsqlConnection(_aggs_connString);
         string sql_string = @"DROP TABLE IF EXISTS nk.linked_study_groups;
         CREATE TABLE nk.linked_study_groups(
@@ -692,7 +692,10 @@ public class LinksDataHelper
         );";
 
         conn.Execute(sql_string);
+    }
 
+    public void ProcessGroupedStudies()
+    {
         // The following steps are required to identify and remove the 1-to-many linked studies.
         
         Identify1ToNGroupedStudies();
@@ -968,6 +971,25 @@ public class LinksDataHelper
                 _loggingHelper.LogLine(feedback);
             }
         }
+        
+        // Make the linked_study_groups table distinct 
+        
+        sql_string = @"SELECT COUNT(*) FROM nk.linked_study_groups";
+        int res1 = conn.ExecuteScalar<int>(sql_string);
+            
+        sql_string = @"DROP TABLE IF EXISTS nk.linked_study_groups2;
+                       CREATE TABLE nk.linked_study_groups2 
+                       as SELECT distinct * FROM nk.linked_study_groups";
+        conn.Execute(sql_string);
+
+        sql_string = @"DROP TABLE IF EXISTS nk.linked_study_groups;
+               ALTER TABLE nk.linked_study_groups2 RENAME TO linked_study_groups;";
+        conn.Execute(sql_string);
+
+        sql_string = @"SELECT COUNT(*) FROM nk.linked_study_groups";
+        int res2 = conn.ExecuteScalar<int>(sql_string);
+        int diff = res1 - res2;
+        _loggingHelper.LogLine($"{res2} records now in temp distinct links table, having dropped {diff}");
     }
 
     private void DeleteGroupedStudyLinkRecords()
@@ -1171,16 +1193,21 @@ public class LinksDataHelper
         int diff = res1 - res2;
         _loggingHelper.LogLine($"{res2} records now in temp distinct links table, having dropped {diff}");
     }
-
     
     public void TransferLinksToPermanentTable()
     {
         // Select the processed study-study into a permanent table (at least until the next 
         // aggregation process). A distinct selection is used as a final check against duplicates. 
+        // Before that the current study links table is copied to a 'previous' version to allow
+        // comparisons.
         
         using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"DROP TABLE IF EXISTS nk.previous_study_study_links;
+        CREATE TABLE nk.previous_study_study_links as 
+              SELECT * FROM nk.study_study_links; ";
+        conn.Execute(sql_string);
         
-        string sql_string = @"DROP TABLE IF EXISTS nk.study_study_links;
+        sql_string = @"DROP TABLE IF EXISTS nk.study_study_links;
         CREATE TABLE nk.study_study_links(
             source_id                INT             NULL
           , sd_sid                   VARCHAR         NULL
@@ -1198,74 +1225,268 @@ public class LinksDataHelper
         _loggingHelper.LogLine($"{res} study-study links created");
     }
 
-    
+
     public void UpdateLinksWithStudyIds()
     {
-        // New links may have been added which means that the study_ids table need to be updated.
-        // First ensure that all the studies identifies as 'preferred' in the links table are listed as such
-        // in the Study_ids table, (where they exist in that table) with a study_id that equals the Id and
-        // an is_preferred status of true. Then ensure that study Id is stored in the links table.
+        // New links may have been added which means that the study_ids table needs to be updated. Some
+        // links may have been removed from the study_study_links table, because the links have been
+        // identified as 1-to-n or n-to-n rather than 1-to-1. There is a need to sync the attributes of 
+        // existing studies and objects with the data in the study_study_links table, before the aggregation
+        // process begins, so that initial matching of records takes place correctly.
+
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        
+        // Examine dropped links before added ones, as a link may be rop a study from one relationship 
+        // add it in another - would probably be due to an error correction
+        
+        string sql_string = @"drop table if exists nk.temp_dropped_links;
+                        create table nk.temp_dropped_links as 
+                        select p.* from nk.previous_study_study_links p 
+                        left join nk.study_study_links n
+                        ON p.source_id = n.source_id
+                        AND p.sd_sid = n.sd_sid
+                        AND p.preferred_sd_sid = n.preferred_sd_sid
+                        AND p.preferred_source_id = n.preferred_source_id
+                        where n.source_id is null ";
+        conn.Execute(sql_string);
+        sql_string = @"SELECT COUNT(*) FROM nk.temp_dropped_links";
+        int res = conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"{res} study-study links deleted, in this aggregation process");
+        
+        // Have any links been deleted? If so...
+        
+        //if (res > 0)
+       // {
+            SyncDroppedLinkRecords();
+       // }
+        
+        sql_string = @"drop table if exists nk.temp_new_links;
+                        create table nk.temp_new_links as
+                        select n.* from 
+                        nk.study_study_links n
+                        left join nk.previous_study_study_links p
+                        ON n.source_id = p.source_id
+                        AND n.sd_sid = p.sd_sid
+                        AND n.preferred_sd_sid = p.preferred_sd_sid
+                        AND n.preferred_source_id = p.preferred_source_id
+                        where p.source_id is null ";
+        conn.Execute(sql_string);
+        sql_string = @"SELECT COUNT(*) FROM nk.temp_new_links";
+        res = conn.ExecuteScalar<int>(sql_string);
+        _loggingHelper.LogLine($"{res} new study-study links created, in this aggregation process");
+        
+        // Are there new links? 
+        
+        //if (res > 0)
+        //{
+            SyncNewLinkRecords();
+        //}
+
+        sql_string = @"drop table if exists nk.temp_new_links;
+                       drop table if exists nk.temp_dropped_links;";
+        conn.Execute(sql_string);
+    }
+
+    private void SyncNewLinkRecords()
+    {
+        // First ensure that all the studies identified as 'preferred' in the links table are listed as such
+        // in the Study_ids table, (if and when they exist in that table) with a study_id that equals the
+        // Table Id and has an is_preferred status of true. Then ensure that the correct study_id is stored
+        // in the links table.
         
         using var conn = new NpgsqlConnection(_aggs_connString);
         string sql_string = @"update nk.study_ids si 
-                        set study_id = si.id,
-                        is_preferred = true
-                        from nk.study_study_links ssk
-                        where si.source_id = ssk.preferred_source_id 
-                        and si.sd_sid = ssk.preferred_sd_sid ";
+                    set study_id = si.id,
+                    is_preferred = true
+                    from nk.study_study_links ssk
+                    where si.source_id = ssk.preferred_source_id 
+                    and si.sd_sid = ssk.preferred_sd_sid ";
         int res = conn.Execute(sql_string);
-        string message = "preferred studies in study_ids checked / modified to ensure correct data";
+        string message = "Preferred studies in study_ids checked or modified to ensure correct data";
         _loggingHelper.LogLine($"{res} {message}");
 
         sql_string = @"update nk.study_study_links ssk
-                  set study_id = si.study_id
-                  from nk.study_ids si 
-                  where ssk.preferred_source_id  = si.source_id
-                  and ssk.preferred_sd_sid = si.sd_sid ";
+              set study_id = si.study_id
+              from nk.study_ids si 
+              where ssk.preferred_source_id  = si.source_id
+              and ssk.preferred_sd_sid = si.sd_sid ";
         res = conn.Execute(sql_string);
-        message = "study_ids added to the link table using the preferred study's id";
+        message = "Study_ids updated in the link table using the preferred study's id";
+        _loggingHelper.LogLine($"{res} {message}");
+
+        // This function ensures the correct data for any study_ids records of non-preferred studies in the
+        // links table. These study_id entries should have is_preferred = false and the study_id should be
+        // equal to that in the links table.
+
+        sql_string = @"Update nk.study_ids sids
+              set is_preferred = false,
+              study_id = ssk.study_id
+              from nk.study_study_links ssk
+              where sids.source_id = ssk.source_id
+              and sids.sd_sid = ssk.sd_sid
+              and ssk.study_id is not null ";
+        res = conn.Execute(sql_string);
+        message = "Non-preferred studies in study_ids checked or modified to ensure correct data";
+        _loggingHelper.LogLine($"{res} {message}");
+
+        // study_ids and link_link table should now be in sync.
+        // The only rows in the links table that will not have a linked study will be the ones where
+        // the preferred study is not yet in the study_ids table. Both the preferred and non-preferred
+        // studies in these rows can only be sorted out in the study_ids table during (as the 
+        // initial stage of) each source based addition.
+
+        // But are there existing data_object_ids that are now also out of sync? The changes above
+        // may result in the (original) study id in the nk.data_object_ids table being different from
+        // the new study_id in the study_ids table. They need to be re-synced or the data object becomes
+        // orphaned. The source and sd_sid are used to link the tables and the study_id changed.
+        
+        SyncChangedDataObjectRecords();
+    }
+    
+    private void SyncDroppedLinkRecords()
+    {
+        // Dropping a link from the table will result in the non-preferred study becoming 'preferred',
+        // and it will take on the Id of the study_Ids table. The preferred dropped study will already
+        // be preferred and no change is necessary.
+        
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"update nk.study_ids si 
+                              set is_preferred = true,
+                              study_id = si.id
+                              from nk.temp_dropped_links dk
+                              where si.source_id = dk.source_id
+                              and si.sd_sid = dk.sd_sid ";
+            
+        int res = conn.Execute(sql_string);
+        string message = "Non-preferred study_ids records no longer in the study_study_link list corrected";
+        _loggingHelper.LogLine($"{res} {message}");
+    }
+
+    private void SyncChangedDataObjectRecords()
+    {
+        // Modified study Ids will require data objects to be re-synced or the data object becomes
+        // orphaned. The source and sd_sid are used to link the tables and the study_id changed.
+        
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        string sql_string = @"Update nk.data_object_ids dids
+               set parent_study_id = study_id,
+               is_preferred_study = is_preferred
+               from nk.study_ids sids
+               where dids.parent_study_source_id = sids.source_id
+               and dids.parent_study_sd_sid = sids.sd_sid
+               and parent_study_id <> study_id ";
+        int res = conn.Execute(sql_string);
+        string message = "Data Object Id records modified to match revised study Ids";
         _loggingHelper.LogLine($"{res} {message}");
         
-        // This function repairs any cases of any non preferred studies in the links table that 
-        // are not linked to a correct study_id entry. These study_id entries should have
-        // is_preferred = false and the study_id should be equal to that in the links table.
+        // It may be also that because a preferred study has a changed set of objects, some of which are
+        // the same, the 'is_valid_link' needs to be revisited to ensure only one link is present
+        // for each study Id - object Id pair. (Should be a relatively rare change)
+        // It may also be that a particular study-object link no longer has any is_valid_link 
+        // record, depending how the valid link was distributed across linked studies.
+        // if that is the case a single link must be made valid.
         
-         sql_string = @"Update nk.study_ids sids
-                  set is_preferred = false,
-                  study_id = ssk.study_id
-                  from nk.study_study_links ssk
-                  where sids.source_id = ssk.source_id
-                  and sids.sd_sid = ssk.sd_sid
-                  and ssk.study_id is not null ";
-         res = conn.Execute(sql_string);   
-         message = "non-preferred studies in study_ids checked / modified to ensure correct data";
-         _loggingHelper.LogLine($"{res} {message}");
-
-         // identify any non-preferred in the study_ids table that do not match a non-preferred entry
-         // in the link table - (May have been part of a simple link arrangement in the past but now 
-         // probably part of a different type of relationship)
-
-         sql_string = @"update nk.study_ids si 
-                  set is_preferred = true,
-                  study_id = si.id
-                  where id in
-                      (select si.id from nk.study_ids si 
-                    left join nk.study_study_links ssk
-                    on si.source_id = ssk.source_id 
-                    and si.sd_sid = ssk.sd_sid 
-                    where is_preferred is false
-                    and ssk.sd_sid is null ) ";
-
-         res = conn.Execute(sql_string);
-         message = "non-preferred study_ids records not in the non-preferred side modified to correct data";
-         _loggingHelper.LogLine($"{res} {message}");
- 
-         // study_ids and link_link table should now be in sync.
-         // The only rows in the links table that will not have a linked study will be the ones where
-         // the preferred study is not yet in the study_ids table. Both the preferred and non-preferred
-         // studies in these rows can only be properly sorted out in the study_ids table during (at the
-         // start of) each source based addition.
+        NormaliseIsValidLinkFields();
     }
+
+    private void NormaliseIsValidLinkFields()
+    {
+        using var conn = new NpgsqlConnection(_aggs_connString);
+        
+        // The data object ids (dids) table is very large - 1.3 million rows and growing quickly, so it is necessary
+        // to chunk the processes below, applying each of them to 100,000 rows atr a time.
+        
+        string sql_string = @"SELECT min(id) FROM nk.data_object_ids";
+        int min_id = conn.ExecuteScalar<int>(sql_string);
+        sql_string = @"SELECT max(id) FROM nk.data_object_ids";
+        int max_id = conn.ExecuteScalar<int>(sql_string);
+        for (int r = min_id; r <= max_id; r += 100000)
+        {
+            int s = r;
+            int e = r + 100000 > max_id ? max_id : r + 100000;
+                
+            // Ensure no more than one valid link per study-object pair
+
+            sql_string = $@"DROP table if exists nk.temp_mult_valid;
+                       Create table nk.temp_mult_valid as 
+                       Select parent_study_id, object_id from nk.data_object_ids dids
+                       where dids.id between {s} and {e} 
+                       and is_valid_link = true
+                       group by parent_study_id, object_id
+                       having count(id) > 1 ";
+            conn.Execute(sql_string);
+
+            sql_string = $@"DROP table if exists nk.temp_to_make_invalid;
+                       Create table nk.temp_to_make_invalid as 
+                       Select max(dids.id) as id
+                       from nk.temp_mult_valid mv 
+                       inner join nk.data_object_ids dids
+                       on mv.parent_study_id = dids.parent_study_id
+                       and mv.object_id = dids.object_id
+                       where dids.id between {s} and {e} 
+                       group by mv.parent_study_id, mv.object_id ";
+            conn.Execute(sql_string);
+
+            sql_string = $@"Update nk.data_object_ids dids
+                       set is_valid_link = false
+                       from nk.temp_to_make_invalid mv
+                       where dids.id = mv.id 
+                       and dids.id between {s} and {e} ";
+            
+            var res = conn.Execute(sql_string);
+            string message = "Data Object Id records set to invalid link to remove multiple object copies from study";
+            message += $", in ids {s} to {e}";
+            _loggingHelper.LogLine($"{res} {message}");
+
+            // Ensure at least one valid link per study-object pair
+
+            sql_string = $@"DROP table if exists nk.temp_no_valid;
+                Create table nk.temp_no_valid as 
+                select f.* from 
+                   (Select distinct parent_study_id, object_id 
+                    from nk.data_object_ids dids
+                    where dids.id between {s} and {e} ) as f
+                left join 
+                   (Select distinct parent_study_id, object_id 
+                    from nk.data_object_ids dids
+                    where dids.id between {s} and {e} 
+                    and dids.is_valid_link = true) as b
+                on f.parent_study_id = b.parent_study_id
+                and f.object_id = b.object_id
+                where b.parent_study_id is null ";
+            conn.Execute(sql_string);
+
+            sql_string = $@"DROP table if exists nk.temp_to_make_valid;
+            create table nk.temp_to_make_valid as
+            select max(dids.id) as id 
+            from nk.data_object_ids dids 
+            inner join nk.temp_no_valid nv
+            on dids.parent_study_id = nv.parent_study_id
+            and dids.object_id = nv.object_id
+            where dids.id between {s} and {e} 
+            group by nv.parent_study_id, nv.object_id ";
+            conn.Execute(sql_string);
+
+            sql_string = $@"update nk.data_object_ids dids
+            set is_valid_link = true
+            from nk.temp_to_make_valid tv
+            where dids.id between {s} and {e} 
+            and dids.id = tv.id ";
+            res = conn.Execute(sql_string);
+            message = "Data Object Id records set to valid link to ensure at least one valid study-object pairing";
+            message += $", in ids {s} to {e}";
+            _loggingHelper.LogLine($"{res} {message}");
+
+        }
+
+        sql_string = @"DROP table if exists nk.temp_mult_valid;
+                       DROP table if exists nk.temp_to_make_invalid;
+                       DROP table if exists nk.temp_no_valid;
+                       DROP table if exists nk.temp_to_make_valid;";
+        conn.Execute(sql_string);
+        
+    }
+    
 
     public void DropTempTables()
     {

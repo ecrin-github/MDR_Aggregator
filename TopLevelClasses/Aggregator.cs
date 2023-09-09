@@ -50,14 +50,16 @@ public class Aggregator
             _loggingHelper.LogBlank();            
             
             // Only then establish new tables and construct a new aggregation event record.
-            
+
+            AggregationEvent agg_event = new AggregationEvent(agg_event_id);
+
+            _monDatalayer.DeleteSameEventDBStats(agg_event.id);  // in case needed            
             SchemaBuilder sb = new SchemaBuilder(agg_conn_string);
             sb.BuildNewStudyTables();
             sb.BuildNewObjectTables();
             _loggingHelper.LogLine("Study, object and link aggregate tables recreated");
             _loggingHelper.LogBlank();
-            AggregationEvent agg_event = new AggregationEvent(agg_event_id);
-            _monDatalayer.DeleteSameEventDBStats(agg_event.id);  // in case needed
+
             
             // Loop through the study sources (in preference order).
             // In each case establish and then drop the source AD tables as an FTW.
@@ -80,14 +82,14 @@ public class Aggregator
                 _loggingHelper.LogStudyHeader("Aggregating", db_name);
                 DataTransferBuilder dtb = new DataTransferBuilder(source, ftw_schema_name, 
                                              agg_conn_string, _monDatalayer, _loggingHelper);
-                SourceSummary srce_summ = new (agg_event_id, db_name);
+                SourceSummary srce_summary = new (agg_event_id, db_name);
                 
                 if (source.has_study_tables is true)
                 {
                     _loggingHelper.LogHeader("Process study Ids");
                     dtb.ProcessStudyIds();
                     _loggingHelper.LogHeader("Transfer study data");
-                    num_studies_imported += dtb.TransferStudyData(srce_summ);
+                    num_studies_imported += dtb.TransferStudyData(srce_summary);
                     _loggingHelper.LogHeader("Process object Ids");
                     dtb.ProcessStudyObjectIds();
                 }
@@ -98,11 +100,11 @@ public class Aggregator
                 }
                 
                 _loggingHelper.LogHeader("Transfer object data");
-                num_objects_imported += dtb.TransferObjectData(srce_summ);
+                num_objects_imported += dtb.TransferObjectData(srce_summary);
 
                 // store summary record, and remove FTW, for this source.
                 
-                dtb.StoreSourceSummaryStatistics(srce_summ);
+                dtb.StoreSourceSummaryStatistics(srce_summary);
                 _monDatalayer.DropTempFTWs(agg_conn_string, db_name, source_schemas);
             }
             
@@ -123,7 +125,7 @@ public class Aggregator
             agg_event.num_total_objects = _monDatalayer.GetAggregateRecNum("data_object_ids", "nk");
             agg_event.num_total_study_object_links = _monDatalayer.GetAggregateRecNum("data_object_ids", "nk");
             _monDatalayer.StoreAggregationEvent(agg_event);
-            
+  
             // Also store summary statistics for 1-to-1 and 1-to-n linked records, before dropping FTWs
             
             slb.StoreStudyLinkStatistics(agg_event.id);
@@ -181,6 +183,22 @@ public class Aggregator
             _monDatalayer.DropTempFTWs(core_conn_string, "mon", mon_schemas);
             _loggingHelper.LogLine("FTW tables dropped");
         }
+        
+
+        if (opts.create_json)
+        {
+            string conn_string = _credentials.GetConnectionString("mdr");
+            JSONHelper jh = new JSONHelper(conn_string, _loggingHelper);
+
+            // Create json fields. If tables are to be left as they are, add false as an
+            // additional boolean (default = true). if tables are to have further data appended
+            // add an integer offset that represents the records to skip (default = 0)
+
+            _loggingHelper.LogHeader("Creating JSON study data");
+            jh.CreateJSONStudyData();
+            // _loggingHelper.LogHeader("Creating JSON object data");
+            // jh.CreateJSONObjectData();
+        }
 
         
         if (opts.do_indexes)
@@ -198,15 +216,15 @@ public class Aggregator
             CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
             _loggingHelper.LogHeader("Setting up Study Text Search data");
             
-            //csb.CreateStudySearchData();
-            //csb.CreateStudyFeatureData();
-            //csb.CreateStudyHasObjectData();
-            //csb.CreateStudyCompositeFieldData();
-            //csb.CreateIdentifierSearchData();
-            //csb.CreatePMIDSearchData();
-            //csb.CreateObjectSearchData();
-            //csb.CreateLexemeSearchData();
-            //csb.CompleteStudySearchData();
+            csb.CreateStudySearchData();
+            csb.CreateStudyFeatureData();
+            csb.CreateStudyHasObjectData();
+            csb.CreateStudyCompositeFieldData();
+            csb.CreateIdentifierSearchData();
+            csb.CreatePMIDSearchData();
+            csb.CreateObjectSearchData();
+            csb.CreateLexemeSearchData();
+            csb.CompleteStudySearchData();
             csb.AddStudyJsonToSearchTables();
             
             // Drop FTW schemas.
@@ -224,9 +242,9 @@ public class Aggregator
             
             StatisticsBuilder sb = new StatisticsBuilder(_monDatalayer, _loggingHelper);
             sb.WriteOutCoreDataSummary();
-            sb.WriteOutStudyLinkData();
             sb.WriteOutCoreObjectTypes();
             sb.WriteOutSourceDataTableSummaries();
+            sb.WriteOutStudyLinkData();
         }
         
 
@@ -286,25 +304,6 @@ public class Aggregator
             ieh.UpdateIECWithStudyIds();
             _loggingHelper.LogLine("IECdata updated with study ids");
         }
-        
-        
-        if (opts.create_json)
-        {
-            string conn_string = _credentials.GetConnectionString("mdr");
-            JSONHelper jh = new JSONHelper(conn_string, _loggingHelper);
-
-            // Create json fields. If tables are to be left as they are, add false as an
-            // additional boolean (default = true). if tables are to have further data appended
-            // add an integer offset that represents the records to skip (default = 0)
-
-            _loggingHelper.LogHeader("Creating JSON study data");
-            jh.CreateJSONStudyData();
-            //jh.LoopThroughOAStudyRecords();
-            _loggingHelper.LogHeader("Creating JSON object data");
-            jh.CreateJSONObjectData();
-            //jh.LoopThroughOAObjectRecords();
-        }
-
         
         _loggingHelper.CloseLog();
         return 0;

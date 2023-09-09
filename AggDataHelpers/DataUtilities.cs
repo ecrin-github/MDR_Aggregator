@@ -396,8 +396,6 @@ public class DBUtilities
                 if (res > 0)
                 {
                     int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} bit map fields, n = {n}, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
                     updated += res;
                 }
             }

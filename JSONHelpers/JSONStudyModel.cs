@@ -1,7 +1,89 @@
 ﻿using Dapper.Contrib.Extensions;
 namespace MDR_Aggregator;
 
-public class JSONStudy
+public class JSONFullStudy
+{
+    public string? file_type { get; set; }
+    public int id { get; set; }
+    public string? display_title { get; set; }
+    public string? brief_description { get; set; }
+    public string? data_sharing_statement { get; set; }
+    public int? study_start_year { get; set; }
+    public int? study_start_month { get; set; }  
+    public Lookup? study_type { get; set; }
+    public Lookup? study_status { get; set; }
+    public string? study_enrolment { get; set; }
+    public Lookup? study_gender_elig { get; set; }
+    public age_param? min_age { get; set; }
+    public age_param? max_age { get; set; }
+    public string? provenance_string { get; set; }
+
+    public List<study_identifier>? study_identifiers { get; set; }
+    public List<study_title>? study_titles { get; set; }
+    public List<study_person>? study_people { get; set; }
+    public List<study_organisation>? study_organisations { get; set; }
+    public List<study_topic>? study_topics { get; set; }
+    public List<study_feature>? study_features { get; set; }
+    public List<study_condition>? study_conditions { get; set; }
+    public List<study_icd>? study_icds { get; set; }
+    public List<study_country>? study_countries { get; set; }
+    public List<study_location>? study_locations { get; set; }
+    public List<study_relationship>? study_relationships { get; set; }
+    public List<int>? linked_data_objects { get; set; }
+
+    public JSONFullStudy(int _id, string? _display_title,
+                     string? _brief_description, string? _data_sharing_statement,
+                     int? _study_start_year, int? _study_start_month,
+                     Lookup? _study_type, Lookup? _study_status, string? _study_enrolment,
+                     Lookup? _study_gender_elig, age_param? _min_age, age_param? _max_age,
+                     string? _provenance_string)
+    {
+        file_type = "study";
+        id = _id;
+        display_title = _display_title;
+        brief_description = _brief_description;
+        data_sharing_statement = _data_sharing_statement;
+        study_start_year = _study_start_year;
+        study_start_month = _study_start_month;
+        study_type = _study_type;
+        study_status = _study_status;
+        study_enrolment = _study_enrolment;
+        study_gender_elig = _study_gender_elig;
+        min_age = _min_age;
+        max_age = _max_age;
+        provenance_string = _provenance_string;
+    }
+}
+
+
+public class JSONSSearchResStudy
+{
+    public int study_id { get; set; }
+    public string? study_name { get; set; }
+    public string? description { get; set; }
+    public string? dss { get; set; }
+    public int? start_year { get; set; }
+    public int? start_month { get; set; }
+    public int? type_id { get; set; }
+    public string? type_name { get; set; }    
+    public int? status_id { get; set; }
+    public string? status_name { get; set; }
+    public int? gender_elig { get; set; }
+    public string? min_age { get; set; }
+    public string? max_age { get; set; }
+    public int? phase_id { get; set; }
+    public int? alloc_id { get; set; }    
+    public string? feature_list { get; set; }
+    public string? country_list { get; set; }
+    public string? condition_list { get; set; }
+    public string? has_objects { get; set; }
+    public string? objects { get; set; }
+    public string? provenance { get; set; }
+
+}
+
+
+public class JSONOAStudy
 {
     public string? file_type { get; set; }
     public int id { get; set; }
@@ -29,7 +111,7 @@ public class JSONStudy
     public List<study_relationship>? study_relationships { get; set; }
     public List<int>? linked_data_objects { get; set; }
 
-    public JSONStudy(int _id, string? _display_title,
+    public JSONOAStudy(int _id, string? _display_title,
                      string? _brief_description, string? _data_sharing_statement,
                      Lookup? _study_type, Lookup? _study_status, string? _study_enrolment,
                      Lookup? _study_gender_elig, age_param? _min_age, age_param? _max_age,
@@ -49,6 +131,57 @@ public class JSONStudy
         provenance_string = _provenance_string;
     }
 }
+
+
+public class JSONC19PStudy
+{
+    public string? file_type { get; set; }
+    public int id { get; set; }
+    public string? display_title { get; set; }
+    public string? brief_description { get; set; }
+    public string? data_sharing_statement { get; set; }
+    public Lookup? study_type { get; set; }
+    public Lookup? study_status { get; set; }
+    public string? study_enrolment { get; set; }
+    public Lookup? study_gender_elig { get; set; }
+    public age_param? min_age { get; set; }
+    public age_param? max_age { get; set; }
+    public string? provenance_string { get; set; }
+
+    public List<study_identifier>? study_identifiers { get; set; }
+    public List<study_title>? study_titles { get; set; }
+    public List<study_person>? study_people { get; set; }
+    public List<study_organisation>? study_organisations { get; set; }
+    public List<study_topic>? study_topics { get; set; }
+    public List<study_feature>? study_features { get; set; }
+    public List<study_condition>? study_conditions { get; set; }
+    public List<study_icd>? study_icds { get; set; }
+    public List<study_country>? study_countries { get; set; }
+    public List<study_location>? study_locations { get; set; }
+    public List<study_relationship>? study_relationships { get; set; }
+    public List<int>? linked_data_objects { get; set; }
+
+    public JSONC19PStudy(int _id, string? _display_title,
+                     string? _brief_description, string? _data_sharing_statement,
+                     Lookup? _study_type, Lookup? _study_status, string? _study_enrolment,
+                     Lookup? _study_gender_elig, age_param? _min_age, age_param? _max_age,
+                     string? _provenance_string)
+    {
+        file_type = "study";
+        id = _id;
+        display_title = _display_title;
+        brief_description = _brief_description;
+        data_sharing_statement = _data_sharing_statement;
+        study_type = _study_type;
+        study_status = _study_status;
+        study_enrolment = _study_enrolment;
+        study_gender_elig = _study_gender_elig;
+        min_age = _min_age;
+        max_age = _max_age;
+        provenance_string = _provenance_string;
+    }
+}
+
 
 
 public class age_param
@@ -282,6 +415,8 @@ public class DBStudy
     public string? title_lang_code { get; set; }
     public string? brief_description { get; set; }
     public string? data_sharing_statement { get; set; }
+    public int? study_start_year { get; set; }
+    public int? study_start_month { get; set; }
     public int? study_type_id { get; set; }
     public string? study_type { get; set; }
     public int? study_status_id { get; set; }
@@ -295,6 +430,7 @@ public class DBStudy
     public int? max_age { get; set; }
     public int? max_age_units_id { get; set; }
     public string? max_age_units { get; set; }
+    public int? iec_level { get; set; }
     public string? provenance_string { get; set; }
 }
 

@@ -28,7 +28,7 @@ public class JSONStudyProcessor
         _repo = repo;
     }
 
-    public JSONStudy? CreateStudyObject(int id)
+    public JSONFullStudy? CreateFullStudyObject(int id)
     {
         // Re-initialise these compound properties.
         
@@ -79,11 +79,12 @@ public class JSONStudyProcessor
         {
             max_age = new age_param(s.max_age, s.max_age_units_id, s.max_age_units);
         }
-        JSONStudy jst = new JSONStudy(s.id, s.display_title, s.brief_description,
-                     s.data_sharing_statement, study_type, study_status, s.study_enrolment,
+        JSONFullStudy jst = new JSONFullStudy(s.id, s.display_title, s.brief_description,
+                     s.data_sharing_statement, s.study_start_year, s.study_start_month, 
+                     study_type, study_status, s.study_enrolment,
                      study_gender_elig, min_age, max_age, s.provenance_string);
 
-        // add the study identifier details
+        // fetch the study identifier details
 
         IEnumerable<DBStudyIdentifier> db_study_identifiers = _repo.FetchDbStudyIdentifiers(id);
         foreach (DBStudyIdentifier t in db_study_identifiers)
@@ -94,8 +95,7 @@ public class JSONStudyProcessor
                                   t.identifier_date, t.identifier_link));
         }
 
-
-        // add the study title details
+        // fetch the study title details
        
         IEnumerable<DBStudyTitle> db_study_titles = _repo.FetchDbStudyTitles(id);
         foreach (DBStudyTitle t in db_study_titles)
@@ -105,7 +105,7 @@ public class JSONStudyProcessor
         }
 
 
-        // add the study people details       
+        // fetch the study people details       
         
         IEnumerable<DBStudyPerson> db_study_people = _repo.FetchDbStudyPeople(id);
         foreach (DBStudyPerson t in db_study_people)
@@ -116,7 +116,7 @@ public class JSONStudyProcessor
         }
         
         
-        // add the study organisations details
+        // fetch the study organisations details
         
         IEnumerable<DBStudyOrganisation> db_study_orgs = _repo.FetchDbStudyOrganisations(id);
         foreach (DBStudyOrganisation t in db_study_orgs)
@@ -126,7 +126,7 @@ public class JSONStudyProcessor
         }
         
 
-        // add the study topic details
+        // fetch the study topic details
         
         IEnumerable<DBStudyTopic> db_study_topics = _repo.FetchDbStudyTopics(id);
         foreach (DBStudyTopic t in db_study_topics)
@@ -146,7 +146,7 @@ public class JSONStudyProcessor
         }
 
         
-        // add the study condition details
+        // fetch the study condition details
         
         IEnumerable<DBStudyCondition> db_study_conditions = _repo.FetchDbStudyConditions(id);
         foreach (DBStudyCondition t in db_study_conditions)
@@ -160,7 +160,7 @@ public class JSONStudyProcessor
         }
         
         
-        // add the study icd details
+        // fetch the study icd details
         
         IEnumerable<DBStudyICD> db_study_icds = _repo.FetchDbStudyICDs(id);
         foreach (DBStudyICD t in db_study_icds)
@@ -169,7 +169,7 @@ public class JSONStudyProcessor
         }
         
         
-        // add the study feature details
+        // fetch the study feature details
                 
         IEnumerable<DBStudyFeature> db_study_features =_repo.FetchDbStudyFeatures(id);
         foreach (DBStudyFeature t in db_study_features)
@@ -179,7 +179,7 @@ public class JSONStudyProcessor
         }
         
         
-        // add the study country details
+        // fetch the study country details
         
         IEnumerable<DBStudyCountry> db_study_countries = _repo.FetchDbStudyCountries(id);
         foreach (DBStudyCountry t in db_study_countries)
@@ -193,7 +193,7 @@ public class JSONStudyProcessor
         }
         
         
-        // add any study location details, if any
+        // fetch any study location details, if any
         
         IEnumerable<DBStudyLocation> db_study_locations = _repo.FetchDbStudyLocations(id);
         foreach (DBStudyLocation t in db_study_locations)
@@ -209,7 +209,7 @@ public class JSONStudyProcessor
         }
 
 
-        // add the study relationships, if any
+        // fetch the study relationships, if any
 
         IEnumerable<DBStudyRelationship> db_study_relationships = _repo.FetchDbStudyRelationships(id);
         foreach (DBStudyRelationship t in db_study_relationships)
@@ -220,7 +220,7 @@ public class JSONStudyProcessor
         }
 
 
-        // add the related objects data
+        // fetch the related objects data
         
         IEnumerable<DBStudyObjectLink>  db_study_object_links = _repo.FetchDbStudyObjectLinks(id);
         foreach (DBStudyObjectLink t in db_study_object_links)
@@ -228,8 +228,7 @@ public class JSONStudyProcessor
             linked_data_objects.Add(t.object_id);
         }
 
-
-        // return the resulting 'json ready' study
+        // return the resulting 'json ready' full study
         
         jst.study_identifiers = study_identifiers.Any() ? study_identifiers : null;
         jst.study_titles = study_titles.Any() ? study_titles : null;
@@ -247,10 +246,162 @@ public class JSONStudyProcessor
         return jst;
     }
 
-
-    public void StoreJSONStudyInDB(int id, string study_json)
+    public JSONSSearchResStudy? CreateStudySearchResObject(JSONFullStudy st)
     {
-        _repo.StoreJSONStudyInDB(id, study_json); ;
+        JSONSSearchResStudy srs = new JSONSSearchResStudy();
+        srs.study_id = st.id;
+        srs.study_name = st.display_title;
+        srs.description = st.brief_description;
+        srs.dss = st.data_sharing_statement;
+        srs.start_year = st.study_start_year;
+        srs.start_month = st.study_start_month;
+        srs.type_id = st.study_type?.id ?? 00;
+        srs.type_name = st.study_type?.name;
+        srs.status_id = st.study_status?.id ?? 0;
+        srs.status_name = st.study_status?.name;
+        srs.gender_elig = st.study_gender_elig?.id ?? 0;
+        string min_age_units = st.min_age?.unit_id == 17 ? "" : " " + st.min_age?.unit_name;
+        srs.min_age = st.min_age?.ToString() + min_age_units;
+        string max_age_units = st.max_age?.unit_id == 17 ? "" : " " + st.max_age?.unit_name;
+        srs.max_age = st.max_age?.ToString() + max_age_units;
+
+        List<study_feature>? fs = st.study_features;
+        
+        if (fs?.Any() == true)
+        {
+            if (srs.type_id == 11)
+            {
+                string phase = "", alloc = "", focus = "", interv = "", masking = "";
+                foreach (study_feature f in fs)
+                {
+                    if (f.feature_type!.id == 20)
+                    {
+                        srs.phase_id = f.feature_value!.id;
+                        string? ph = f.feature_value?.name;
+                        if (!string.IsNullOrEmpty(ph) && ph.ToLower() != "not applicable")
+                        {
+                            phase = "Phase: " + ph;
+                        }
+                    }
+                    if (f.feature_type!.id == 21)
+                    {
+                        string? fc = f.feature_value?.name;
+                        if (!string.IsNullOrEmpty(fc) && fc.ToLower() != "other")
+                        {
+                            focus = "Focus: " + fc;
+                        }
+                    }
+                    if (f.feature_type!.id == 22)
+                    {
+                        srs.alloc_id = f.feature_value!.id;
+                        string? ac = f.feature_value?.name;
+                        if (string.IsNullOrEmpty(ac))
+                        {
+                            alloc = "Randomised: Not provided";
+                        }
+                        else
+                        {
+                            alloc = "Randomised: " + ac.ToLower() switch
+                            {
+                                "randomised" => "Yes",
+                                "nonrandomised" => "No",
+                                "not applicable" => "No",
+                                _ => "Unclear"
+                            };
+                        }
+                    }
+                    if (f.feature_type!.id == 23)
+                    {
+                        string? iv = f.feature_value?.name;
+                        if (!string.IsNullOrEmpty(iv) && iv.ToLower() != "other")
+                        {
+                            interv = "Intervention design: " + iv;
+                        }
+                    }
+                    if (f.feature_type!.id == 24)
+                    {
+                        string? mk = f.feature_value?.name;
+                        if (!string.IsNullOrEmpty(mk) && mk.ToLower() != "not applicable")
+                        {
+                            masking = "Masking: " + mk;
+                        }
+                    }
+                }
+
+                string int_feature_list = alloc;
+                
+                
+                srs.feature_list = int_feature_list;
+            }
+            else if (srs.type_id == 12)
+            {
+                string time_persp = "", obs_model = "", bio_spec = "";
+                foreach (study_feature f in fs)
+                {
+                    if (f.feature_type!.id == 30)
+                    {
+                        string? tp = f.feature_value?.name;
+                        if (!string.IsNullOrEmpty(tp))
+                        {
+                            time_persp = "Time Perspective: ";
+                            time_persp += tp == "Other" ? "Not specified" : tp;
+                        }
+                    }
+                    if (f.feature_type!.id == 31)
+                    {
+                        string? om = f.feature_value?.name;
+                        if (!string.IsNullOrEmpty(om) && om.ToLower() != "other")
+                        {
+                            obs_model = "Observation model: " + om;
+                        }
+                    }
+                    if (f.feature_type!.id == 32)
+                    {
+                        string? bs = f.feature_value?.name;
+                        if (!string.IsNullOrEmpty(bs) && bs.ToLower() != "other")
+                        {
+                            bio_spec = bs.Trim() + " reported as available";
+                        }
+                    }
+                }
+                string obs_feature_list = time_persp;
+                if (!string.IsNullOrEmpty(obs_model))
+                { 
+                    obs_feature_list += !string.IsNullOrEmpty(obs_feature_list) ? "; " + obs_model : obs_model;
+                }
+                if (!string.IsNullOrEmpty(bio_spec))
+                { 
+                    obs_feature_list += !string.IsNullOrEmpty(obs_feature_list) ? "; " + bio_spec : bio_spec;
+                }
+
+                srs.feature_list = obs_feature_list;
+            }
+        }
+
+
+        srs.provenance = st.provenance_string;
+        
+ 'has_objects', has_objects, 'country_list', 
+     country_list, 'condition_list', condition_list, 'objects', object_json) ";
+
+        return srs;
+    }
+    
+    public JSONOAStudy? CreateStudyOAObject(JSONFullStudy st)
+    {
+        return null;
+    }
+    
+    public JSONC19PStudy? CreateStudyC19PStudyObject(JSONFullStudy st)
+    {
+        return null;
+    }
+    
+
+    public void StoreJSONStudyInDB(int id, string full_json, string? search_res_json, 
+                                   string? open_aire_json, string? c19p_json)
+    {
+        _repo.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_json); ;
     }
 }
 

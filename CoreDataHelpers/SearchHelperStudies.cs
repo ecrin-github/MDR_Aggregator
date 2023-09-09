@@ -3,11 +3,14 @@
 public class SearchHelperStudies
 {
     private readonly DBUtilities db;
+    
     readonly int min_studies_id, max_studies_id;
-
+    private readonly ILoggingHelper _loggingHelper;
+    
     public SearchHelperStudies(string connString, ILoggingHelper loggingHelper)
     {
         db = new DBUtilities(connString, loggingHelper);
+        _loggingHelper = loggingHelper;
         min_studies_id = db.GetAggMinId("core.studies");
         max_studies_id = db.GetAggMaxId("core.studies");
     }
@@ -44,7 +47,7 @@ public class SearchHelperStudies
             , timepersp_name        varchar           null
             , biospec_name          varchar           null
             , feature_list          varchar           null
-            , has_objects           bit(16)           default '0000000000000000'
+            , has_objects           bit(17)           default '00000000000000000'
             , country_list          varchar           null
             , condition_list        varchar           null
             , provenance            varchar           null
@@ -105,7 +108,7 @@ public class SearchHelperStudies
                               and ss.gender_elig_id is not null ";
         return db.UpdateSearchStudyData(sql_string, "search_studies gender elig", min_studies_id, max_studies_id);
     }
-    
+    /*
     public int UpdateStudyMinAgeData()
     {   
         string sql_string = @"Update core.search_studies ss
@@ -127,12 +130,12 @@ public class SearchHelperStudies
                               and ss.max_age_units_id <> 17 ";
         return db.UpdateSearchStudyData(sql_string, "search_studies max age", min_studies_id, max_studies_id);
     }
-  
+
     public int UpdateStudySearchDataWithPhaseIdData()
     {
         string sql_string = @"UPDATE core.search_studies ss
-               set phase_id = f.feature_value_id
-                   phase_name = f.name,
+               set phase_id = f.feature_value_id,
+                   phase_name = f.name
                from 
                    (select sf.study_id, sf.feature_value_id,
                     lup.name from core.study_features sf
@@ -147,7 +150,7 @@ public class SearchHelperStudies
     public int UpdateStudySearchDataWithAllocIdData()
     {
         string sql_string = @"UPDATE core.search_studies ss
-               set alloc_id = f.feature_value_id
+               set alloc_id = f.feature_value_id,
                    alloc_name = f.name
                from 
                    (select sf.study_id, sf.feature_value_id,
@@ -248,7 +251,7 @@ public class SearchHelperStudies
 
         return db.UpdateSearchFeatureData(sql_string, "bio-specimen", min_studies_id, max_studies_id);
     }
-
+*/
     public int UpdateStudySearchDataWithCountryData()
     {
         string top_sql = @"update core.search_studies ss
@@ -373,7 +376,7 @@ public class SearchHelperStudies
     {
         return db.CollectHasObjectData("b.object_type_id in (166, 167, 168, 169, 170)", 14, "Software");
     }
-
+    
     public int UpdateStudySearchDataIfHasOther()
     {
         return db.CollectHasObjectData(@"b.object_type_id in (37, 151, 110, 111, 114,  
@@ -381,19 +384,26 @@ public class SearchHelperStudies
                                        or b.object_type_id between 155 and 165",
                                        15, "Other");
     }
+    
+    public int UpdateStudySearchDataIfHasSamples()
+    {
+        return db.CollectHasObjectData("b.object_type_id in (301)", 16, "Samples");
+    }
 
     public void CreateBitMapData()
     {
         // Data is in table int id, int study_id, int bit_pos
 
-        for (int n = 0; n < 16; n++)
+        for (int n = 0; n < 17; n++)
         {
             string sql_string = $@"Update core.search_studies ss 
                                 set has_objects = set_bit(has_objects, {n}, 1)
                                 from core.temp_searchobjects b 
                                 where ss.study_id = b.study_id
                                 and b.bit_pos = {n} ";
-            db.UpdateBitMap(sql_string, n, min_studies_id, max_studies_id);
+            int res = db.UpdateBitMap(sql_string, n, min_studies_id, max_studies_id);
+            string feedback = $"Updated {res} bit map fields, n = {n}";
+            _loggingHelper.LogLine(feedback);
         }
     }
     
@@ -447,13 +457,12 @@ public class SearchHelperStudies
 		           || case 
 			          when biospec_name is null then ''
 			          when biospec_name ='other' then ''
-			          else '; '||trim(biospec_name)||' reported as available'
+			          else '; '||trim(biospec_name)||' reported as available; 
 		           end 
             where type_id = 12 ";
         
         return db.UpdateStudyFeatureList(sql_string, min_studies_id, max_studies_id, "observation feature");
     }
-
 
     public int ObtainObjectJsonData()
     {

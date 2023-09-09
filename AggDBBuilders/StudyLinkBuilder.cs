@@ -119,7 +119,8 @@ public class StudyLinkBuilder
         // these form study-study relationships and are moved to the study_relationships table, 
         // rather than simple 1-to-1 study links. These linkages need to be identified and removed 
         // from this process, and dealt with separately at the end.
-
+        
+        slh.CreateGroupedStudiesTable();
         slh.ProcessGroupedStudies();
 
         // Identify and repair missing 'link cascade' steps. Then cascade 'preferred' studies so that the 

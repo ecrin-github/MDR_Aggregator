@@ -71,7 +71,7 @@ public class JSONStudyDataLayer
         study_identifier_query_string = @"select
             si.id, identifier_value,
             identifier_type_id, it.name as identifier_type,
-            source_id, source, source_ror_id,
+            source_id, si.source, source_ror_id,
             identifier_date, identifier_link
             from core.study_identifiers si
             left join context_lup.identifier_types it on si.identifier_type_id = it.id
@@ -95,7 +95,7 @@ public class JSONStudyDataLayer
         study_organisation_query_string = @"select
             sg.id, sg.contrib_type_id, ct.name as contrib_type, sg.organisation_id, 
             sg.organisation_name, sg.organisation_ror_id
-            from core.study_organisations sp 
+            from core.study_organisations sg 
             left join context_lup.contribution_types ct on sg.contrib_type_id = ct.id
             where study_id = ";
         
@@ -120,7 +120,7 @@ public class JSONStudyDataLayer
             sc.id, sc.original_value, sc.original_ct_type_id, 
             tv.name as original_ct_type, sc.original_ct_code
             from core.study_conditions sc
-            left join context_lup.topic_vocabularies tv on st.original_ct_type_id = tv.id
+            left join context_lup.topic_vocabularies tv on sc.original_ct_type_id = tv.id
             where study_id = ";
 
         study_icd_query_string = @"select 
@@ -140,7 +140,7 @@ public class JSONStudyDataLayer
              sn.city_id, sn.city_name, sn.country_id, sn.country_name, 
              sn.status_id, ss.name as status
              from core.study_locations sn
-             left join context_lup.study_statuses ss on sc.status_id = ss.id
+             left join context_lup.study_statuses ss on sn.status_id = ss.id
              where study_id = ";
         
         study_relationship_query_string = @"select
@@ -259,7 +259,8 @@ public class JSONStudyDataLayer
     }
 
 
-    public void StoreJSONStudyInDB(int id, string study_json)
+    public void StoreJSONStudyInDB(int id, string full_json, string? search_res_json, 
+                                   string? open_aire_json, string? c19p_json)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         Conn.Open();
@@ -268,9 +269,9 @@ public class JSONStudyDataLayer
         // command have to be explicitly declared and typed
 
         using var cmd = new NpgsqlCommand();
-        cmd.CommandText = "INSERT INTO core.studies_json (id, json) VALUES (@id, @p)";
+        cmd.CommandText = "INSERT INTO core.studies_json (id, full_study) VALUES (@id, @p)";
         cmd.Parameters.Add(new NpgsqlParameter("@id", NpgsqlDbType.Integer) {Value = id });
-        cmd.Parameters.Add(new NpgsqlParameter("@p", NpgsqlDbType.Json) {Value = study_json });
+        cmd.Parameters.Add(new NpgsqlParameter("@p", NpgsqlDbType.Json) {Value = full_json });
         cmd.Connection = Conn;
         cmd.ExecuteNonQuery();
         Conn.Close();

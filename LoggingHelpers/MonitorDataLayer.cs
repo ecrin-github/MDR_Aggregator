@@ -92,10 +92,13 @@ public class MonDataLayer : IMonDataLayer
                               has_study_people, has_study_organisations, 
                               has_study_references, has_study_relationships,
                               has_study_countries, has_study_locations,
+                              has_study_links, has_study_ipd_available,
                               has_object_datasets, has_object_instances, has_object_dates,
                               has_object_descriptions, has_object_identifiers, 
                               has_object_people, has_object_organisations, has_object_topics,
-                              has_object_rights, has_object_relationships
+                              has_object_rights, has_object_relationships,
+                              has_object_comments, has_object_db_links, 
+                              has_journal_details, has_object_publication_types
                             from sf.source_parameters
                             where is_current_agg_source = true
                             order by preference_rating;";
@@ -146,6 +149,14 @@ public class MonDataLayer : IMonDataLayer
         int? last_id = Conn.ExecuteScalar<int?>(sql_string);
         return (last_id == null) ? 100001 : (int)last_id + 1;
     }
+    
+    public int GetNextAuditId()
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(monConnString);
+        string sql_string = "select max(id) from sf.source_ad_summaries ";
+        int? last_id = Conn.ExecuteScalar<int?>(sql_string);
+        return (last_id == null) ? 100001 : (int)last_id + 1;
+    }
 
     public int GetLastAggEventId()
     {
@@ -168,7 +179,7 @@ public class MonDataLayer : IMonDataLayer
         using var conn = new NpgsqlConnection(monConnString);
         return (int)conn.Insert(iec_agg);
     }
-
+    
     public void StoreSourceIECData(int iec_agg_id, Source source, Int64 res)
     {
         IECAggregationSourceNum summ_rec = new(iec_agg_id, source.id, source.database_name, res);
@@ -274,6 +285,12 @@ public class MonDataLayer : IMonDataLayer
     {
         using var conn = new NpgsqlConnection(monConnString);
         conn.Insert(asm);
+    }
+    
+    public void StoreAdSummary(SourceADSummary sad)
+    {
+        using var conn = new NpgsqlConnection(monConnString);
+        conn.Insert(sad);
     }
 
     public List<AggregationObjectNum> GetObjectTypes(int agg_event_id, string dest_conn_string)

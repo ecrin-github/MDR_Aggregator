@@ -139,6 +139,14 @@ public class ObjectDataTransferrer
         _loggingHelper.LogLine("Existing objects matched in temp table");
         _loggingHelper.LogBlank();
         
+        /************************************
+         * If a study matching has caused the old study_id to be superseded (i.e. it has become
+         * a non-preferred study with a different study_id itself, this can be problematic
+         * as the matched study id now 'orphans' the data object linkage.
+         * Necessary to update matching data objects with the revised study_ids first,
+         * as part of the study revision process.
+         ************************************/
+        
         // Also update the data_object_identifiers table. Indicates has been matched
         // and updates the data fetch date
 

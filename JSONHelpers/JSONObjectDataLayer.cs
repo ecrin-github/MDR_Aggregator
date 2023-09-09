@@ -192,7 +192,7 @@ public class JSONObjectDataLayer
         object_identifier_query_string = @"select
             oi.id, identifier_value, 
             identifier_type_id, it.name as identifier_type,
-            source_id, source, 
+            source_id, oi.source, 
             source_ror_id, identifier_date
             from core.object_identifiers oi
             left join context_lup.identifier_types it on oi.identifier_type_id = it.id

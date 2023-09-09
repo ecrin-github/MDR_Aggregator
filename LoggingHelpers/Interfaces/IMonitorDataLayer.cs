@@ -18,6 +18,7 @@ public interface IMonDataLayer
 
     int GetNextAggEventId();
     int GetNextIECAggEventId();
+    int GetNextAuditId();
     int GetLastAggEventId();
 
     // Used in removing prior results data with the same Agg Id
@@ -43,6 +44,7 @@ public interface IMonDataLayer
     int StoreAggregationEvent(AggregationEvent aggregation);
     int StoreIECAggregationEvent(IECAggregationEvent iec_agg);
     void StoreSourceSummary(SourceSummary sm);
+    void StoreAdSummary(SourceADSummary sad);
     void StoreSourceIECData(int iec_agg_id, Source source, Int64 res);    
     void StoreCoreSummary(CoreSummary asm);
     ulong StoreObjectNumbers(PostgreSQLCopyHelper<AggregationObjectNum> copyHelper,

@@ -1,18 +1,25 @@
-﻿namespace MDR_Aggregator;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
+
+namespace MDR_Aggregator;
 
 public class JSONHelper
 {
     private readonly string _connString;
     private readonly DBUtilities db;
     private readonly ILoggingHelper _loggingHelper;
-
+    private readonly JsonSerializerOptions? _json_options;
     public JSONHelper(string connString, ILoggingHelper logginghelper)
     {
         _connString = connString;
         _loggingHelper = logginghelper;
         db = new DBUtilities(connString, _loggingHelper);
+        _json_options = new()
+        {
+            AllowTrailingCommas = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
     }
-
 
     public void CreateJSONStudyData(bool create_table = true, int offset = 0)
     {
@@ -23,7 +30,10 @@ public class JSONHelper
             string sql_string = @"DROP TABLE IF EXISTS core.studies_json;
             CREATE TABLE core.studies_json(
               id                       INT             NOT NULL PRIMARY KEY
-            , json                     JSON            NULL
+            , search_res               JSON            NULL
+            , full_study               JSON            NULL
+            , open_aire                JSON            NULL
+            , c19p                     JSON            NULL 
             );
             CREATE INDEX studies_json_id ON core.studies_json(id);";
             db.ExecuteSQL(sql_string);
@@ -31,10 +41,77 @@ public class JSONHelper
 
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
-        LoopThroughOAStudyRecords(repo, min_id, max_id, offset);
+        LoopThroughStudyRecords(repo, min_id, max_id, offset);
     }
 
+    public void LoopThroughStudyRecords(JSONStudyDataLayer repo, int min_id, int max_id, int offset = 0)
+    {
+        JSONStudyProcessor processor = new JSONStudyProcessor(repo);
+        int batch = 10000;      // Do 10,000 ids at a time
+        int k = offset;
+        min_id += offset;
+        
+        for (int n = min_id; n <= max_id; n+= batch)
+        {
+            if (k > 10)  // for testing
+            {
+                break;
+            }
+            
+            IEnumerable<int> id_numbers = repo.FetchIds(n, batch);
+            foreach (int id in id_numbers)
+            {
+                // Re-initialise variables and then construct full study object, drawing data from
+                // various database tables and serialise to a formatted json string, then store json in the database.
+                string? search_res_json = null;
+                string? open_aire_json = null;
+                string? c19p_json = null;
+                
+                JSONFullStudy? st = processor.CreateFullStudyObject(id);
+                if (st is not null)
+                {
+                    string full_json = JsonSerializer.Serialize(st, _json_options);
+                    
+                    // Construct search result and Covid19 Portal objects as subsets of the full study,
+                    // and the open aire object by combining elements 
+                    
+                    JSONSSearchResStudy? st_search_res = processor.CreateStudySearchResObject(st);
+                    if (st_search_res is not null)
+                    {
+                        
+                        
+                        search_res_json =  JsonSerializer.Serialize(st_search_res, _json_options);
+                    }
+                    
+                    JSONOAStudy? st_open_aire = processor.CreateStudyOAObject(st);
+                    if (st_open_aire is not null)
+                    {
+                        open_aire_json =  JsonSerializer.Serialize(st_open_aire, _json_options);
+                    }
+                    
+                    JSONC19PStudy? st_c19p = processor.CreateStudyC19PStudyObject(st);
+                    if (st_c19p is not null)
+                    {
+                        c19p_json =  JsonSerializer.Serialize(st_c19p, _json_options);
+                    }
+                    
+                    // Add all json strings to the database
 
+                    processor.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_json);                    
+                }
+                k++;
+                
+                if (k > 10)  // for testing
+                {
+                    break;
+                }
+                
+                if (k % 1000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
+            }
+        }
+    }
+    
+    
     public void CreateJSONObjectData(bool create_table = true, int offset = 0)
     {
         JSONObjectDataLayer repo = new JSONObjectDataLayer(_connString);
@@ -44,7 +121,8 @@ public class JSONHelper
             string sql_string = @"DROP TABLE IF EXISTS core.objects_json;
             CREATE TABLE core.objects_json(
               id                       INT             NOT NULL PRIMARY KEY
-            , json                     JSON            NULL
+            , search_res               JSON            NULL
+            , full                     JSON            NULL
             );
             CREATE INDEX objects_json_id ON core.objects_json(id);";
             db.ExecuteSQL(sql_string);
@@ -53,58 +131,14 @@ public class JSONHelper
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
 
-        LoopThroughOAObjectRecords(repo, min_id, max_id, offset);
+        LoopThroughObjectRecords(repo, min_id, max_id, offset);
     }
 
-
-    public void LoopThroughOAStudyRecords(JSONStudyDataLayer repo, int min_id, int max_id, int offset)
-    {
-        JSONStudyProcessor processor = new JSONStudyProcessor(repo);
-
-        // Do 10,000 ids at a time
-        int batch = 10000;
-        //int batch = 100;  // testing
-
-        int k = 0;
-        for (int n = min_id; n <= max_id; n+= batch)
-        {
-            IEnumerable<int> id_numbers = repo.FetchIds(n, batch);
-            foreach (int id in id_numbers)
-            {
-                // Construct single study object, drawing data from various database tables 
-                // and serialise to a formatted json string, then store json in the database.
-
-                JSONStudy? st = processor.CreateStudyObject(id);
-                if (st is not null)
-                {
-                    //var linear_json = JsonConvert.SerializeObject(st);
-                    //processor.StoreJSONStudyInDB(id, linear_json);
-                    /*
-                    if (also_do_files)
-                    {
-                        var formatted_json = JsonConvert.SerializeObject(st, Formatting.Indented);
-                        string file_name = "study " + id.ToString() + ".json";
-                        string full_path = Path.Combine(folder_path, file_name);
-                        File.WriteAllText(full_path, formatted_json);
-                    }
-                    */
-                }
-
-                k++;
-                if (k % 1000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
-            }
-        }
-    }
-
-
-    public void LoopThroughOAObjectRecords(JSONObjectDataLayer repo, int min_id, int max_id, int offset)
+    
+    public void LoopThroughObjectRecords(JSONObjectDataLayer repo, int min_id, int max_id, int offset)
     {
         JSONObjectProcessor processor = new JSONObjectProcessor(repo, _loggingHelper);
-
-        // Do 10,000 ids at a time
-        int batch = 10000;
-        //int batch = 100;  // testing
-
+        int batch = 10000;   // Do 10,000 ids at a time
         int k = offset;
         min_id += offset;
         
@@ -122,130 +156,11 @@ public class JSONHelper
                     //var linear_json = JsonConvert.SerializeObject(obj);
                     //processor.StoreJSONObjectInDB(id, linear_json);
                 }
-
                 k++;
                 if (k % 1000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
             }
         }
     }
-
-/*
- * The two methods below no longer used - not clear if they might be useful at some point!
-
-    public void UpdateJSONStudyData(bool also_do_files, int offset = 0)
-    {
-        JSONStudyDataLayer repo = new JSONStudyDataLayer(_loggingHelper, _connString);
-        JSONStudyProcessor processor = new JSONStudyProcessor(repo);
-
-        int min_id = repo.FetchMinId();
-        int max_id = repo.FetchMaxId(); 
-
-        // Do 10,000 ids at a time
-        int batch = 10000;
-        //int batch = 100;  // testing
-
-        string folder_path = "";
-        int k = 0;
-        for (int n = min_id; n <= max_id; n += batch)
-        {
-            if (also_do_files)
-            {
-                // get the folder for the next batch, obtaining the parent path from repo
-
-                string folder_name = "studies " + n.ToString() + " to " + (n + batch - 1).ToString();
-                folder_path = Path.Combine(repo.StudyJsonFolder, folder_name);
-                if (!Directory.Exists(folder_path))
-                {
-                    Directory.CreateDirectory(folder_path);
-                }
-            }
-
-            IEnumerable<int> id_numbers = repo.FetchIds(n, batch);
-            foreach (int id in id_numbers)
-            {
-                // Construct single study object, drawing data from various database tables 
-                // and serialise to a formatted json string, then store json in the database.
-
-                JSONStudy st = processor.CreateStudyObject(id);
-                if (st != null)
-                {
-                    var linear_json = JsonConvert.SerializeObject(st);
-                    processor.StoreJSONStudyInDB(id, linear_json);
-                    if (also_do_files)
-                    {
-                        var formatted_json = JsonConvert.SerializeObject(st, Formatting.Indented);
-                        string file_name = "study " + id.ToString() + ".json";
-                        string full_path = Path.Combine(folder_path, file_name);
-                        File.WriteAllText(full_path, formatted_json);
-                    }
-                }
-
-                k++;
-                if (k % 1000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
-            }
-        }
-    }
-
-
-    public void UpdateJSONObjectData(bool also_do_files, int offset = 0)
-    {
-        JSONObjectDataLayer repo = new JSONObjectDataLayer(_loggingHelper, _connString);
-        JSONObjectProcessor processor = new JSONObjectProcessor(repo, _loggingHelper);
-
-        int min_id = repo.FetchMinId();
-        int max_id = repo.FetchMaxId();
-
-        // Do 10,000 ids at a time
-        int batch = 10000;
-        //int batch = 100;  // testing
-
-        string folder_path = "";
-        int k = offset;
-        min_id += offset;
-
-        for (int n = min_id; n <= max_id; n += batch)
-        {
-            //if (n > min_id + 200) break;  // testing
-            if (also_do_files)
-            {
-                // get the folder for the next batch, obtaining the parent path from repo
-
-                string folder_name = "objects " + n.ToString() + " to " + (n + batch - 1).ToString();
-                folder_path = Path.Combine(repo.ObjectJsonFolder, folder_name);
-                if (!Directory.Exists(folder_path))
-                {
-                    Directory.CreateDirectory(folder_path);
-                }
-            }
-
-            IEnumerable<int> id_numbers = repo.FetchIds(n, batch);
-            foreach (int id in id_numbers)
-            {
-                // Construct single study object, drawing data from various database tables 
-                // and serialise to a formatted json string, then store json in the database.
-
-                JSONDataObject obj = processor.CreateObject(id);
-                if (obj != null)
-                {
-                    var linear_json = JsonConvert.SerializeObject(obj);
-                    processor.StoreJSONObjectInDB(id, linear_json);
-
-                    if (also_do_files)
-                    {
-                        var formatted_json = JsonConvert.SerializeObject(obj, Formatting.Indented);
-                        string file_name = "object " + id.ToString() + ".json";
-                        string full_path = Path.Combine(folder_path, file_name);
-                        File.WriteAllText(full_path, formatted_json);
-                    }
-                }
-
-                k++;
-                if (k % 1000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
-            }
-        }
-    }
-*/
-
 }
 
 

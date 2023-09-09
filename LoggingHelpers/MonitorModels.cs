@@ -19,6 +19,8 @@ public class Source
     public bool? has_study_people{ get; }
     public bool? has_study_organisations{ get; }
     public bool? has_study_references { get; }
+    public bool? has_study_links { get; }
+    public bool? has_study_ipd_available { get; }
     public bool? has_study_relationships { get; }
     public bool? has_study_countries { get; }
     public bool? has_study_locations { get; }
@@ -33,6 +35,11 @@ public class Source
     public bool? has_object_topics { get; }
     public bool? has_object_rights { get; }
     public bool? has_object_relationships { get; }
+    public bool? has_object_comments { get; }
+    public bool? has_object_db_links { get; }
+    public bool? has_journal_details { get; }
+    public bool? has_object_publication_types { get; }
+    
 }
    
 
@@ -74,6 +81,55 @@ public class SourceSummary
     }
 
     public SourceSummary()
+    { }
+}
+
+[Table("sf.source_ad_summaries")]
+public class SourceADSummary	
+{
+    public int audit_id { get; set; }
+    public DateTime audit_datetime { get; set; }
+    public string? database_name { get; set; }
+    public int study_recs { get; set; }
+    public int study_identifiers_recs { get; set; }
+    public int study_titles_recs { get; set; }
+    public int study_people_recs { get; set; }
+    public int study_organisations_recs { get; set; }
+    public int study_topics_recs { get; set; }
+    public int study_conditions_recs { get; set; }
+    public int study_features_recs { get; set; }
+    public int study_countries_recs { get; set; }
+    public int study_locations_recs { get; set; }
+    public int study_relationships_recs { get; set; }
+    public int study_references_recs { get; set; }
+    public int study_links_recs { get; set; }
+    public int study_ipd_available_recs { get; set; }
+    
+    public int data_object_recs { get; set; }
+    public int object_datasets_recs { get; set; }
+    public int object_instances_recs { get; set; }
+    public int object_titles_recs { get; set; }
+    public int object_dates_recs { get; set; }
+    public int object_people_recs { get; set; }
+    public int object_organisations_recs { get; set; }
+    public int object_topics_recs { get; set; }
+    public int object_identifiers_recs { get; set; }
+    public int object_descriptions_recs { get; set; }
+    public int object_comments_recs { get; set; }
+    public int object_db_link_recs { get; set; }
+    public int object_journal_detail_recs { get; set; }
+    public int object_publication_types_recs { get; set; }
+    public int object_rights_recs { get; set; }
+    public int object_relationships_recs { get; set; }
+
+    public SourceADSummary(int _aggregation_event_id, string _database_name)
+    {
+        audit_id = _aggregation_event_id;
+        audit_datetime = DateTime.Now;
+        database_name = _database_name;
+    }
+
+    public SourceADSummary()
     { }
 }
 
