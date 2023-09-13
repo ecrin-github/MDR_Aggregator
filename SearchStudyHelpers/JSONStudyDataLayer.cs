@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Dapper.Contrib.Extensions;
 using Npgsql;
 using NpgsqlTypes;
 namespace MDR_Aggregator;
@@ -6,7 +7,6 @@ namespace MDR_Aggregator;
 public class JSONStudyDataLayer
 {
     private readonly string _connString;
-
 
     // These strings are used as the base of each query.
     // They are constructed once in the class constructor,
@@ -19,10 +19,12 @@ public class JSONStudyDataLayer
     private string? study_people_query_string, study_organisation_query_string;
     private string? study_condition_query_string, study_icd_query_string;
     private string? study_country_query_string, study_location_query_string;
+    private readonly DBUtilities db;
     
-    public JSONStudyDataLayer(string connString)
+    public JSONStudyDataLayer(string connString, ILoggingHelper logginghelper)
     {
         _connString = connString;
+        db = new DBUtilities(connString, logginghelper);
         ConstructStudyQueryStrings();
     }
 
@@ -55,7 +57,7 @@ public class JSONStudyDataLayer
             brief_description, data_sharing_statement, 
             study_type_id, st.name as study_type,
             study_status_id, ss.name as study_status,
-            study_enrolment, 
+            study_start_year, study_start_month, study_enrolment, 
             study_gender_elig_id, ge.name as study_gender_elig, 
             min_age, min_age_units_id, tu1.name as min_age_units,
             max_age, max_age_units_id, tu2.name as max_age_units,
@@ -258,6 +260,24 @@ public class JSONStudyDataLayer
         return Conn.Query<DBStudyObjectLink>(sql_string);
     }
 
+    public IEnumerable<JSONSearchResObject>? FetchObjectDetails(int study_id)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = $@"select os.* 
+        from core.study_object_links sol
+        inner join core.new_search_objects os
+        on sol.object_id = os.oid
+        where sol.study_id = {study_id}  
+        order by os.year_pub";
+        
+        return Conn.Query<JSONSearchResObject>(sql_string);
+    }
+    
+    public int StoreSearchRecord(StudyToSearchRecord tsr)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        return (int)Conn.Insert(tsr);
+    }
 
     public void StoreJSONStudyInDB(int id, string full_json, string? search_res_json, 
                                    string? open_aire_json, string? c19p_json)
@@ -267,15 +287,92 @@ public class JSONStudyDataLayer
 
         // To insert the string into a json field the parameters for the 
         // command have to be explicitly declared and typed
+        
+        search_res_json ??= "{}";
+        open_aire_json ??= "{}";
+        c19p_json ??= "{}";
 
         using var cmd = new NpgsqlCommand();
-        cmd.CommandText = "INSERT INTO core.studies_json (id, full_study) VALUES (@id, @p)";
+        cmd.CommandText = @"INSERT INTO core.new_search_studies_json (id, search_res, full_study, open_aire, c19p) 
+                            VALUES (@id, @sr, @fs, @oa, @c19)";
         cmd.Parameters.Add(new NpgsqlParameter("@id", NpgsqlDbType.Integer) {Value = id });
-        cmd.Parameters.Add(new NpgsqlParameter("@p", NpgsqlDbType.Json) {Value = full_json });
+        cmd.Parameters.Add(new NpgsqlParameter("@sr", NpgsqlDbType.Json) {Value = search_res_json });
+        cmd.Parameters.Add(new NpgsqlParameter("@fs", NpgsqlDbType.Json) {Value = full_json });
+        cmd.Parameters.Add(new NpgsqlParameter("@oa", NpgsqlDbType.Json) {Value = open_aire_json });
+        cmd.Parameters.Add(new NpgsqlParameter("@c19", NpgsqlDbType.Json) {Value = c19p_json });
         cmd.Connection = Conn;
         cmd.ExecuteNonQuery();
         Conn.Close();
     }
+    
+    
+    public int AddDataToPMIDSearchData()
+    {
+        string sql_string = @"insert into core.new_search_pmids (pmid, study_id)
+        select oi.identifier_value::int, k.study_id from 
+        core.object_identifiers oi
+        inner join core.study_object_links k
+        on oi.object_id = k.object_id
+        where identifier_type_id = 16
+        order by oi.identifier_value::int ;";
+        
+        return db.ExecuteSQL(sql_string);
+    }    
+    
+    // idents table.
+    
+    public int AddDataToIdentsSearchData()
+    {
+        string top_sql = @"insert into core.new_search_idents (ident_type, ident_value, study_id)
+        select identifier_type_id, identifier_value, study_id
+        from core.study_identifiers si
+        where identifier_type_id not in (1, 90) ";
+        string bottom_sql = @" order by identifier_type_id, identifier_value ;";
+        
+        int min_studies_id = FetchMinId();
+        int max_studies_id = FetchMaxId();
+        return db.CreateSearchIdentsData(top_sql, bottom_sql, min_studies_id, max_studies_id, "search_idents");
+    }
+    
+    public int AddDataToCountrySearchData()
+    {
+        string top_sql = @"insert into core.new_search_countries (country_id, study_id)
+        select country_id, study_id
+        from core.study_countries sc 
+        where country_id is not null ";
+        
+        int min_studies_id = FetchMinId();
+        int max_studies_id = FetchMaxId();
+        return db.CreateSearchCountriesData(top_sql,min_studies_id, max_studies_id, "search_countries");
+    }
+    
+    public int UpdateIdentsSearchWithStudyJson(int min_studies_id, int max_studies_id)
+    {
+        string sql_string = @"update core.new_search_idents s
+                              set study_json = sj.search_res
+                              from core.search_studies_json sj
+                              where s.study_id = sj.id ";
+        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "idents study json");
+    }
+    
+    public int UpdatePMIDsSearchWithStudyJson(int min_studies_id, int max_studies_id)
+    {
+        string sql_string = @"update core.new_search_pmids s
+                              set study_json = sj.search_res
+                              from core.new_search_studies_json sj
+                              where s.study_id = sj.id ";
+        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "pmids study json");
+    }
+    
+    public int UpdateLexemesSearchWithStudyJson(int min_studies_id, int max_studies_id)
+    {
+        string sql_string = @"update core.new_search_lexemes s
+                              set study_json = sj.search_res
+                              from core.new_search_studies_json sj
+                              where s.study_id = sj.id ";
+        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "lexemes study json");
+    }
+    
 }
 
 

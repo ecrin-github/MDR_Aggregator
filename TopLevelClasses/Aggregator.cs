@@ -185,7 +185,8 @@ public class Aggregator
         }
         
 
-        if (opts.create_json)
+        /*
+         * if (opts.create_json)
         {
             string conn_string = _credentials.GetConnectionString("mdr");
             JSONHelper jh = new JSONHelper(conn_string, _loggingHelper);
@@ -194,17 +195,19 @@ public class Aggregator
             // additional boolean (default = true). if tables are to have further data appended
             // add an integer offset that represents the records to skip (default = 0)
 
+            _loggingHelper.LogHeader("Creating JSON object data");
+            jh.CreateJSONObjectData();            
             _loggingHelper.LogHeader("Creating JSON study data");
             jh.CreateJSONStudyData();
-            // _loggingHelper.LogHeader("Creating JSON object data");
-            // jh.CreateJSONObjectData();
         }
-
+         */
         
         if (opts.do_indexes)
         {
-            // Set up study search data. The lup schemas from context, as well as the
-            // aggs databases required to set up these tables.
+            // There are two aspects of setting up search data. One is to create searchable
+            // tables to respond to queries and filters. The other is to set up
+            // suitable JSON fields to return to the UI in response to those queries.
+            // The lup schemas from context, as well as the aggs schemas, are required.
             
             string core_conn_string = _credentials.GetConnectionString("mdr");
             List<string> aggs_schemas = new(){"st", "ob", "nk"};
@@ -213,19 +216,36 @@ public class Aggregator
             _monDatalayer.SetUpTempFTWs(_credentials, core_conn_string, "core", "context", ctx_schemas);
             _loggingHelper.LogLine("FTW tables recreated");
             
-            CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
-            _loggingHelper.LogHeader("Setting up Study Text Search data");
+            // Initial task is to create JSON versions of the object data (as part of this will be
+            // incorporated into study json and tables, from where it can be returned when necessary).
+            // Querying and filtering is almost always done against studies rather than objects - the
+            // exception being PMIDs and even then it is studies that are returned.
+            // Preparing object data is therefore focused on creating the JSON required. The routine
+            // below generates both a 'full' JSON image of each object plus a much smaller JSON
+            // fragment that will be returned within search results.
             
-            csb.CreateStudySearchData();
-            csb.CreateStudyFeatureData();
-            csb.CreateStudyHasObjectData();
-            csb.CreateStudyCompositeFieldData();
-            csb.CreateIdentifierSearchData();
-            csb.CreatePMIDSearchData();
-            csb.CreateObjectSearchData();
-            csb.CreateLexemeSearchData();
-            csb.CompleteStudySearchData();
+            CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
+            
+            //_loggingHelper.LogHeader("Creating JSON object data");
+           // csb.CreateJSONObjectData();  
+                
+            // Tables are then created to hold data for querying in various ways
+            
+            _loggingHelper.LogHeader("Setting up study search tables");
+
+            //csb.CreateIdentifierSearchDataTable();
+            //csb.CreatePMIDSearchDataTable();
+            //csb.CreateLexemeSearchDataTable();
+            //csb.CreateCountrySearchDataTable();  
+            
+            // The study data json objects are then created
+            
+            _loggingHelper.LogHeader("Creating JSON study data");
+            csb.CreateJSONStudyData();
+            
+            _loggingHelper.LogHeader("Creating data in search tables");
             csb.AddStudyJsonToSearchTables();
+            csb.SwitchToNewTables();
             
             // Drop FTW schemas.
             

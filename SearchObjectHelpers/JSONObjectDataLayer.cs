@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Dapper.Contrib.Extensions;
 using Npgsql;
 using NpgsqlTypes;
 namespace MDR_Aggregator;
@@ -34,7 +35,7 @@ public class JSONObjectDataLayer
         using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
-
+   
     public IEnumerable<int> FetchIds(int n, int batch)
     {
         string sql_string = @"select id from core.data_objects
@@ -43,8 +44,7 @@ public class JSONObjectDataLayer
         using var conn = new NpgsqlConnection(_connString);
         return conn.Query<int>(sql_string);
     }
-
-
+    
     private void ConstructObjectQueryStrings()
     {
         // data object query string
@@ -87,16 +87,13 @@ public class JSONObjectDataLayer
         // object instances
         
         object_instance_query_string = @"select
-            oi.id, instance_type_id, it.name as instance_type,
-            system_id, system, url,
+            oi.id, system_id, system, url,
             url_accessible, url_last_checked,
             resource_type_id, rt.name as resource_type,
             resource_size, resource_size_units, resource_comments as comments
             from core.object_instances oi
             left join context_lup.resource_types rt on oi.resource_type_id = rt.id
-            left join context_lup.object_instance_types it on oi.instance_type_id = it.id
             where object_id = ";
-
 
         // object title query string
         
@@ -117,9 +114,8 @@ public class JSONObjectDataLayer
             from core.object_dates od
             left join context_lup.date_types dt on od.date_type_id = dt.id
             where object_id = ";
-
         
-        // object contributor
+        // object contributors
         
         object_person_query_string = @"select 
             op.id, op.contrib_type_id, ct.name as contrib_type, op.person_full_name,
@@ -136,45 +132,6 @@ public class JSONObjectDataLayer
             left join context_lup.contribution_types ct on og.contrib_type_id = ct.id
             where object_id = ";
         
-        /*
-        /*  three strings below no longer used - may need to be resurrected 
-
-        // object people (using object contributors AND study people) - part 1
-        // would need to be 'unionised' to any from the object itself
-             
-        object_study_people_query_string = @"select
-            sc.id, contrib_type_id, ct.name as contrib_type, 
-            person_full_name, orcid_id, person_affiliation,
-            organisation_id, organisation_name, organisation_ror_id
-            from core.study_object_links k
-            inner join core.study_people sc on k.study_id = sc.study_id
-            left join context_lup.contribution_types ct on oc.contrib_type_id = ct.id
-            where object_id = ";
-
-        // object organisations (using object contributors AND study organisations) - part 2
-        
-        object_study_orgs_query_string = @"select
-            sc.id, contrib_type_id, ct.name as contrib_type, 
-            organisation_id, organisation_name, organisation_ror_id
-            from core.study_object_links k
-            inner join core.study_organisations sc on k.study_id = sc.study_id
-            left join context_lup.contribution_types ct on sc.contrib_type_id = ct.id
-            where object_id = ";
-
-        // object topics (using study objects)
-        
-        object_study_topics_query_string = @"select
-            st.id, topic_type_id, tt.name as topic_type, 
-            mesh_coded, mesh_code, mesh_value, 
-            original_ct_id, original_ct_code, original_value
-            from core.study_object_links k
-            inner join core.study_topics st on k.study_id = st.study_id
-            left join context_lup.topic_types tt on st.topic_type_id = tt.id
-            where k.object_id = ";
-
-         */
-
-
         // object topics 
         
         object_topic_query_string = @"select
@@ -324,57 +281,7 @@ public class JSONObjectDataLayer
         return Conn.Query<DBObjectTopic>(sql_string);
     }
     
-    
-    /*/* May need o re-used in the future 
-    // Fetches all linked contributor records for the specified data object.
-    // The boolean add_study_contribs, if true, indicates that the system should draw
-    // the contributors from the corresponding 'parent' study's contributors
-    // In these circumstances the object is assumed to have no linked contributors itself.
-    // If false, the system draws the topics from the object's own contributor records, but 
-    // it also unions these from any organisational contributors attached to the parent study 
-    // (e.g. the sponsor).
-
-    public IEnumerable<DBObjectContributor>? FetchObjectContributors(int id, bool? add_study_contribs)
-    {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string;
-        if (add_study_contribs is true)
-        {
-            sql_string = object_study_contrib_query_string + id;
-        }
-        else
-        {
-            sql_string = object_contrib_query_string1 + id + " union ";
-            sql_string += object_contrib_query_string2 + id + " and is_individual = false";
-        }
-        return Conn.Query<DBObjectContributor>(sql_string);
-    }
-
-
-    // Fetches all linked topic records for the specified data object.
-    // The boolean use_study_topics, if true, indicates that the system should draw
-    // the topics from the corresponding 'parent' study's topics.
-    // In these circumstances the object is assumed to have no linked topics itself.
-    // If false, the system draws the topics from the object's own topic records.
-
-    public IEnumerable<DBObjectTopic>? FetchObjectTopics(int id, bool? use_study_topics)
-    {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string;
-        if (use_study_topics is true)
-        {
-            sql_string = object_study_topics_query_string + id;
-        }
-        else
-        {
-            sql_string = object_topics_query_string + id;
-        }
-        return Conn.Query<DBObjectTopic>(sql_string);
-    }
-    */
-    
-    
-    // Fetches all linked identifier records for the specified data object
+   // Fetches all linked identifier records for the specified data object
 
     public IEnumerable<DBObjectIdentifier> FetchObjectIdentifiers(int id)
     {
@@ -382,7 +289,6 @@ public class JSONObjectDataLayer
         string sql_string = object_identifier_query_string + id;
         return Conn.Query<DBObjectIdentifier>(sql_string);
     }
-
 
     public IEnumerable<DBObjectDescription> FetchObjectDescriptions(int id)
     {
@@ -398,14 +304,19 @@ public class JSONObjectDataLayer
         return Conn.Query<DBObjectRelationship>(sql_string);
     }
 
-
+    
     public IEnumerable<DBObjectRight> FetchObjectRights(int id)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = object_rights_query_string + id;
         return Conn.Query<DBObjectRight>(sql_string);
     }
-
+   
+    public void StoreSearchRecord(JSONSearchResObject sres)
+    {
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        Conn.Insert(sres);
+    }
 
     public void StoreJSONObjectInDB(int id, string object_json)
     {
@@ -417,7 +328,7 @@ public class JSONObjectDataLayer
 
         using (var cmd = new NpgsqlCommand())
         {
-            cmd.CommandText = "INSERT INTO core.objects_json (id, json) VALUES (@id, @p)";
+            cmd.CommandText = "INSERT INTO core.new_search_objects_json (id, full_object) VALUES (@id, @p)";
             cmd.Parameters.Add(new NpgsqlParameter("@id", NpgsqlDbType.Integer) { Value = id });
             cmd.Parameters.Add(new NpgsqlParameter("@p", NpgsqlDbType.Json) { Value = object_json });
             cmd.Connection = Conn;
@@ -425,6 +336,8 @@ public class JSONObjectDataLayer
         }
         Conn.Close();
     }
+    
+    
 }
 
 

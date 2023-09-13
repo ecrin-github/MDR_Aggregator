@@ -1,4 +1,7 @@
-﻿namespace MDR_Aggregator;
+﻿using System.Collections;
+using System.Text;
+
+namespace MDR_Aggregator;
 
 public class JSONStudyProcessor
 {
@@ -246,7 +249,13 @@ public class JSONStudyProcessor
         return jst;
     }
 
-    public JSONSSearchResStudy? CreateStudySearchResObject(JSONFullStudy st)
+    public int AddNewStudySearchRecord(JSONSSearchResStudy srs)
+    {
+        StudyToSearchRecord tsr = new(srs);
+        return _repo.StoreSearchRecord(tsr);
+    }
+
+    public JSONSSearchResStudy CreateStudySearchResult(JSONFullStudy st)
     {
         JSONSSearchResStudy srs = new JSONSSearchResStudy();
         srs.study_id = st.id;
@@ -259,11 +268,11 @@ public class JSONStudyProcessor
         srs.type_name = st.study_type?.name;
         srs.status_id = st.study_status?.id ?? 0;
         srs.status_name = st.study_status?.name;
-        srs.gender_elig = st.study_gender_elig?.id ?? 0;
+        srs.gender_elig = st.study_gender_elig?.name;
         string min_age_units = st.min_age?.unit_id == 17 ? "" : " " + st.min_age?.unit_name;
-        srs.min_age = st.min_age?.ToString() + min_age_units;
+        srs.min_age = st.min_age is not null ? st.min_age.value + min_age_units : null;
         string max_age_units = st.max_age?.unit_id == 17 ? "" : " " + st.max_age?.unit_name;
-        srs.max_age = st.max_age?.ToString() + max_age_units;
+        srs.max_age = st.max_age is not null ? st.max_age.value + max_age_units : null;
 
         List<study_feature>? fs = st.study_features;
         
@@ -327,12 +336,26 @@ public class JSONStudyProcessor
                         }
                     }
                 }
-
                 string int_feature_list = alloc;
-                
-                
+                if (!string.IsNullOrEmpty(phase))
+                { 
+                    int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + phase : phase;
+                }
+                if (!string.IsNullOrEmpty(focus))
+                { 
+                    int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + focus : focus;
+                }
+                if (!string.IsNullOrEmpty(interv))
+                { 
+                    int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + interv : interv;
+                }
+                if (!string.IsNullOrEmpty(masking))
+                { 
+                    int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + masking : masking;
+                }
                 srs.feature_list = int_feature_list;
             }
+            
             else if (srs.type_id == 12)
             {
                 string time_persp = "", obs_model = "", bio_spec = "";
@@ -377,15 +400,164 @@ public class JSONStudyProcessor
                 srs.feature_list = obs_feature_list;
             }
         }
-
-
-        srs.provenance = st.provenance_string;
         
- 'has_objects', has_objects, 'country_list', 
-     country_list, 'condition_list', condition_list, 'objects', object_json) ";
+        List<study_condition>? sds = st.study_conditions;
+        if (sds?.Any() == true)
+        {
+            string condition_list = "";
+            foreach (study_condition sd in sds)
+            {
+                condition_list += ", " + sd.original_value;
+            }
+            srs.condition_list = condition_list[2..];
+        }
+
+        List<study_country>? scs = st.study_countries;
+        if (scs?.Any() == true)
+        {
+            string country_list = "";
+            foreach (study_country sc in scs)
+            {
+                country_list += ", " + sc.country_name;
+            }
+            srs.country_list = country_list[2..];
+        }
+        srs.provenance = st.provenance_string;
+
+        List<JSONSearchResObject>? obs  = _repo.FetchObjectDetails(st.id)?.ToList();
+        if (obs?.Any() == true)
+        {
+            if (obs is [{ typeid: 13 }])
+            {
+                srs.has_objects = "100000000000000000";  // almost always the case for a single object
+            }
+            else
+            {
+                int?[] typeids = obs.Select(b => b.typeid).ToArray();
+                srs.has_objects = GetHasObjectsString(typeids);
+            }
+            
+            srs.objects = obs;
+        }
 
         return srs;
     }
+
+
+    private string GetHasObjectsString(int?[] type_ids)
+    {
+        BitArray has_objects = new BitArray(18);   //18 positions
+        foreach (int? type_id in type_ids)
+        {
+            if (type_id is 13)
+            {
+                has_objects[0] = true; // registry entry
+            }
+            else if (type_id is 28)
+            {
+                has_objects[1] = true; // registry results
+            }
+            else if (type_id is 12 or 100 or 117 or 135 or 152 or 202 or 203 or 204 or 210)
+            {
+                has_objects[2] = true; // Article
+            }
+            else if (type_id is 201)
+            {
+                has_objects[2] = true; // Article
+                has_objects[3] = true; // Protocol
+            }
+            else if (type_id is 11 or 42)
+            {
+                has_objects[3] = true; // Protocol
+            }
+            else if (type_id is 74)
+            {
+                has_objects[3] = true; // Protocol
+                has_objects[8] = true; // SAP
+            }
+            else if (type_id is 75)
+            {
+                has_objects[3] = true; // Protocol
+                has_objects[5] = true; // PIC/IS
+            }
+            else if (type_id is 76)
+            {
+                has_objects[3] = true; // Protocol
+                has_objects[5] = true; // PIC/IS
+                has_objects[8] = true; // SAP
+            }
+            else if (type_id is 38)
+            {
+                has_objects[4] = true; // study overview
+            }
+            else if (type_id is 18 or 19)
+            {
+                has_objects[5] = true; // PIC/IS
+            }
+            else if (type_id is 21 or 30 or 40)
+            {
+                has_objects[6] = true; // CRFs
+            }
+            else if (type_id is 35 or 36)
+            {
+                has_objects[7] = true; // Procedures
+            }
+            else if (type_id is 22 or 29 or 43)
+            {
+                has_objects[8] = true; // SAP
+            }
+            else if (type_id is 26 or 27 or 29 or 85)
+            {
+                has_objects[9] = true; // CSR
+            }
+            else if (type_id is 20 or 31 or 32 or 81 or 82 or 73)
+            {
+                has_objects[10] = true; // Data Description
+            }
+            else if (type_id is 80 or 153 or 154 or (>= 51 and <= 72))
+            {
+                has_objects[11] = true; // IPD
+            }
+            else if (type_id is 14 or 15 or 16 or 17 or 23 or 24
+                     or 25 or 33 or 34 or 39 or 77 or 78 or 83 or 84
+                     or 86 or 115 or 171)
+            {
+                has_objects[12] = true; // Other resource
+            }
+            else if (type_id is 88 or 106 or 107 or 108 or 109
+                     or 119 or 121 or 122 or 101 or 102 or 103 or 104
+                     or 105 or 113 or 112 or 120 or 123 or 126 or 127 or 128)
+            {
+                has_objects[13] = true; // Other info
+            }
+            else if (type_id == 134)
+            {
+                has_objects[14] = true; // Website
+            }
+            else if (type_id is >= 166 and <= 170)
+            {
+                has_objects[15] = true; // Software
+            }
+            else if (type_id is 37 or 151 or 110 or 111 or 114 or
+                     118 or 124 or 125 or 129 or 130 or 131 or 132 or 133
+                     or (>= 155 and <= 165))
+            {
+                has_objects[16] = true; // Other
+            }
+            else if (type_id == 301)
+            {
+                has_objects[17] = true; // Samples
+            }
+        }
+        var sb = new StringBuilder();
+        for (int i = 0; i < 18; i++)
+        {
+            char c = has_objects[i] ? '1' : '0';
+            sb.Append(c);
+        }
+        return sb.ToString();
+    }
+    
     
     public JSONOAStudy? CreateStudyOAObject(JSONFullStudy st)
     {
@@ -401,7 +573,9 @@ public class JSONStudyProcessor
     public void StoreJSONStudyInDB(int id, string full_json, string? search_res_json, 
                                    string? open_aire_json, string? c19p_json)
     {
-        _repo.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_json); ;
+        _repo.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_json);
     }
+    
+    
 }
 

@@ -1,7 +1,7 @@
 ﻿using Dapper.Contrib.Extensions;
 namespace MDR_Aggregator;
 
-public class JSONDataObject
+public class JSONFullObject
 {
     public string? file_type { get; set; }
     public int id { get; set; }
@@ -35,7 +35,7 @@ public class JSONDataObject
     public List<int>? linked_studies { get; set; }
 
     
-    public JSONDataObject(int _id, string? _doi, string? _display_title, string? _version,
+    public JSONFullObject(int _id, string? _doi, string? _display_title, string? _version,
         Lookup? _object_class, Lookup? _object_type, int? _publication_year,
         Organisation? _managing_organisation, string? _lang_code,
         Lookup? _access_type, object_access? _access_details,
@@ -56,6 +56,40 @@ public class JSONDataObject
         eosc_category = _eosc_category;
         provenance_string = _provenance_string;
     }
+}
+
+[Table("core.new_search_objects")]
+public class JSONSearchResObject
+{
+    public int oid { get; set; }
+    public string? ob_name { get; set; }
+    public int? typeid { get; set; }
+    public string? typename { get; set; }
+    public string? url { get; set; }
+    public int? res_type_id { get; set; }
+    public string? res_icon { get; set; }
+    public string? year_pub { get; set; }
+    public string? acc_icon { get; set; }
+    public string? prov { get; set; }
+
+    public JSONSearchResObject(int _oid, string? _ob_name,
+        int? _typeid, string? _typename, string? _url,
+        int? _res_type_id, string? _res_icon, string? _year_pub,
+        string? _acc_icon, string? _prov)
+    {
+        oid = _oid;
+        ob_name = _ob_name;
+        typeid = _typeid;
+        typename = _typename;
+        url = _url;
+        res_type_id = _res_type_id;
+        res_icon = _res_icon;
+        year_pub = _year_pub;
+        acc_icon = _acc_icon;
+        prov = _prov;
+    }
+    
+    public JSONSearchResObject() {}
 }
 
 
@@ -698,24 +732,3 @@ public class DBObjectRight
 }
 
 
-[Table("core.study_object_links")]
-public class DBObjectStudyLink
-{
-    public int id { get; set; }
-    public int study_id { get; set; }
-    public int object_id { get; set; }
-}
-
-
-[Table("core.objects_json")]
-public class DBObjectJSON
-{
-    public int id { get; set; }
-    public string json { get; set; }
-
-    public DBObjectJSON(int _id, string _json)
-    {
-        id = _id;
-        json = _json;
-    }
-}

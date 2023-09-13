@@ -190,25 +190,6 @@ public class SearchHelperLexemes
     }
     
     
-    public void CreateSearchLexemesTable()
-    {
-        string sql_string = @"drop table if exists core.search_lexemes;
-        create table core.search_lexemes
-        (
-            study_id            int               primary key not null
-          , study_name          varchar           null 
-          , tt                  varchar           null   
-          , tt_lex  		    tsvector          null
-          , conditions 	        varchar           null   
-          , conditions_lex      tsvector          null
-          , study_json          json              null
-        ) ;
-        CREATE INDEX tt_search_idx ON core.search_lexemes USING GIN (tt_lex);
-        CREATE INDEX cond_search_idx ON core.search_lexemes USING GIN (conditions_lex);";
-
-        db.ExecuteSQL(sql_string);
-    }
-    
     public void ProcessLexemeBaseData()
     {
         for (int i = min_studies_id; i <= max_studies_id; i += 10000)
@@ -246,13 +227,13 @@ public class SearchHelperLexemes
                 CopyHelpers.lexeme_base_helper.SaveAll(conn, lexbases);
                 _loggingHelper.LogLine($"lexeme base data created for ids {start_id} to {end_id}");
 
-                sql_string = $@"UPDATE core.search_lexemes s
+                sql_string = $@"UPDATE core.new_search_lexemes s
                     set tt_lex = strip(to_tsvector('core.mdr_english_config2', tt))
                     where s.study_id >= {start_id} and s.study_id < {end_id} ";
                 db.ExecuteSQL(sql_string);
                 _loggingHelper.LogLine($"lex fields created for tt for ids {start_id} to {end_id}");
 
-                sql_string = $@"UPDATE core.search_lexemes s
+                sql_string = $@"UPDATE core.new_search_lexemes s
                     set conditions_lex = strip(to_tsvector('core.mdr_english_config2', conditions))
                     where s.study_id >= {start_id} and s.study_id < {end_id} ";
                 db.ExecuteSQL(sql_string);

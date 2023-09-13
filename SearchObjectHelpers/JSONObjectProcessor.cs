@@ -33,7 +33,7 @@ class JSONObjectProcessor
         _loggingHelper = loggingHelper;
     }
 
-    public JSONDataObject? CreateObject(int id)
+    public JSONFullObject? CreateFullObject(int id)
     {
         // Re-initialise these compound properties.
 
@@ -98,10 +98,9 @@ class JSONObjectProcessor
 
         // Instantiate data object with those details
 
-        JSONDataObject dobj = new JSONDataObject(ob.id, ob.doi, ob.display_title, ob.version, object_class,
+        JSONFullObject dobj = new JSONFullObject(ob.id, ob.doi, ob.display_title, ob.version, object_class,
                               object_type, ob.publication_year, managing_organisation, ob.lang_code,
                               access_type, access_details, ob.eosc_category, ob.provenance_string);
-
 
         // Get dataset properties, if there are any...
 
@@ -295,9 +294,98 @@ class JSONObjectProcessor
         return dobj;
     }
 
+    public List<JSONSearchResObject> CreateSearchResObjects(JSONFullObject fob)
+    {
+        List<JSONSearchResObject> ores = new();
+        string pub_year = fob.publication_year.ToString() ?? "No public. date";
+        List<object_instance>? fi = fob.object_instances;
+
+        if (fi?.Any() == true)
+        {
+            // for most objects there will be one instance.
+            // For some journal articles there will be 2 (abstract and article)
+            // For some 'virtual' objects with restricted access there will be none (see below)
+            
+            foreach (object_instance oi in fi)
+            {
+                int? access_type_id = fob.access_type?.id;
+                int? resource_type_id = oi.resource_details?.type_id;
+                string acc_icon = "X";  // default
+                if (resource_type_id == 40)
+                {
+                    // S and T currently the same as R and G respectively
+                    
+                    acc_icon = access_type_id == 15 ? "S" : "T";
+                }
+                else
+                {
+                    if (access_type_id is 11 or 12 or 13 or 14 or 20)
+                    {
+                        acc_icon = "G";  // green
+                    }
+                    if (access_type_id is 15 or 16 or 17 or 18 or 19)
+                    {
+                        acc_icon = "R";  // orange
+                    }
+                }
+
+                string res_icon = resource_type_id  switch
+                {
+                    37 or 38 or 39 or 40 => "WA",   // Web + API
+                    35 => "WO",             // Web text
+                    36 => "WD",             // Web + Download
+                    11 => "P",              // PDF
+                    12 or 13 => "D",        // Data
+                    14 or 15 or 16 => "T",  // Other document
+                    17 or 18 or 19 => "S",  // Spreadsheet
+                    >=20 and <= 34 => "O",  // Other file
+                    _ => "X"
+                };                
+  
+                ores.Add(new JSONSearchResObject(fob.id, fob.display_title, 
+                    fob.object_type?.id, fob.object_type?.name, oi.access_details?.url, 
+                    oi.resource_details?.type_id, res_icon, pub_year, acc_icon, fob.provenance_string)
+                );
+            }
+        }
+        else
+        {
+            // No instance data in the database for the object
+            // Indicates it is a 'virtual' instance under restricted access
+
+            string object_display_text = fob.display_title + " ( " +
+                                          fob.access_details + ")";
+            int virtual_rectype_id = fob.object_class?.id switch
+            {
+                14 => 80,   // virtual dataset
+                23 => 81,   // virtual document
+                19 => 82,   // virtual samples
+                _ => 0
+            };
+            string virtual_resicon = fob.object_class?.id  switch
+            {
+                14 => "D",   // virtual dataset
+                23 => "T",   // virtual document
+                19 => "M",   // virtual samples
+                _ => "X"
+            };
+
+            ores.Add(new JSONSearchResObject(fob.id, object_display_text, 
+                fob.object_type?.id, fob.object_type?.name, fob.access_details?.url, 
+                virtual_rectype_id, virtual_resicon, pub_year, "R", fob.provenance_string));
+        }
+        return ores;
+    }
+
+    public void StoreSearchRecord(JSONSearchResObject sres)
+    {
+        _repo.StoreSearchRecord(sres);
+    }
+    
     public void StoreJSONObjectInDB(int id, string object_json)
     {
         _repo.StoreJSONObjectInDB(id, object_json);
     }
+    
 
 }

@@ -328,7 +328,7 @@ public class DBUtilities
         }
     }
 
-    // Used 8 times in updating the search_studies table with feature data.
+    // Used twice times in updating the search_studies table with feature data.
     
     public int UpdateSearchFeatureData(string sql_string, string data_type, int min_id, int max_id)
     {
@@ -470,6 +470,35 @@ public class DBUtilities
             return 0;
         }
     }
+    
+    public int CreateSearchCountriesData(string top_sql, int min_id, int max_id, string list_type )
+    {
+        try
+        { 
+            int created = 0;
+            int rec_batch = 50000;
+            for (int r = min_id; r <= max_id; r += rec_batch)
+            {
+                string batch_sql_string = top_sql
+                                          + $" and sc.study_id >= {r} and sc.study_id < {r + rec_batch} ";
+                int res = ExecuteSQL(batch_sql_string);
+                if (res > 0)
+                {
+                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
+                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    created += res;
+                }
+            }
+            return created;
+        }
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In {list_type} update: { e.Message}");
+            return 0;
+        }
+    }
+    
     
     // Used during construction of object search data. Called 3 times.
     
@@ -624,6 +653,7 @@ public class DBUtilities
         }
     }
     
+    /*
     public int UpdateSearchStudyObjectJson(int min_id, int max_id, string list_type )
     {
         try
@@ -659,6 +689,7 @@ public class DBUtilities
             return 0;
         }
     }
+    */
     
     public int UpdateStudyJson(string sql_string,  int min_id, int max_id, string data_type)
     {
@@ -713,4 +744,5 @@ public class DBUtilities
             return 0;
         }
     }
+    
 }

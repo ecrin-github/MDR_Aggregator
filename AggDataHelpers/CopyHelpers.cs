@@ -111,9 +111,23 @@ public static class CopyHelpers
             .MapTimeStampTz("datetime_of_data_fetch", x => x.datetime_of_data_fetch);
     
     public static readonly PostgreSQLCopyHelper<LexemeBase> lexeme_base_helper =
-        new PostgreSQLCopyHelper<LexemeBase>("core", "search_lexemes")
+        new PostgreSQLCopyHelper<LexemeBase>("core", "new_search_lexemes")
             .MapInteger("study_id", x => x.study_id)
             .MapVarchar("study_name", x => x.study_name)
             .MapVarchar("tt", x => x.tt)
             .MapVarchar("conditions", x => x.conditions);
+    
+    public static readonly PostgreSQLCopyHelper<JSONSearchResObject> object_search_helper =
+        new PostgreSQLCopyHelper<JSONSearchResObject>("core", "new_search_objects")
+            .MapInteger("oid", x => x.oid)
+            .MapVarchar("ob_name", x => x.ob_name)
+            .MapInteger("typeid", x => x.typeid)
+            .MapVarchar("typename", x => x.typename)            
+            .MapVarchar("url", x => x.url)   
+            .MapInteger("res_type_id", x => x.res_type_id)
+            .MapVarchar("res_icon", x => x.res_icon)
+            .MapVarchar("year_pub", x => x.year_pub)
+            .MapVarchar("acc_icon", x => x.acc_icon)
+            .MapVarchar("prov", x => x.prov);
+
 }

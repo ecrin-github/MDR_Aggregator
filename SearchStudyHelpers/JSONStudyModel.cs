@@ -55,6 +55,36 @@ public class JSONFullStudy
     }
 }
 
+[Table("core.new_search_studies")]
+public class StudyToSearchRecord
+{
+    public int study_id { get; set; }
+    public string? study_name { get; set; }
+    public int? start_year { get; set; }
+    public int? start_month { get; set; }
+    public int? type_id { get; set; }
+    public int? status_id { get; set; }
+    public int? phase_id { get; set; }
+    public int? alloc_id { get; set; }   
+    public string? has_objects { get; set; }
+
+    public StudyToSearchRecord()
+    { }
+    
+    public StudyToSearchRecord(JSONSSearchResStudy srs)
+    {
+        study_id = srs.study_id;
+        study_name = srs.study_name;
+        start_year = srs.start_year;
+        start_month = srs.start_month;
+        type_id = srs.type_id;
+        status_id = srs.status_id;
+        phase_id = srs.phase_id;
+        alloc_id = srs.alloc_id;
+        has_objects = srs.has_objects;
+    }
+}
+
 
 public class JSONSSearchResStudy
 {
@@ -68,7 +98,7 @@ public class JSONSSearchResStudy
     public string? type_name { get; set; }    
     public int? status_id { get; set; }
     public string? status_name { get; set; }
-    public int? gender_elig { get; set; }
+    public string? gender_elig { get; set; }
     public string? min_age { get; set; }
     public string? max_age { get; set; }
     public int? phase_id { get; set; }
@@ -77,7 +107,7 @@ public class JSONSSearchResStudy
     public string? country_list { get; set; }
     public string? condition_list { get; set; }
     public string? has_objects { get; set; }
-    public string? objects { get; set; }
+    public List<JSONSearchResObject>? objects { get; set; }
     public string? provenance { get; set; }
 
 }
@@ -580,15 +610,3 @@ public class DBStudyObjectLink
 }
 
 
-[Table("core.studies_json")]
-public class DBStudyJSON
-{
-    public int id { get; set; }
-    public string json { get; set; }
-
-    public DBStudyJSON(int _id, string _json)
-    {
-        id = _id;
-        json = _json;
-    }
-}
