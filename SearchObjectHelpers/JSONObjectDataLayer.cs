@@ -328,7 +328,7 @@ public class JSONObjectDataLayer
 
         using (var cmd = new NpgsqlCommand())
         {
-            cmd.CommandText = "INSERT INTO core.new_search_objects_json (id, full_object) VALUES (@id, @p)";
+            cmd.CommandText = "INSERT INTO search.new_objects_json (id, full_object) VALUES (@id, @p)";
             cmd.Parameters.Add(new NpgsqlParameter("@id", NpgsqlDbType.Integer) { Value = id });
             cmd.Parameters.Add(new NpgsqlParameter("@p", NpgsqlDbType.Json) { Value = object_json });
             cmd.Connection = Conn;

@@ -42,7 +42,7 @@ internal class PubmedTransferHelper
                   , object_id                INT
                   , source_id                INT
                   , sd_oid                   VARCHAR
-                  , object_type_id		   INT            
+                  , object_type_id		     INT            
                   , title                    VARCHAR      
                   , is_preferred_object      BOOLEAN
                   , parent_study_source_id   INT 
@@ -65,7 +65,7 @@ internal class PubmedTransferHelper
                   , object_id                INT
                   , source_id                INT
                   , sd_oid                   VARCHAR
-                  , object_type_id		   INT            
+                  , object_type_id		     INT            
                   , title                    VARCHAR      
                   , is_preferred_object      BOOLEAN
                   , parent_study_source_id   INT 
@@ -561,7 +561,7 @@ internal class PubmedTransferHelper
                 FROM nk.dutch_id_checker k
                 WHERE p.parent_study_sd_sid = k.old_id
                 and parent_study_source_id = 100132;";
-       conn.Execute(sql_string);
+        conn.Execute(sql_string);
         
     }
 

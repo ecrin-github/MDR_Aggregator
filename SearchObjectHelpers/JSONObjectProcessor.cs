@@ -353,8 +353,10 @@ class JSONObjectProcessor
             // No instance data in the database for the object
             // Indicates it is a 'virtual' instance under restricted access
 
-            string object_display_text = fob.display_title + " ( " +
-                                          fob.access_details + ")";
+            string object_display_text = fob.display_title + " (" +
+                                         (fob.access_details?.description ?? "No access details available")
+                                          + ")";
+
             int virtual_rectype_id = fob.object_class?.id switch
             {
                 14 => 80,   // virtual dataset

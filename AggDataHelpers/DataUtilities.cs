@@ -662,11 +662,11 @@ public class DBUtilities
             int rec_batch = 20000;
             for (int r = min_id; r <= max_id; r += rec_batch)
             {
-                string batch_sql_string = $@"Update core.search_studies ss
+                string batch_sql_string = $@"Update search.studies ss
                    set object_json = b.obj_json
                 from
                     (select study_id, json_agg(object_json) as obj_json
-                    from core.search_objects 
+                    from search.objects 
                     where study_id >= {r}
                     and study_id < {r + rec_batch} 
                     group by study_id) b

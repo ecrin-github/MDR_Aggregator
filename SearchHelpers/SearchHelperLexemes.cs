@@ -223,17 +223,18 @@ public class SearchHelperLexemes
                         lex_base.conditions = CleanStudyString(cn);
                     }
                 }
+
                 conn.Open();
                 CopyHelpers.lexeme_base_helper.SaveAll(conn, lexbases);
                 _loggingHelper.LogLine($"lexeme base data created for ids {start_id} to {end_id}");
 
-                sql_string = $@"UPDATE core.new_search_lexemes s
+                sql_string = $@"UPDATE search.new_lexemes s
                     set tt_lex = strip(to_tsvector('core.mdr_english_config2', tt))
                     where s.study_id >= {start_id} and s.study_id < {end_id} ";
                 db.ExecuteSQL(sql_string);
                 _loggingHelper.LogLine($"lex fields created for tt for ids {start_id} to {end_id}");
 
-                sql_string = $@"UPDATE core.new_search_lexemes s
+                sql_string = $@"UPDATE search.new_lexemes s
                     set conditions_lex = strip(to_tsvector('core.mdr_english_config2', conditions))
                     where s.study_id >= {start_id} and s.study_id < {end_id} ";
                 db.ExecuteSQL(sql_string);

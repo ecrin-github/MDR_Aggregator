@@ -58,7 +58,7 @@ public class JSONFullObject
     }
 }
 
-[Table("core.new_search_objects")]
+[Table("search.new_objects")]
 public class JSONSearchResObject
 {
     public int oid { get; set; }

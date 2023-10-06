@@ -73,6 +73,8 @@ public class ObjectDataTransferrer
 
     public ulong FetchObjectIds(int source_id, string source_conn_string)
     {
+        // Inserts the listed fields into the nk.temp_object_ids table.
+
         string sql_string = "select max(id) FROM ad.data_objects";
         using var conn = new NpgsqlConnection(source_conn_string);
         int max_id = conn.ExecuteScalar<int>(sql_string);
@@ -138,16 +140,18 @@ public class ObjectDataTransferrer
                                  , 25000, ", with object details, status = 1, for matched objects");
         _loggingHelper.LogLine("Existing objects matched in temp table");
         _loggingHelper.LogBlank();
-        
+
         /************************************
          * If a study matching has caused the old study_id to be superseded (i.e. it has become
          * a non-preferred study with a different study_id itself, this can be problematic
          * as the matched study id now 'orphans' the data object linkage.
          * Necessary to update matching data objects with the revised study_ids first,
-         * as part of the study revision process.
+         * as part of the study revision process. This will already have happened
+         * using the SyncChangedDataObjectRecords() function that is called at the end of the
+         * LinksDataHelper processes.
          ************************************/
-        
-        // Also update the data_object_identifiers table. Indicates has been matched
+
+        // Also update the permanent data_object_ids table. Indicates has been matched
         // and updates the data fetch date
 
         sql_string = $@"UPDATE nk.data_object_ids doi
@@ -180,7 +184,7 @@ public class ObjectDataTransferrer
                  sql_string, " and ", 25000, ", with study id and 'is preferred' status");
         _loggingHelper.LogLine($"{res} objects updated with parent study details");
 
-        // Drop those object records that cannot be matched
+        // Drop those object records that cannot be matched (though shouldn't happen unless error in data input)
         // N.B. study linked object records only - Pubmed objects do not travel down this path
 
         sql_string = @"DELETE FROM nk.temp_object_ids
@@ -193,7 +197,7 @@ public class ObjectDataTransferrer
 
     public void AddNewObjectsToIdentifiersTable(int source_id)
     {
-        // Add all the new object id records to the all Ids table
+        // Add ALL the new object id records to the all Ids table
 
         string sql_string = @"INSERT INTO nk.data_object_ids
                         (source_id, sd_oid, object_type_id, title, is_preferred_object,
@@ -270,7 +274,7 @@ public class ObjectDataTransferrer
 
         // Identify data object records that have the same type and title as existing records
         // for those studies. Use that table to update the data_object_ids table to insert the
-        // existing object id and tho set the is_valid_link field to false.
+        // existing object id but set the is_valid_link field to false. 
 
         sql_string = $@"drop table if exists nk.dup_objects_by_type_and_title;
               create table nk.dup_objects_by_type_and_title

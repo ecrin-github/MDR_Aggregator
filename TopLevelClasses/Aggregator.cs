@@ -221,22 +221,21 @@ public class Aggregator
             // Querying and filtering is almost always done against studies rather than objects - the
             // exception being PMIDs and even then it is studies that are returned.
             // Preparing object data is therefore focused on creating the JSON required. The routine
-            // below generates both a 'full' JSON image of each object plus a much smaller JSON
-            // fragment that will be returned within search results.
+            // below generates both a 'full' JSON image of each object.
             
             CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
             
-            //_loggingHelper.LogHeader("Creating JSON object data");
-           // csb.CreateJSONObjectData();  
+            _loggingHelper.LogHeader("Creating JSON object data");
+            csb.CreateJSONObjectData();  
                 
             // Tables are then created to hold data for querying in various ways
             
             _loggingHelper.LogHeader("Setting up study search tables");
 
-            //csb.CreateIdentifierSearchDataTable();
-            //csb.CreatePMIDSearchDataTable();
-            //csb.CreateLexemeSearchDataTable();
-            //csb.CreateCountrySearchDataTable();  
+            csb.CreateIdentifierSearchDataTable();
+            csb.CreatePMIDSearchDataTable();
+            csb.CreateLexemeSearchDataTable();
+            csb.CreateCountrySearchDataTable();  
             
             // The study data json objects are then created
             

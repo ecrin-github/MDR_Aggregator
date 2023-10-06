@@ -1,0 +1,14 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/MDR_Aggregator/config
+/.vs/MDR_Aggregator/DesignTimeBuild
+/.vs/MDR_Aggregator/FileContentIndex/9f07d51c-da0b-4ab7-9077-077c0ec9c115.vsidx
+*.vsidx
+/.vs/MDR_Aggregator/v17/.futdcache.v2
+*.wsuo
+/bin/Debug/net7.0/appsettings.json
+/bin/Debug/net7.0/MDR_Aggregator.dll
+/bin/Debug/net7.0/MDR_Aggregator.pdb
+/appsettings.json

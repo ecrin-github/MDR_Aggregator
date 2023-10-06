@@ -86,7 +86,7 @@ public class CoreSearchBuilder
         _loggingHelper.LogLine($"{res} condition  records, by study, created");
         res = lexemes_srch.CombineTitleAndTopicText();
         _loggingHelper.LogLine($"{res} title and topic text combined");
-        
+
         tables_srch.CreateSearchLexemesTable();
         lexemes_srch.ProcessLexemeBaseData();
         
@@ -109,11 +109,20 @@ public class CoreSearchBuilder
 
     public void SwitchToNewTables()
     {
-        // to do
-        // turn new tables into correctly named ones
-        // Applies to search_pmids, search_idents, search_lexemes, 
-        // search_studies, search_studies_json, search_objects_json, search_objects   ==> rename to search_objects
-        // drop old ones
+        // turn 'new_' tables into correctly named ones
+        // Applies to search.new_pmids, search.new_idents, search.new_lexemes, search.new_countries
+        // search.new_studies, search.new_studies_json, search.new_objects_json, search.new_objects 
+
+        // for each, drop the one with the target name and rename the new_table as having the target name
+
+        tables_srch.RenameTable("pmids");
+        tables_srch.RenameTable("idents");
+        tables_srch.RenameTable("lexemes");
+        tables_srch.RenameTable("countries");
+        tables_srch.RenameTable("studies");
+        tables_srch.RenameTable("studies_json");
+        tables_srch.RenameTable("objects");
+        tables_srch.RenameTable("objects_json");
     }
 
 }

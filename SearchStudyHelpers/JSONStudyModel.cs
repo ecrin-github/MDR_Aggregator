@@ -55,7 +55,7 @@ public class JSONFullStudy
     }
 }
 
-[Table("core.new_search_studies")]
+[Table("search.new_studies")]
 public class StudyToSearchRecord
 {
     public int study_id { get; set; }
