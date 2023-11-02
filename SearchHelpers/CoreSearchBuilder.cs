@@ -57,9 +57,18 @@ public class CoreSearchBuilder
         int res = study_repo.AddDataToCountrySearchData();
         _loggingHelper.LogLine($"{res} country search records created");
         _loggingHelper.LogBlank();
-    } 
-    
-    
+    }
+
+    public void CreateObjectTypeSearchDataTable()
+    {
+        tables_srch.CreateObjectTypeSearchData();
+        int res = study_repo.AddDataToObjectTypeSearchData();
+        _loggingHelper.LogLine($"{res} object type search records created");
+        _loggingHelper.LogBlank();
+    }
+
+
+ 
     public void CreateLexemeSearchDataTable()
     {
         // Set up the text search configurations, then for both titles and topics, set up
@@ -107,6 +116,21 @@ public class CoreSearchBuilder
         _loggingHelper.LogLine($"{res} lexemes search records updated with study json data");
     }
 
+    public void TileLexemeTable()
+    {
+        tables_srch.TileLexemeTable();
+    }
+
+
+    public void ClusterSearchTables()
+    {
+        tables_srch.ClusterTable("countries", "sc_country_id");
+        tables_srch.ClusterTable("pmids", "sp_pmid");
+        tables_srch.ClusterTable("idents", "si_type_value");
+        tables_srch.ClusterTable("object_types", "sb_type_id");
+        tables_srch.ClusterTable("lexemes", "bucket_study");
+    }
+
     public void SwitchToNewTables()
     {
         // turn 'new_' tables into correctly named ones
@@ -114,15 +138,49 @@ public class CoreSearchBuilder
         // search.new_studies, search.new_studies_json, search.new_objects_json, search.new_objects 
 
         // for each, drop the one with the target name and rename the new_table as having the target name
+        // Also rename PKs and indexes toi keep consistent naming scheme and avoid conflicts
 
         tables_srch.RenameTable("pmids");
+        tables_srch.RenameIndex("sp_study_id");
+        tables_srch.RenameIndex("sp_pmid");
+
         tables_srch.RenameTable("idents");
-        tables_srch.RenameTable("lexemes");
+        tables_srch.RenameIndex("si_study_id");
+        tables_srch.RenameIndex("si_type_value");
+
         tables_srch.RenameTable("countries");
-        tables_srch.RenameTable("studies");
-        tables_srch.RenameTable("studies_json");
+        tables_srch.RenameIndex("sc_study_id");
+        tables_srch.RenameIndex("sc_country_id");
+
+        tables_srch.RenameTable("object_types");
+        tables_srch.RenameIndex("sb_study_id");
+        tables_srch.RenameIndex("sb_type_id");
+                
+        tables_srch.RenameTable("lexemes");
+        tables_srch.RenamePK("lexemes_pkey");
+        tables_srch.RenameIndex("cond_search_idx");
+        tables_srch.RenameIndex("tt_search_idx");
+        tables_srch.RenameIndex("bucket_study");
+
         tables_srch.RenameTable("objects");
+        tables_srch.RenamePK("objects_pkey");
+        tables_srch.RenameIndex("os_object_id");
+
         tables_srch.RenameTable("objects_json");
+        tables_srch.RenamePK("objects_json_pkey");        
+        tables_srch.RenameIndex("search_objects_json_id");
+
+        tables_srch.RenameTable("studies");
+        tables_srch.RenamePK("studies_pkey");
+        tables_srch.RenameIndex("ss_alloc_id");
+        tables_srch.RenameIndex("ss_phase_id");
+        tables_srch.RenameIndex("ss_start_year");
+        tables_srch.RenameIndex("ss_status");
+        tables_srch.RenameIndex("ss_type");
+
+        tables_srch.RenameTable("studies_json");
+        tables_srch.RenamePK("studies_json_pkey");
+        tables_srch.RenameIndex("search_studies_json_id");
     }
 
 }

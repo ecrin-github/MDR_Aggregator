@@ -39,6 +39,8 @@ public class Credentials : ICredentials
             Password = _password,
             Port = _port,
             Database = database_name,
+            CommandTimeout = 360,           // Some very long cluster commands require this
+            InternalCommandTimeout = 360,   // Not clear onf difference between this and above
             KeepAlive = 300,
             IncludeErrorDetail = true
         };

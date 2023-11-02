@@ -429,10 +429,12 @@ public class JSONStudyProcessor
         {
             if (obs is [{ typeid: 13 }])
             {
-                srs.has_objects = "100000000000000000";  // almost always the case for a single object
+                srs.has_objects = "100000000000000000";  // the default case for a single object
             }
             else
             {
+
+
                 int?[] typeids = obs.Select(b => b.typeid).ToArray();
                 srs.has_objects = GetHasObjectsString(typeids);
             }

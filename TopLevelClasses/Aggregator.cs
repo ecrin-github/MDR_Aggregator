@@ -184,24 +184,6 @@ public class Aggregator
             _loggingHelper.LogLine("FTW tables dropped");
         }
         
-
-        /*
-         * if (opts.create_json)
-        {
-            string conn_string = _credentials.GetConnectionString("mdr");
-            JSONHelper jh = new JSONHelper(conn_string, _loggingHelper);
-
-            // Create json fields. If tables are to be left as they are, add false as an
-            // additional boolean (default = true). if tables are to have further data appended
-            // add an integer offset that represents the records to skip (default = 0)
-
-            _loggingHelper.LogHeader("Creating JSON object data");
-            jh.CreateJSONObjectData();            
-            _loggingHelper.LogHeader("Creating JSON study data");
-            jh.CreateJSONStudyData();
-        }
-         */
-        
         if (opts.do_indexes)
         {
             // There are two aspects of setting up search data. One is to create searchable
@@ -234,16 +216,20 @@ public class Aggregator
 
             csb.CreateIdentifierSearchDataTable();
             csb.CreatePMIDSearchDataTable();
+            csb.CreateCountrySearchDataTable();
+            csb.CreateObjectTypeSearchDataTable();
+
             csb.CreateLexemeSearchDataTable();
-            csb.CreateCountrySearchDataTable();  
-            
+
             // The study data json objects are then created
-            
+
             _loggingHelper.LogHeader("Creating JSON study data");
             csb.CreateJSONStudyData();
             
             _loggingHelper.LogHeader("Creating data in search tables");
             csb.AddStudyJsonToSearchTables();
+            csb.TileLexemeTable();
+            csb.ClusterSearchTables();
             csb.SwitchToNewTables();
             
             // Drop FTW schemas.

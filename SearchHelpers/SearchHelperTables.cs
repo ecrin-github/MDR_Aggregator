@@ -1,4 +1,9 @@
-﻿using System.Data.SqlTypes;
+﻿using System.Collections.Generic;
+using System.Data.SqlTypes;
+using System.Diagnostics.Metrics;
+using System.Drawing;
+using System.Net.NetworkInformation;
+using static NpgsqlTypes.NpgsqlTsVector;
 
 namespace MDR_Aggregator;
 
@@ -119,10 +124,23 @@ public class SearchHelperTables
          (
             country_id   		int                not null		
           , study_id 			int                not null
-          , study_json          json               null
          );
         create index sc_country_id_new on search.new_countries(country_id);
         create index sc_study_id_new on search.new_countries(study_id);";
+
+        db.ExecuteSQL(sql_string);
+    }
+
+    public void CreateObjectTypeSearchData()
+    {
+        string sql_string = @"drop table if exists search.new_object_types;
+         create table search.new_object_types
+         (
+            object_type_id   	int                not null		
+          , study_id 			int                not null
+         );
+        create index sb_type_id_new on search.new_object_types(object_type_id, study_id);
+        create index sb_study_id_new on search.new_object_types(study_id);";
 
         db.ExecuteSQL(sql_string);
     }
@@ -133,6 +151,7 @@ public class SearchHelperTables
         create table search.new_lexemes
         (
             study_id            int               primary key not null
+          , bucket              int               null
           , study_name          varchar           null 
           , tt                  varchar           null   
           , tt_lex  		    tsvector          null
@@ -141,8 +160,53 @@ public class SearchHelperTables
           , study_json          json              null
         ) ;
         CREATE INDEX tt_search_idx_new ON search.new_lexemes USING GIN (tt_lex);
-        CREATE INDEX cond_search_idx_new ON search.new_lexemes USING GIN (conditions_lex);";
+        CREATE INDEX cond_search_idx_new ON search.new_lexemes USING GIN (conditions_lex);
+        CREATE INDEX bucket_study_new ON search.new_lexemes(bucket, study_id);";
 
+        db.ExecuteSQL(sql_string);
+    }
+
+
+    public void TileLexemeTable()
+    {
+        // This splits the lexeme search table into 20 'buckets' which can then be 
+        // searched in sequence in any Lexeme saearch request
+
+        // Get count from table and calculate the 'batch size' to span the table in 20 buckets
+        // Then use those parameters to add the bucket number to each record
+
+        int lex_count = db.GetCount("search.new_lexemes");
+        int batch_size = lex_count / 20;
+        if (lex_count % 20 != 0)
+        {
+            batch_size++;  // add one to ensure all records covered
+        }
+
+        for (int i = 0; i < 20; i++)
+        {
+            string sql_string = $@"update search.new_lexemes sl
+                  set bucket = {i + 1}
+                  from
+                  (  select study_id 
+                     from search.new_lexemes 
+                     order by study_id 
+                     offset {i * batch_size} limit {batch_size} 
+                  ) b
+                  where sl.study_id = b.study_id; ";
+            db.ExecuteSQL(sql_string);
+        }
+    }
+
+    // Some of the cluster commands take over 5 minutes to run
+    // Change connection parameters to try and allow this
+
+    public void ClusterTable(string table_name, string index_name)
+    {
+        string new_table_name = "new_" + table_name;
+        string new_index_name = index_name + "_new";
+        string sql_string = $"CLUSTER search.{new_table_name} USING {new_index_name}";
+        db.ExecuteSQL(sql_string);
+        sql_string = $"ANALYZE search.{new_table_name};";
         db.ExecuteSQL(sql_string);
     }
 
@@ -152,6 +216,20 @@ public class SearchHelperTables
         string sql_string = $"DROP TABLE IF EXISTS search.{table_name}";
         db.ExecuteSQL(sql_string);
         sql_string = $"ALTER TABLE search.{new_table_name} RENAME TO {table_name};";
+        db.ExecuteSQL(sql_string);
+    }
+
+    public void RenameIndex(string index_name)
+    {
+        string old_index_name = index_name + "_new";
+        string sql_string = $"ALTER INDEX search.{old_index_name} RENAME TO {index_name};";
+        db.ExecuteSQL(sql_string);
+    }
+
+    public void RenamePK(string index_name)
+    {
+        string old_index_name = "new_" + index_name;
+        string sql_string = $"ALTER INDEX search.{old_index_name} RENAME TO {index_name};";
         db.ExecuteSQL(sql_string);
     }
 }

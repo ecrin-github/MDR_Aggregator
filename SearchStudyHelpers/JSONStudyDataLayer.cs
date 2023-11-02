@@ -2,6 +2,8 @@
 using Dapper.Contrib.Extensions;
 using Npgsql;
 using NpgsqlTypes;
+using System.Collections.Generic;
+
 namespace MDR_Aggregator;
 
 public class JSONStudyDataLayer
@@ -28,16 +30,16 @@ public class JSONStudyDataLayer
         ConstructStudyQueryStrings();
     }
 
-    public int FetchMinId()
+    public int FetchMinId(string table_name = "studies")
     {
-        string sql_string = @"select min(id) from core.studies";
+        string sql_string =$@"select min(id) from core.{table_name}";
         using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
 
-    public int FetchMaxId()
+    public int FetchMaxId(string table_name = "studies")
     {
-        string sql_string = @"select max(id) from core.studies";
+        string sql_string = $@"select max(id) from core.{table_name}";
         using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
@@ -343,9 +345,28 @@ public class JSONStudyDataLayer
         
         int min_studies_id = FetchMinId();
         int max_studies_id = FetchMaxId();
-        return db.CreateSearchCountriesData(top_sql,min_studies_id, max_studies_id, "search.countries");
+        return db.CreateSearchCountriesData(top_sql, min_studies_id, max_studies_id, "search.countries");
     }
-    
+
+    public int AddDataToObjectTypeSearchData()
+    {
+        // Note the need for a distinct select, as study may have
+        // multiple objects of the same type - especially journal articles
+
+        string top_sql = @"insert into search.new_object_types(object_type_id, study_id)
+               select distinct lup.filter_as_id, sol.study_id
+               from core.data_objects dob
+               inner join core.study_object_links sol
+               on dob.id = sol.object_id
+               inner join search.object_filter_types_lup lup
+               on dob.object_type_id = lup.object_type_id
+               where dob.object_type_id<> 13 ";   // ignore trial registry entries
+
+        int min_studies_id = FetchMinId("study_object_links");
+        int max_studies_id = FetchMaxId("study_object_links");
+        return db.CreateSearchObjectTypesData(top_sql, min_studies_id, max_studies_id, "search.object_types");
+    }
+
     public int UpdateIdentsSearchWithStudyJson(int min_studies_id, int max_studies_id)
     {
         string sql_string = @"update search.new_idents s

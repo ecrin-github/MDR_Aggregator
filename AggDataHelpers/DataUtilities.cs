@@ -498,10 +498,39 @@ public class DBUtilities
             return 0;
         }
     }
-    
-    
+
+
+    public int CreateSearchObjectTypesData(string top_sql, int min_id, int max_id, string list_type)
+    {
+        try
+        {
+            int created = 0;
+            int rec_batch = 50000;
+            for (int r = min_id; r <= max_id; r += rec_batch)
+            {
+                string batch_sql_string = top_sql
+                                          + $" and sol.id >= {r} and sol.id < {r + rec_batch} ";
+                int res = ExecuteSQL(batch_sql_string);
+                if (res > 0)
+                {
+                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
+                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    created += res;
+                }
+            }
+            return created;
+        }
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In {list_type} update: {e.Message}");
+            return 0;
+        }
+    }
+
+
     // Used during construction of object search data. Called 3 times.
-    
+
     public int UpdateObjectSearchData(string sql_string, int min_id, int max_id, string qualifier, string field_type )
     {
         try
