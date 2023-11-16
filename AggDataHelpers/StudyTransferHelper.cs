@@ -379,6 +379,20 @@ public class StudyDataTransferrer
 
         int res2 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_identifiers", " and ", "existing studies");
         _loggingHelper.LogLine($"Loaded {res2} study identifiers, for existing studies");
+
+        // But can existing identifiers be updated with date information?
+
+        sql_string = $@"update st.study_identifiers si
+                   set identifier_date = s.identifier_date
+                   FROM nk.source_data s
+                   where
+                   si.study_id = s.study_id
+                   AND si.identifier_type_id = s.identifier_type_id
+                   AND si.identifier_value = s.identifier_value
+                   AND si.identifier_date is null ";
+        int res3 = db.ExecuteTransferSQL(sql_string, ftw_schema_name, "study_identifiers", " and ", "updating dates");
+        _loggingHelper.LogLine($"Updated {res3} study identifiers with new dates");
+
         _loggingHelper.LogBlank();
         db.ExecuteSQL("DROP TABLE IF EXISTS nk.source_data; DROP TABLE IF EXISTS nk.existing_data;");
         return res1 + res2;

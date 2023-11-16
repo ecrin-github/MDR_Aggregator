@@ -128,7 +128,7 @@ public class JSONStudyDataLayer
             where study_id = ";
 
         study_icd_query_string = @"select 
-            id, icd_code, icd_code 
+            id, icd_code, icd_name 
             from core.study_icd 
             where study_id = ";
         
@@ -264,6 +264,7 @@ public class JSONStudyDataLayer
 
     public IEnumerable<JSONSearchResObject>? FetchObjectDetails(int study_id)
     {
+        /*
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         string sql_string = $@"select os.* 
         from core.study_object_links sol
@@ -271,7 +272,17 @@ public class JSONStudyDataLayer
         on sol.object_id = os.oid
         where sol.study_id = {study_id}  
         order by os.year_pub";
-        
+        */
+        // TEMP  // TEMP  // TEMP  // TEMP
+
+        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        string sql_string = $@"select os.* 
+        from core.study_object_links sol
+        inner join search.objects os
+        on sol.object_id = os.oid
+        where sol.study_id = {study_id}  
+        order by os.year_pub";
+
         return Conn.Query<JSONSearchResObject>(sql_string);
     }
     
@@ -282,7 +293,7 @@ public class JSONStudyDataLayer
     }
 
     public void StoreJSONStudyInDB(int id, string full_json, string? search_res_json, 
-                                   string? open_aire_json, string? c19p_json)
+                                   string? open_aire_json, string? c19p_string)
     {
         using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
         Conn.Open();
@@ -292,7 +303,7 @@ public class JSONStudyDataLayer
         
         search_res_json ??= "{}";
         open_aire_json ??= "{}";
-        c19p_json ??= "{}";
+        c19p_string ??= "";
 
         using var cmd = new NpgsqlCommand();
         cmd.CommandText = @"INSERT INTO search.new_studies_json (id, search_res, full_study, open_aire, c19p) 
@@ -301,7 +312,7 @@ public class JSONStudyDataLayer
         cmd.Parameters.Add(new NpgsqlParameter("@sr", NpgsqlDbType.Json) {Value = search_res_json });
         cmd.Parameters.Add(new NpgsqlParameter("@fs", NpgsqlDbType.Json) {Value = full_json });
         cmd.Parameters.Add(new NpgsqlParameter("@oa", NpgsqlDbType.Json) {Value = open_aire_json });
-        cmd.Parameters.Add(new NpgsqlParameter("@c19", NpgsqlDbType.Json) {Value = c19p_json });
+        cmd.Parameters.Add(new NpgsqlParameter("@c19", NpgsqlDbType.Varchar) {Value = c19p_string });
         cmd.Connection = Conn;
         cmd.ExecuteNonQuery();
         Conn.Close();

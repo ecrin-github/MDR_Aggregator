@@ -207,7 +207,7 @@ public class Aggregator
             
             CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
             
-            _loggingHelper.LogHeader("Creating JSON object data");
+            //_loggingHelper.LogHeader("Creating JSON object data");
             csb.CreateJSONObjectData();  
                 
             // Tables are then created to hold data for querying in various ways

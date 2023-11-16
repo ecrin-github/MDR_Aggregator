@@ -433,8 +433,6 @@ public class JSONStudyProcessor
             }
             else
             {
-
-
                 int?[] typeids = obs.Select(b => b.typeid).ToArray();
                 srs.has_objects = GetHasObjectsString(typeids);
             }
@@ -566,9 +564,80 @@ public class JSONStudyProcessor
         return null;
     }
     
-    public JSONC19PStudy? CreateStudyC19PStudyObject(JSONFullStudy st)
+    public entry? CreateStudyC19PStudyObject(JSONFullStudy st)
     {
-        return null;
+        entry e = new entry(st.id.ToString(), st.display_title, st.brief_description);
+        List<dbref>? cross_refs = new();
+        List<date>? dates = new();
+        List<field>? add_fields = new();
+
+        List<study_identifier>? sis = st.study_identifiers;
+        if (sis?.Any() == true)
+        {
+            foreach(study_identifier si in sis)
+            {
+                if (si.identifier_type?.id == 11)
+                {
+                    cross_refs.Add(new dbref(si.source?.name ?? "", si.identifier_value));
+                }
+            }
+        }
+
+        add_fields.Add(new field("repository", "ECRIN MDR"));
+        add_fields.Add(new field("full_dataset_link", "https://newmdr.ecrin.org/Study/" + st.id.ToString()));
+        add_fields.Add(new field("study_type", st.study_type?.name ?? "Not provided"));
+        add_fields.Add(new field("study_status", st.study_status?.name ?? "Not provided"));
+        add_fields.Add(new field("study_start_year", st.study_start_year?.ToString() ?? "Not provided"));
+        add_fields.Add(new field("study_start_month", st.study_start_month?.ToString() ?? "Not provided"));
+
+        string date_string = "1900-01-01";
+        string y = st.study_start_year?.ToString("0000") ?? "";
+        if (y != "")
+        {
+            string m = st.study_start_month?.ToString("00") ?? "";
+            date_string = m == "" ? $"{y}-06-30": $"{y}-{m}-15";
+        }
+        dates.Add(new date("creation", date_string));
+
+        List<study_condition>? sds = st.study_conditions;
+        if (sds?.Any() == true)
+        {
+            foreach (study_condition sd in sds)
+            {
+                add_fields.Add(new field("condition", sd.original_value));
+            }
+        }
+
+        List<study_topic>? sts = st.study_topics;
+        if (sts?.Any() == true)
+        {
+            foreach (study_topic tp in sts)
+            {
+                add_fields.Add(new field("keyword", tp.original_value));
+            }
+        }
+
+        List<study_country>? scs = st.study_countries;
+        if (scs?.Any() == true)
+        {
+            string country_list = "";
+            foreach (study_country sc in scs)
+            {
+                country_list += ", " + sc.country_name;
+            }
+            add_fields.Add(new field("location", country_list[2..]));
+        }
+
+        if (!string.IsNullOrEmpty(st.data_sharing_statement))
+        {
+            add_fields.Add(new field("data_sharing_plan", st.data_sharing_statement));
+        }
+
+        e.cross_references = cross_refs;
+        e.dates = dates;
+        e.additional_fields = add_fields;
+
+        return e;
     }
     
 

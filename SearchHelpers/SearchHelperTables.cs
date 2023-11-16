@@ -56,7 +56,7 @@ public class SearchHelperTables
         , search_res               JSON            NULL
         , full_study               JSON            NULL
         , open_aire                JSON            NULL
-        , c19p                     JSON            NULL 
+        , c19p                     Varchar         NULL 
         );
         CREATE INDEX search_studies_json_id_new ON search.new_studies_json(id);";
         db.ExecuteSQL(sql_string);

@@ -1,5 +1,7 @@
-﻿using System.Text.Encodings.Web;
+﻿using System;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Xml.Serialization;
 
 namespace MDR_Aggregator;
 
@@ -72,18 +74,16 @@ public class SearchHelperJson
         int batch = 1000;      // Do 1000 ids at a time
         int k = offset;
         min_id += offset;
-        
+
         for (int n = min_id; n <= max_id; n+= batch)
         {
             IEnumerable<int> id_numbers = repo.FetchIds(n, batch);
             foreach (int id in id_numbers)
             {
+
                 // Re-initialise variables and then construct full study object, drawing data from various
                 // database tables and serialise to a formatted json string, then store json in the database.
-                
-                string? open_aire_json = null;
-                string? c19p_json = null;
-                
+
                 JSONFullStudy? st = processor.CreateFullStudyObject(id);
                 if (st is not null)
                 {
@@ -95,22 +95,34 @@ public class SearchHelperJson
                     JSONSSearchResStudy st_search_res = processor.CreateStudySearchResult(st);
                     processor.AddNewStudySearchRecord(st_search_res);
                     string search_res_json = JsonSerializer.Serialize(st_search_res, _json_options);
-                    
+
+
+                    string? open_aire_json = null;
                     JSONOAStudy? st_open_aire = processor.CreateStudyOAObject(st);
                     if (st_open_aire is not null)
                     {
                         open_aire_json =  JsonSerializer.Serialize(st_open_aire, _json_options);
                     }
-                    
-                    JSONC19PStudy? st_c19p = processor.CreateStudyC19PStudyObject(st);
-                    if (st_c19p is not null)
+
+
+                    string? c19p_string = null;
+                    entry? c19p_entry = processor.CreateStudyC19PStudyObject(st);
+                    if (c19p_entry is not null)
                     {
-                        c19p_json =  JsonSerializer.Serialize(st_c19p, _json_options);
+                        XmlSerializer x = new XmlSerializer(c19p_entry.GetType());
+                        StringWriter sw = new StringWriter();
+                        x.Serialize(sw, c19p_entry);
+                        c19p_string = sw.ToString();
+
+                        c19p_string = c19p_string.Replace("dbref", "ref");
+                        c19p_string = c19p_string.Replace("<?xml version=\"1.0\" encoding=\"utf-16\"?>", "");
+                        c19p_string = c19p_string.Replace(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"", "");
+                        c19p_string = c19p_string.Replace(" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"", "");
                     }
                     
                     // Add all json strings to the database
 
-                    processor.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_json);                    
+                    processor.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_string);                    
                 }
                 k++;
                 if (k % 100 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
@@ -153,7 +165,7 @@ public class SearchHelperJson
         }
     }
     */
-}
+                    }
 
 
 
