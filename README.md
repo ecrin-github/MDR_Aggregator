@@ -29,15 +29,17 @@ and linked pages.
 
 
 ## Parameters and Usage
+
 The table below shows the allowed parameters.
 
-| Parameter | Description   |
-|:----------| :-------------|
-| **-D:**   | Indicates data import from source systems and aggregate st, ob, nk tables constructed.
-| **-C:**   | Indicates that the core (MDR) tables should be created and filled from the aggregate tables.
-| **-J:** | Indicates JSON fields building from the core table data.
-| **-S:** | Summarises record numbers of each sort in different sources and the summary and core tables.
-| **-T:** | Carry out D, C, J, and S, but use test data only in the test database.
+| Parameter | Function                    | Description |
+|:----------|:----------------------------|:-------------|
+| **-D**   | transfer and aggregate data | Indicates data import from source systems and aggregate st, ob, nk tables constructed.       
+| **-C**   | create core table data      | Indicates that the core (MDR) tables should be created and filled from the aggregate tables. 
+| **-J**   | create json                 | Indicates JSON fields building from the core table data.                                     
+| **-S**   | do statistics               | Summarises record numbers of each sort in different sources and the summary and core tables. 
+| **-I**   | do IEC data                 | Aggregates the inclusion / exclusion data into a separate database (`iec`).                       
+| **-X**    | Create indexes              | Re-establishes text indexes on title and topic fields, for searching.
 
 As in the scheduled extraction process, routine usage would be to do each of D, C, J and S in succession.
 The flags can be combined, but if they are, the operations are always carried out in the order D, C, J and S.
