@@ -125,7 +125,7 @@ public class SearchHelperJson
                     processor.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_string);                    
                 }
                 k++;
-                if (k % 100 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
+                if (k % 10000 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
             }
         }
     }
