@@ -1,4 +1,4 @@
-﻿using Dapper.Contrib.Extensions;
+using Dapper.Contrib.Extensions;
 using MDR_Aggregator.SearchObjectHelpers;
 
 namespace MDR_Aggregator.SearchStudyHelpers;
@@ -11,7 +11,7 @@ public class JSONFullStudy
     public string? brief_description { get; set; }
     public string? data_sharing_statement { get; set; }
     public int? study_start_year { get; set; }
-    public int? study_start_month { get; set; }  
+    public int? study_start_month { get; set; }
     public Lookup? study_type { get; set; }
     public Lookup? study_status { get; set; }
     public string? study_enrolment { get; set; }
@@ -67,12 +67,12 @@ public class StudyToSearchRecord
     public int? type_id { get; set; }
     public int? status_id { get; set; }
     public int? phase_id { get; set; }
-    public int? alloc_id { get; set; }   
+    public int? alloc_id { get; set; }
     public string? has_objects { get; set; }
 
     public StudyToSearchRecord()
     { }
-    
+
     public StudyToSearchRecord(JSONSSearchResStudy srs)
     {
         study_id = srs.study_id;
@@ -97,14 +97,14 @@ public class JSONSSearchResStudy
     public int? start_year { get; set; }
     public int? start_month { get; set; }
     public int? type_id { get; set; }
-    public string? type_name { get; set; }    
+    public string? type_name { get; set; }
     public int? status_id { get; set; }
     public string? status_name { get; set; }
     public string? gender_elig { get; set; }
     public string? min_age { get; set; }
     public string? max_age { get; set; }
     public int? phase_id { get; set; }
-    public int? alloc_id { get; set; }    
+    public int? alloc_id { get; set; }
     public string? feature_list { get; set; }
     public string? country_list { get; set; }
     public string? condition_list { get; set; }
@@ -283,7 +283,7 @@ public class study_person
     public Organisation? affiliation_org { get; set; }
 
     public study_person(int _id, Lookup? _contrib_type,
-        string? _person_full_name, string? _orcid_id, 
+        string? _person_full_name, string? _orcid_id,
         string? _person_affiliation, Organisation? _affiliation_org)
     {
         id = _id;
@@ -316,7 +316,7 @@ public class study_topic
 {
     public int id { get; set; }
     public Lookup? topic_type { get; set; }
-    public string? original_value { get; set; }    
+    public string? original_value { get; set; }
     public CTData? ct_data { get; set; }
     public MeshData? mesh_data { get; set; }
 
@@ -324,27 +324,27 @@ public class study_topic
         CTData? _ct_data, MeshData? _mesh_data)
     {
         id = _id;
-        topic_type = _topic_type; 
+        topic_type = _topic_type;
         original_value = _original_value;
-        ct_data = _ct_data;   
+        ct_data = _ct_data;
         mesh_data = _mesh_data;
     }
-} 
+}
 
 
 public class study_condition
 {
     public int id { get; set; }
-    public string? original_value { get; set; }    
+    public string? original_value { get; set; }
     public CTData? ct_data { get; set; }
 
     public study_condition(int _id, string? _original_value, CTData? _ct_data)
     {
         id = _id;
-        original_value = _original_value;        
-        ct_data = _ct_data;       
+        original_value = _original_value;
+        ct_data = _ct_data;
     }
-} 
+}
 
 public class study_icd
 {
@@ -356,7 +356,7 @@ public class study_icd
         id = _id;
         icd_data = _icd_data;
     }
-} 
+}
 
 public class study_feature
 {
@@ -537,7 +537,7 @@ public class DBStudyTopic
 public class DBStudyCondition
 {
     public int id { get; set; }
-    public string? original_value { get; set; }    
+    public string? original_value { get; set; }
     public int? original_ct_type_id { get; set; }
     public string? original_ct_type { get; set; }
     public string? original_ct_code { get; set; }

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Text;
 using MDR_Aggregator.SearchObjectHelpers;
 
@@ -35,7 +35,7 @@ public class JSONStudyProcessor
     public JSONFullStudy? CreateFullStudyObject(int id)
     {
         // Re-initialise these compound properties.
-        
+
         _studyType = null;
         _studyStatus = null;
         _studyGenderElig = null;
@@ -57,7 +57,7 @@ public class JSONStudyProcessor
 
         // Get the singleton study properties from DB
         // and instantiate the top level lookup types
-        
+
         DBStudy? s = _repo.FetchDbStudy(id);
         if (s is null)
         {
@@ -84,7 +84,7 @@ public class JSONStudyProcessor
             _maxAge = new age_param(s.max_age, s.max_age_units_id, s.max_age_units);
         }
         JSONFullStudy jst = new JSONFullStudy(s.id, s.display_title, s.brief_description,
-                     s.data_sharing_statement, s.study_start_year, s.study_start_month, 
+                     s.data_sharing_statement, s.study_start_year, s.study_start_month,
                      _studyType, _studyStatus, s.study_enrolment,
                      _studyGenderElig, _minAge, _maxAge, s.provenance_string);
 
@@ -100,38 +100,38 @@ public class JSONStudyProcessor
         }
 
         // fetch the study title details
-       
+
         IEnumerable<DBStudyTitle> db_study_titles = _repo.FetchDbStudyTitles(id);
         foreach (DBStudyTitle t in db_study_titles)
         {
-            _studyTitles.Add(new study_title(t.id, new Lookup(t.title_type_id, t.title_type), 
+            _studyTitles.Add(new study_title(t.id, new Lookup(t.title_type_id, t.title_type),
                 t.title_text, t.lang_code, t.comments));
         }
 
 
         // fetch the study people details       
-        
+
         IEnumerable<DBStudyPerson> db_study_people = _repo.FetchDbStudyPeople(id);
         foreach (DBStudyPerson t in db_study_people)
         {
-            _studyPeople.Add(new study_person(t.id, new Lookup(t.contrib_type_id, t.contrib_type), 
-                t.person_full_name, t.orcid_id, t.person_affiliation, 
+            _studyPeople.Add(new study_person(t.id, new Lookup(t.contrib_type_id, t.contrib_type),
+                t.person_full_name, t.orcid_id, t.person_affiliation,
                 new Organisation(t.organisation_id, t.organisation_name, t.organisation_ror_id)));
         }
-        
-        
+
+
         // fetch the study organisations details
-        
+
         IEnumerable<DBStudyOrganisation> db_study_orgs = _repo.FetchDbStudyOrganisations(id);
         foreach (DBStudyOrganisation t in db_study_orgs)
         {
-            _studyOrganisations.Add(new study_organisation(t.id, new Lookup(t.contrib_type_id, t.contrib_type),  
+            _studyOrganisations.Add(new study_organisation(t.id, new Lookup(t.contrib_type_id, t.contrib_type),
                 new Organisation(t.organisation_id, t.organisation_name, t.organisation_ror_id)));
         }
-        
+
 
         // fetch the study topic details
-        
+
         IEnumerable<DBStudyTopic> db_study_topics = _repo.FetchDbStudyTopics(id);
         foreach (DBStudyTopic t in db_study_topics)
         {
@@ -149,9 +149,9 @@ public class JSONStudyProcessor
                 t.original_value, ct, md));
         }
 
-        
+
         // fetch the study condition details
-        
+
         IEnumerable<DBStudyCondition> db_study_conditions = _repo.FetchDbStudyConditions(id);
         foreach (DBStudyCondition t in db_study_conditions)
         {
@@ -162,29 +162,29 @@ public class JSONStudyProcessor
             }
             _studyConditions.Add(new study_condition(t.id, t.original_value, ct));
         }
-        
-        
+
+
         // fetch the study icd details
-        
+
         IEnumerable<DBStudyICD> db_study_icds = _repo.FetchDbStudyICDs(id);
         foreach (DBStudyICD t in db_study_icds)
         {
             _studyIcds.Add(new study_icd(t.id, new ICDData(t.icd_code, t.icd_name)));
         }
-        
-        
+
+
         // fetch the study feature details
-                
-        IEnumerable<DBStudyFeature> db_study_features =_repo.FetchDbStudyFeatures(id);
+
+        IEnumerable<DBStudyFeature> db_study_features = _repo.FetchDbStudyFeatures(id);
         foreach (DBStudyFeature t in db_study_features)
         {
             _studyFeatures.Add(new study_feature(t.id, new Lookup(t.feature_type_id, t.feature_type),
                                                 new Lookup(t.feature_value_id, t.feature_value)));
         }
-        
-        
+
+
         // fetch the study country details
-        
+
         IEnumerable<DBStudyCountry> db_study_countries = _repo.FetchDbStudyCountries(id);
         foreach (DBStudyCountry t in db_study_countries)
         {
@@ -195,19 +195,19 @@ public class JSONStudyProcessor
             }
             _studyCountries.Add(new study_country(t.id, t.country_id, t.country_name, status));
         }
-        
-        
+
+
         // fetch any study location details, if any
-        
+
         IEnumerable<DBStudyLocation> db_study_locations = _repo.FetchDbStudyLocations(id);
         foreach (DBStudyLocation t in db_study_locations)
         {
             Lookup? status = null;
             if (t.status_id is not null && t.status is not null)
             {
-                status = new Lookup(t.status_id, t.status); 
+                status = new Lookup(t.status_id, t.status);
             }
-            _studyLocations.Add(new study_location(t.id, 
+            _studyLocations.Add(new study_location(t.id,
                 new Organisation(t.facility_org_id, t.facility, t.facility_ror_id),
                 t.city_id, t.city_name, t.country_id, t.country_name, status));
         }
@@ -225,15 +225,15 @@ public class JSONStudyProcessor
 
 
         // fetch the related objects data
-        
-        IEnumerable<DBStudyObjectLink>  db_study_object_links = _repo.FetchDbStudyObjectLinks(id);
+
+        IEnumerable<DBStudyObjectLink> db_study_object_links = _repo.FetchDbStudyObjectLinks(id);
         foreach (DBStudyObjectLink t in db_study_object_links)
         {
             _linkedDataObjects.Add(t.object_id);
         }
 
         // return the resulting 'json ready' full study
-        
+
         jst.study_identifiers = _studyIdentifiers.Any() ? _studyIdentifiers : null;
         jst.study_titles = _studyTitles.Any() ? _studyTitles : null;
         jst.study_people = _studyPeople.Any() ? _studyPeople : null;
@@ -276,158 +276,158 @@ public class JSONStudyProcessor
         srs.max_age = st.max_age is not null ? st.max_age.value + max_age_units : null;
 
         List<study_feature>? fs = st.study_features;
-        
+
         if (fs?.Any() == true)
         {
             switch (srs.type_id)
             {
                 case 11:
-                {
-                    string phase = "", alloc = "", focus = "", interv = "", masking = "";
-                    foreach (study_feature f in fs)
                     {
-                        switch (f.feature_type!.id)
+                        string phase = "", alloc = "", focus = "", interv = "", masking = "";
+                        foreach (study_feature f in fs)
                         {
-                            case 20:
+                            switch (f.feature_type!.id)
                             {
-                                srs.phase_id = f.feature_value!.id;
-                                string? ph = f.feature_value?.name;
-                                if (!string.IsNullOrEmpty(ph) && ph.ToLower() != "not applicable")
-                                {
-                                    phase = "Phase: " + ph;
-                                }
-
-                                break;
-                            }
-                            case 21:
-                            {
-                                string? fc = f.feature_value?.name;
-                                if (!string.IsNullOrEmpty(fc) && fc.ToLower() != "other")
-                                {
-                                    focus = "Focus: " + fc;
-                                }
-
-                                break;
-                            }
-                            case 22:
-                            {
-                                srs.alloc_id = f.feature_value!.id;
-                                string? ac = f.feature_value?.name;
-                                if (string.IsNullOrEmpty(ac))
-                                {
-                                    alloc = "Randomised: Not provided";
-                                }
-                                else
-                                {
-                                    alloc = "Randomised: " + ac.ToLower() switch
+                                case 20:
                                     {
-                                        "randomised" => "Yes",
-                                        "nonrandomised" => "No",
-                                        "not applicable" => "No",
-                                        _ => "Unclear"
-                                    };
-                                }
+                                        srs.phase_id = f.feature_value!.id;
+                                        string? ph = f.feature_value?.name;
+                                        if (!string.IsNullOrEmpty(ph) && ph.ToLower() != "not applicable")
+                                        {
+                                            phase = "Phase: " + ph;
+                                        }
 
-                                break;
-                            }
-                            case 23:
-                            {
-                                string? iv = f.feature_value?.name;
-                                if (!string.IsNullOrEmpty(iv) && iv.ToLower() != "other")
-                                {
-                                    interv = "Intervention design: " + iv;
-                                }
+                                        break;
+                                    }
+                                case 21:
+                                    {
+                                        string? fc = f.feature_value?.name;
+                                        if (!string.IsNullOrEmpty(fc) && fc.ToLower() != "other")
+                                        {
+                                            focus = "Focus: " + fc;
+                                        }
 
-                                break;
-                            }
-                            case 24:
-                            {
-                                string? mk = f.feature_value?.name;
-                                if (!string.IsNullOrEmpty(mk) && mk.ToLower() != "not applicable")
-                                {
-                                    masking = "Masking: " + mk;
-                                }
+                                        break;
+                                    }
+                                case 22:
+                                    {
+                                        srs.alloc_id = f.feature_value!.id;
+                                        string? ac = f.feature_value?.name;
+                                        if (string.IsNullOrEmpty(ac))
+                                        {
+                                            alloc = "Randomised: Not provided";
+                                        }
+                                        else
+                                        {
+                                            alloc = "Randomised: " + ac.ToLower() switch
+                                            {
+                                                "randomised" => "Yes",
+                                                "nonrandomised" => "No",
+                                                "not applicable" => "No",
+                                                _ => "Unclear"
+                                            };
+                                        }
 
-                                break;
+                                        break;
+                                    }
+                                case 23:
+                                    {
+                                        string? iv = f.feature_value?.name;
+                                        if (!string.IsNullOrEmpty(iv) && iv.ToLower() != "other")
+                                        {
+                                            interv = "Intervention design: " + iv;
+                                        }
+
+                                        break;
+                                    }
+                                case 24:
+                                    {
+                                        string? mk = f.feature_value?.name;
+                                        if (!string.IsNullOrEmpty(mk) && mk.ToLower() != "not applicable")
+                                        {
+                                            masking = "Masking: " + mk;
+                                        }
+
+                                        break;
+                                    }
                             }
                         }
-                    }
-                    string int_feature_list = alloc;
-                    if (!string.IsNullOrEmpty(phase))
-                    { 
-                        int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + phase : phase;
-                    }
-                    if (!string.IsNullOrEmpty(focus))
-                    { 
-                        int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + focus : focus;
-                    }
-                    if (!string.IsNullOrEmpty(interv))
-                    { 
-                        int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + interv : interv;
-                    }
-                    if (!string.IsNullOrEmpty(masking))
-                    { 
-                        int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + masking : masking;
-                    }
-                    srs.feature_list = int_feature_list;
-                    break;
-                }
-                case 12:
-                {
-                    string time_persp = "", obs_model = "", bio_spec = "";
-                    foreach (study_feature f in fs)
-                    {
-                        switch (f.feature_type!.id)
+                        string int_feature_list = alloc;
+                        if (!string.IsNullOrEmpty(phase))
                         {
-                            case 30:
+                            int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + phase : phase;
+                        }
+                        if (!string.IsNullOrEmpty(focus))
+                        {
+                            int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + focus : focus;
+                        }
+                        if (!string.IsNullOrEmpty(interv))
+                        {
+                            int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + interv : interv;
+                        }
+                        if (!string.IsNullOrEmpty(masking))
+                        {
+                            int_feature_list += !string.IsNullOrEmpty(int_feature_list) ? "; " + masking : masking;
+                        }
+                        srs.feature_list = int_feature_list;
+                        break;
+                    }
+                case 12:
+                    {
+                        string time_persp = "", obs_model = "", bio_spec = "";
+                        foreach (study_feature f in fs)
+                        {
+                            switch (f.feature_type!.id)
                             {
-                                string? tp = f.feature_value?.name;
-                                if (!string.IsNullOrEmpty(tp))
-                                {
-                                    time_persp = "Time Perspective: ";
-                                    time_persp += tp == "Other" ? "Not specified" : tp;
-                                }
+                                case 30:
+                                    {
+                                        string? tp = f.feature_value?.name;
+                                        if (!string.IsNullOrEmpty(tp))
+                                        {
+                                            time_persp = "Time Perspective: ";
+                                            time_persp += tp == "Other" ? "Not specified" : tp;
+                                        }
 
-                                break;
-                            }
-                            case 31:
-                            {
-                                string? om = f.feature_value?.name;
-                                if (!string.IsNullOrEmpty(om) && om.ToLower() != "other")
-                                {
-                                    obs_model = "Observation model: " + om;
-                                }
+                                        break;
+                                    }
+                                case 31:
+                                    {
+                                        string? om = f.feature_value?.name;
+                                        if (!string.IsNullOrEmpty(om) && om.ToLower() != "other")
+                                        {
+                                            obs_model = "Observation model: " + om;
+                                        }
 
-                                break;
-                            }
-                            case 32:
-                            {
-                                string? bs = f.feature_value?.name;
-                                if (!string.IsNullOrEmpty(bs) && bs.ToLower() != "other")
-                                {
-                                    bio_spec = bs.Trim() + " reported as available";
-                                }
+                                        break;
+                                    }
+                                case 32:
+                                    {
+                                        string? bs = f.feature_value?.name;
+                                        if (!string.IsNullOrEmpty(bs) && bs.ToLower() != "other")
+                                        {
+                                            bio_spec = bs.Trim() + " reported as available";
+                                        }
 
-                                break;
+                                        break;
+                                    }
                             }
                         }
-                    }
-                    string obs_feature_list = time_persp;
-                    if (!string.IsNullOrEmpty(obs_model))
-                    { 
-                        obs_feature_list += !string.IsNullOrEmpty(obs_feature_list) ? "; " + obs_model : obs_model;
-                    }
-                    if (!string.IsNullOrEmpty(bio_spec))
-                    { 
-                        obs_feature_list += !string.IsNullOrEmpty(obs_feature_list) ? "; " + bio_spec : bio_spec;
-                    }
+                        string obs_feature_list = time_persp;
+                        if (!string.IsNullOrEmpty(obs_model))
+                        {
+                            obs_feature_list += !string.IsNullOrEmpty(obs_feature_list) ? "; " + obs_model : obs_model;
+                        }
+                        if (!string.IsNullOrEmpty(bio_spec))
+                        {
+                            obs_feature_list += !string.IsNullOrEmpty(obs_feature_list) ? "; " + bio_spec : bio_spec;
+                        }
 
-                    srs.feature_list = obs_feature_list;
-                    break;
-                }
+                        srs.feature_list = obs_feature_list;
+                        break;
+                    }
             }
         }
-        
+
         List<study_condition>? sds = st.study_conditions;
         if (sds?.Any() == true)
         {
@@ -443,7 +443,7 @@ public class JSONStudyProcessor
         }
         srs.provenance = st.provenance_string;
 
-        List<JSONSearchResObject>? obs  = _repo.FetchObjectDetails(st.id)?.ToList();
+        List<JSONSearchResObject>? obs = _repo.FetchObjectDetails(st.id)?.ToList();
         if (obs?.Any() != true) return srs;
         if (obs is [{ typeid: 13 }])
         {
@@ -454,7 +454,7 @@ public class JSONStudyProcessor
             int?[] typeids = obs.Select(b => b.typeid).ToArray();
             srs.has_objects = GetHasObjectsString(typeids);
         }
-            
+
         srs.objects = obs;
 
         return srs;
@@ -555,25 +555,25 @@ public class JSONStudyProcessor
         }
         return sb.ToString();
     }
-    
-    
+
+
     public JSONOAStudy? CreateStudyOAObject(JSONFullStudy st)
     {
         return null;
     }
-    
+
     public JSONC19PStudy? CreateStudyC19PStudyObject(JSONFullStudy st)
     {
         return null;
     }
-    
 
-    public void StoreJSONStudyInDB(int id, string fullJson, string? searchResJson, 
+
+    public void StoreJSONStudyInDB(int id, string fullJson, string? searchResJson,
                                    string? openAireJson, string? c19PJson)
     {
         _repo.StoreJSONStudyInDB(id, fullJson, searchResJson, openAireJson, c19PJson);
     }
-    
-    
+
+
 }
 

@@ -1,4 +1,4 @@
-﻿using MDR_Aggregator.TopLevelClasses.Interfaces;
+using MDR_Aggregator.TopLevelClasses.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 
@@ -10,10 +10,10 @@ public class Credentials : ICredentials
     private readonly string _username;
     private readonly string _password;
     private readonly int _port;
-    
+
     public string Username => _username;
     public string Password => _password;
-    
+
     public Credentials(IConfiguration settings)
     {
         // all asserted as non-null

@@ -1,4 +1,4 @@
-﻿using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
 
 namespace MDR_Aggregator.SearchObjectHelpers;
 
@@ -16,7 +16,7 @@ class JSONObjectProcessor
     private record_keys? _dsRecordKeys;
     private Deidentification? _dsDeidentLevel;
     private Consent? _dsConsent;
-   
+
     private List<object_instance>? _objectInstances;
     private List<object_title>? _objectTitles;
     private List<object_person>? _objectPeople;
@@ -44,22 +44,22 @@ class JSONObjectProcessor
         _accessType = null;
         _managingOrganisation = null;
         _accessDetails = null;
-        
+
         _dsRecordKeys = null;
         _dsDeidentLevel = null;
         _dsConsent = null;
 
-        _objectTitles = new List<object_title>(); 
+        _objectTitles = new List<object_title>();
         _objectPeople = new List<object_person>();
-        _objectOrganisations = new List<object_organisation>(); 
-        _objectDates = new List<object_date>(); 
-        _objectInstances = new List<object_instance>(); 
-        _objectTopics = new List<object_topic>(); 
-        _objectIdentifiers = new List<object_identifier>(); 
-        _objectDescriptions = new List<object_description>(); 
-        _objectRights = new List<object_right>(); 
-        _objectRelationships = new List<object_relationship>(); 
-        _linkedStudies = new List<int>(); 
+        _objectOrganisations = new List<object_organisation>();
+        _objectDates = new List<object_date>();
+        _objectInstances = new List<object_instance>();
+        _objectTopics = new List<object_topic>();
+        _objectIdentifiers = new List<object_identifier>();
+        _objectDescriptions = new List<object_description>();
+        _objectRights = new List<object_right>();
+        _objectRelationships = new List<object_relationship>();
+        _linkedStudies = new List<int>();
 
         // Get the singleton data object properties from DB
 
@@ -70,13 +70,13 @@ class JSONObjectProcessor
         }
 
         // First check there is at least one linked study
-       
+
         _linkedStudies = new List<int>(_repo.FetchLinkedStudies(id));
         if (_linkedStudies.Count == 0)
         {
             // May occur in a few cases, if it does need to investigate further !!!!!!!
             // Seems to be due to a (minor) error in data object linkage with journal articles.
-            
+
             _loggingHelper.LogError("object " + (_ob?.id ?? 0).ToString() + " does not appear to be linked to studies");
             return null;
         }
@@ -111,7 +111,7 @@ class JSONObjectProcessor
         {
             _dsRecordKeys = new record_keys(db_ds.record_keys_type_id, db_ds.record_keys_type, db_ds.record_keys_details);
             _dsDeidentLevel = new Deidentification(db_ds.deident_type_id, db_ds.deident_type, db_ds.deident_direct,
-                                         db_ds.deident_hipaa, db_ds.deident_dates, db_ds.deident_nonarr, 
+                                         db_ds.deident_hipaa, db_ds.deident_dates, db_ds.deident_nonarr,
                                          db_ds.deident_kanon, db_ds.deident_details);
             _dsConsent = new Consent(db_ds.consent_type_id, db_ds.consent_type, db_ds.consent_noncommercial,
                                          db_ds.consent_geog_restrict, db_ds.consent_research_type, db_ds.consent_genetic_only,
@@ -162,7 +162,7 @@ class JSONObjectProcessor
 
         IEnumerable<DBObjectDate> db_object_dates = _repo.FetchObjectDates(id);
         foreach (DBObjectDate d in db_object_dates)
-        {        
+        {
             sdate_as_ints? start_date = null;
             edate_as_ints? end_date = null;
             if (d.start_year != null || d.start_month != null || d.start_day != null)
@@ -177,7 +177,7 @@ class JSONObjectProcessor
                                         d.date_as_string, start_date, end_date, d.comments));
         }
 
-        
+
         // Get object descriptions.
 
         IEnumerable<DBObjectDescription> db_object_descriptions = _repo.FetchObjectDescriptions(id);
@@ -186,7 +186,7 @@ class JSONObjectProcessor
             _objectDescriptions.Add(new object_description(i.id, new Lookup(i.description_type_id, i.description_type),
                                  i.label, i.description_text, i.lang_code));
         }
-        
+
         // The 4 functions below are currently only required for Pubmed objects. To save time
         // it is easier to therefore only apply them to these objects. In the core tables an object's source
         // is no longer apparent, but - AT THE MOMENT AT LEAST - the add_study_contribs and add_study_topics
@@ -278,20 +278,20 @@ class JSONObjectProcessor
         dobj.dataset_consent = _dsConsent;
         dobj.dataset_record_keys = _dsRecordKeys;
         dobj.dataset_deident_level = _dsDeidentLevel;
-        
+
         dobj.object_instances = _objectInstances.Any() ? _objectInstances : null;
         dobj.object_titles = _objectTitles.Any() ? _objectTitles : null;
         dobj.object_dates = _objectDates.Any() ? _objectDates : null;
         dobj.object_descriptions = _objectDescriptions.Any() ? _objectDescriptions : null;
-        
+
         dobj.object_identifiers = _objectIdentifiers.Any() ? _objectIdentifiers : null;
         dobj.object_people = _objectPeople.Any() ? _objectPeople : null;
         dobj.object_organisations = _objectOrganisations.Any() ? _objectOrganisations : null;
         dobj.object_topics = _objectTopics.Any() ? _objectTopics : null;
-        
+
         dobj.object_relationships = _objectRelationships.Any() ? _objectRelationships : null;
-        dobj.object_rights = _objectRights.Any() ? _objectRights : null;     
-        
+        dobj.object_rights = _objectRights.Any() ? _objectRights : null;
+
         dobj.linked_studies = _linkedStudies.Any() ? _linkedStudies : null;
         return dobj;
     }
@@ -307,7 +307,7 @@ class JSONObjectProcessor
             // for most objects there will be one instance.
             // For some journal articles there will be 2 (abstract and article)
             // For some 'virtual' objects with restricted access there will be none (see below)
-            
+
             foreach (object_instance oi in fi)
             {
                 int? access_type_id = fob.access_type?.id;
@@ -316,7 +316,7 @@ class JSONObjectProcessor
                 if (resource_type_id == 40)
                 {
                     // S and T currently the same as R and G respectively
-                    
+
                     acc_icon = access_type_id == 15 ? "S" : "T";
                 }
                 else
@@ -331,7 +331,7 @@ class JSONObjectProcessor
                     }
                 }
 
-                string res_icon = resource_type_id  switch
+                string res_icon = resource_type_id switch
                 {
                     37 or 38 or 39 or 40 => "WA",   // Web + API
                     35 => "WO",             // Web text
@@ -340,12 +340,12 @@ class JSONObjectProcessor
                     12 or 13 => "D",        // Data
                     14 or 15 or 16 => "T",  // Other document
                     17 or 18 or 19 => "S",  // Spreadsheet
-                    >=20 and <= 34 => "O",  // Other file
+                    >= 20 and <= 34 => "O",  // Other file
                     _ => "X"
-                };                
-  
-                ores.Add(new JSONSearchResObject(fob.id, fob.display_title, 
-                    fob.object_type?.id, fob.object_type?.name, oi.access_details?.url, 
+                };
+
+                ores.Add(new JSONSearchResObject(fob.id, fob.display_title,
+                    fob.object_type?.id, fob.object_type?.name, oi.access_details?.url,
                     oi.resource_details?.type_id, res_icon, pub_year, acc_icon, fob.provenance_string)
                 );
             }
@@ -364,7 +364,7 @@ class JSONObjectProcessor
                 19 => 82,   // virtual samples
                 _ => 0
             };
-            string virtual_resicon = fob.object_class?.id  switch
+            string virtual_resicon = fob.object_class?.id switch
             {
                 14 => "D",   // virtual dataset
                 23 => "T",   // virtual document
@@ -372,8 +372,8 @@ class JSONObjectProcessor
                 _ => "X"
             };
 
-            ores.Add(new JSONSearchResObject(fob.id, object_display_text, 
-                fob.object_type?.id, fob.object_type?.name, fob.access_details?.url, 
+            ores.Add(new JSONSearchResObject(fob.id, object_display_text,
+                fob.object_type?.id, fob.object_type?.name, fob.access_details?.url,
                 virtual_rectype_id, virtual_resicon, pub_year, "R", fob.provenance_string));
         }
         return ores;
@@ -383,7 +383,7 @@ class JSONObjectProcessor
     {
         _repo.StoreSearchRecord(sres);
     }
-    
+
     public void StoreJSONObjectInDB(int id, string objectJson)
     {
         _repo.StoreJSONObjectInDB(id, objectJson);

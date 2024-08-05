@@ -1,4 +1,4 @@
-﻿using Dapper.Contrib.Extensions;
+using Dapper.Contrib.Extensions;
 
 namespace MDR_Aggregator.SearchObjectHelpers;
 
@@ -35,7 +35,7 @@ public class JSONFullObject
     public List<object_relationship>? object_relationships { get; set; }
     public List<int>? linked_studies { get; set; }
 
-    
+
     public JSONFullObject(int _id, string? _doi, string? _display_title, string? _version,
         Lookup? _object_class, Lookup? _object_type, int? _publication_year,
         Organisation? _managing_organisation, string? _lang_code,
@@ -89,8 +89,8 @@ public class JSONSearchResObject
         acc_icon = _acc_icon;
         prov = _prov;
     }
-    
-    public JSONSearchResObject() {}
+
+    public JSONSearchResObject() { }
 }
 
 
@@ -185,7 +185,7 @@ public class record_keys
     public string? record_keys_type { get; set; }
     public string? record_keys_details { get; set; }
 
-    public record_keys(int? _record_keys_type_id, 
+    public record_keys(int? _record_keys_type_id,
                        string? _record_keys_type, string? _record_keys_details)
     {
         record_keys_type_id = _record_keys_type_id;
@@ -276,7 +276,7 @@ public class access_details
     public bool? direct_access { get; set; }
     public string? url_last_checked { get; set; }
 
-    public access_details( string? _url, bool? _direct_access, string? _url_last_checked)
+    public access_details(string? _url, bool? _direct_access, string? _url_last_checked)
     {
         url = _url;
         direct_access = _direct_access;
@@ -287,14 +287,14 @@ public class access_details
 
 public class resource_details
 {
-     public int? type_id { get; set; }
-     public string? type_name { get; set; }
-     public float? size { get; set; }
-     public string? size_unit { get; set; }
-     public string? comments { get; set; }
+    public int? type_id { get; set; }
+    public string? type_name { get; set; }
+    public float? size { get; set; }
+    public string? size_unit { get; set; }
+    public string? comments { get; set; }
 
-     public resource_details(int? _type_id, string? _type_name,
-            float? _size, string? _size_unit, string? _comments)
+    public resource_details(int? _type_id, string? _type_name,
+           float? _size, string? _size_unit, string? _comments)
     {
         type_id = _type_id;
         type_name = _type_name;
@@ -396,7 +396,7 @@ public class object_topic
 {
     public int id { get; set; }
     public Lookup? topic_type { get; set; }
-    public string? original_value { get; set; }   
+    public string? original_value { get; set; }
     public CTData? ct_data { get; set; }
     public MeshData? mesh_data { get; set; }
 
@@ -422,7 +422,7 @@ public class object_person
     public Organisation? affiliation_org { get; set; }
 
     public object_person(int _id, Lookup? _contrib_type,
-        string? _person_full_name, string? _orcid_id, 
+        string? _person_full_name, string? _orcid_id,
         string? _person_affiliation, Organisation? _affiliation_org)
     {
         id = _id;
@@ -457,7 +457,7 @@ public class object_description
 {
     public int id { get; set; }
     public Lookup? description_type { get; set; }
-    public string?description_label { get; set; }
+    public string? description_label { get; set; }
     public string? description_text { get; set; }
     public string? lang_code { get; set; }
 
@@ -485,7 +485,7 @@ public class object_identifier
     public Organisation? source { get; set; }
     public string? identifier_date { get; set; }
 
-    public object_identifier(int _id, string? _identifier_value, 
+    public object_identifier(int _id, string? _identifier_value,
         Lookup? _identifier_type, Organisation? _source,
                              string? _identifier_date)
     {
@@ -507,7 +507,7 @@ public class object_right
     public string? rights_uri { get; set; }
     public string? comments { get; set; }
 
-    public object_right(int _id, string? _rights_name, 
+    public object_right(int _id, string? _rights_name,
                         string? _rights_uri, string? _comments)
     {
         id = _id;
@@ -692,7 +692,7 @@ public class DBObjectTopic
     public int id { get; set; }
     public int? topic_type_id { get; set; }
     public string? topic_type { get; set; }
-    public string? original_value { get; set; }    
+    public string? original_value { get; set; }
     public int? original_ct_type_id { get; set; }
     public string? original_ct_type { get; set; }
     public string? original_ct_code { get; set; }

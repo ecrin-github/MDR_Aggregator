@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Dapper;
 using MDR_Aggregator.AggDataHelpers;
 using MDR_Aggregator.LoggingHelpers.Interfaces;
@@ -13,7 +13,7 @@ public partial class SearchHelperLexemes
     private readonly string _connString;
     private readonly ILoggingHelper _loggingHelper;
     private readonly Dictionary<string, string> _romanSuffixes;
-    
+
     public SearchHelperLexemes(string connString, ILoggingHelper loggingHelper)
     {
         _db = new DbUtilities(connString, loggingHelper);
@@ -21,7 +21,7 @@ public partial class SearchHelperLexemes
         _maxStudiesId = _db.GetAggMaxId("core.studies");
         _connString = connString;
         _loggingHelper = loggingHelper;
-        
+
         _romanSuffixes = new()
         {
             {" i ", "1 "}, {" ii ", "2 "},{" iii ", "3 "},{" iv ", "4 "},{" v ", "5 "},
@@ -33,7 +33,7 @@ public partial class SearchHelperLexemes
             {" xxix ", "29 "},{" xxx ", "30 " }
         };
     }
-    
+
     public void CreateTSConfig()
     {
         string sql_string = @"DROP TEXT SEARCH CONFIGURATION IF EXISTS core.mdr_english_config2;
@@ -52,7 +52,7 @@ public partial class SearchHelperLexemes
         
               CREATE TEXT SEARCH DICTIONARY core.mdr_synonyms 
                (TEMPLATE = synonym, SYNONYMS = mdr_synonyms);";
-        
+
         _db.ExecuteSql(sql_string);
 
         sql_string = @" ALTER TEXT SEARCH CONFIGURATION core.mdr_english_config2
@@ -84,7 +84,7 @@ public partial class SearchHelperLexemes
         from core.study_titles ";
         return _db.ExecuteCoreTransferSql(sql_string, "where", "core.study_titles");
     }
-    
+
     public int GenerateTopicData()
     {
         string sql_string = @"drop table if exists core.temp_topics;
@@ -126,7 +126,7 @@ public partial class SearchHelperLexemes
 
         return _db.ExecuteCoreTransferSql(sql_string, "where", "core.study_conditions");
     }
-    
+
     public int GenerateTitleDataByStudy()
     {
         string sql_string = @"drop table if exists core.temp_titles_by_study;
@@ -137,14 +137,14 @@ public partial class SearchHelperLexemes
         );";
 
         _db.ExecuteSql(sql_string);
-        
+
         sql_string = @"insert into core.temp_titles_by_study(study_id, title_concat)
                      select study_id, string_agg(title_text, ' ')
                      from core.temp_titles s ";
         return _db.AggregateLexDataByStudy(sql_string, "temp_titles_by_study",
                                _minStudiesId, _maxStudiesId);
     }
-          
+
     public int GenerateTopicDataByStudy()
     {
         string sql_string = @"drop table if exists core.temp_topics_by_study;
@@ -155,14 +155,14 @@ public partial class SearchHelperLexemes
         );";
 
         _db.ExecuteSql(sql_string);
-        
+
         sql_string = @"insert into core.temp_topics_by_study(study_id, topic_concat)
                      select study_id, string_agg(topic_text, ' ')
                      from core.temp_topics s ";
-         return _db.AggregateLexDataByStudy(sql_string, "temp_topics_by_study",
-                                  _minStudiesId, _maxStudiesId);
+        return _db.AggregateLexDataByStudy(sql_string, "temp_topics_by_study",
+                                 _minStudiesId, _maxStudiesId);
     }
-    
+
     public int GenerateConditionDataByStudy()
     {
         string sql_string = @"drop table if exists core.temp_conditions_by_study;
@@ -176,9 +176,9 @@ public partial class SearchHelperLexemes
         sql_string = @"insert into core.temp_conditions_by_study(study_id, condition_concat)
                      select study_id, string_agg(condition_text, ' ')
                      from core.temp_conditions s ";
-        
-         return _db.AggregateLexDataByStudy(sql_string, "temp_conditions_by_study",
-                                    _minStudiesId, _maxStudiesId);
+
+        return _db.AggregateLexDataByStudy(sql_string, "temp_conditions_by_study",
+                                   _minStudiesId, _maxStudiesId);
     }
 
     public int CombineTitleAndTopicText()
@@ -190,8 +190,8 @@ public partial class SearchHelperLexemes
                               and s.study_id = t.study_id ";
         return _db.TransferSearchDataByStudy(sql_string, "title-topic combined ", _minStudiesId, _maxStudiesId);
     }
-    
-    
+
+
     public void ProcessLexemeBaseData()
     {
         for (int i = _minStudiesId; i <= _maxStudiesId; i += 10000)
@@ -206,7 +206,7 @@ public partial class SearchHelperLexemes
                      left join core.temp_conditions_by_study c
                      on s.id = c.study_id  
                      where s.id >= {start_id} and s.id < {end_id} ";
-            
+
             using var conn = new NpgsqlConnection(_connString);
             List<LexemeBase> lexbases = (conn.Query<LexemeBase>(sql_string)).ToList();
             if (lexbases.Count == 0) continue;
@@ -298,7 +298,7 @@ public partial class SearchHelperLexemes
         }
         if (MyRegex3().IsMatch(new_st))
         {
-            while (MyRegex4().IsMatch(new_st)) 
+            while (MyRegex4().IsMatch(new_st))
             {
                 string to_replace = MyRegex5().Match(new_st).Value;
                 string new_value = _romanSuffixes[to_replace];

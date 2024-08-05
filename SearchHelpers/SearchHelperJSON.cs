@@ -1,4 +1,4 @@
-﻿using System.Text.Encodings.Web;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using MDR_Aggregator.LoggingHelpers.Interfaces;
 using MDR_Aggregator.SearchObjectHelpers;
@@ -11,7 +11,7 @@ public class SearchHelperJson
     private readonly string _connString;
     private readonly ILoggingHelper _loggingHelper;
     private readonly JsonSerializerOptions? _jsonOptions;
-    
+
     public SearchHelperJson(string connString, ILoggingHelper loggingHelper)
     {
         _connString = connString;
@@ -29,7 +29,7 @@ public class SearchHelperJson
         JSONObjectProcessor processor = new JSONObjectProcessor(repo, _loggingHelper);
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
-        
+
         int batch = 10000;   // Do 10,000 ids at a time
         int k = offset;
         min_id += offset;
@@ -40,19 +40,19 @@ public class SearchHelperJson
             foreach (int id in id_numbers)
             {
                 // Construct single data object object, drawing data from various database tables 
-                
+
                 JSONFullObject? obj = processor.CreateFullObject(id);
                 if (obj != null)
                 {
                     string full_json = JsonSerializer.Serialize(obj, _jsonOptions);
                     processor.StoreJSONObjectInDB(id, full_json);   // full object details 
-                    
+
                     List<JSONSearchResObject> ob_search_results = processor.CreateSearchResObjects(obj);
                     if (ob_search_results.Any())
                     {
                         // no need to serialise to json here - just store straight in the DB
                         // as a record - it will be serialised into json as part of the study json later
-                        
+
                         foreach (JSONSearchResObject sres in ob_search_results)
                         {
                             processor.StoreSearchRecord(sres);
@@ -71,59 +71,59 @@ public class SearchHelperJson
         JSONStudyProcessor processor = new JSONStudyProcessor(repo);
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
-        
+
         int batch = 1000;      // Do 1000 ids at a time
         int k = offset;
         min_id += offset;
-        
-        for (int n = min_id; n <= max_id; n+= batch)
+
+        for (int n = min_id; n <= max_id; n += batch)
         {
             IEnumerable<int> id_numbers = repo.FetchIds(n, batch);
             foreach (int id in id_numbers)
             {
                 // Re-initialise variables and then construct full study object, drawing data from various
                 // database tables and serialise to a formatted json string, then store json in the database.
-                
+
                 string? open_aire_json = null;
                 string? c19p_json = null;
-                
+
                 JSONFullStudy? st = processor.CreateFullStudyObject(id);
                 if (st is not null)
                 {
                     string full_json = JsonSerializer.Serialize(st, _jsonOptions);
-                    
+
                     // Construct to-search record, json search result and Covid19 Portal objects
                     // as subsets of the full study, and the open aire object by combining elements 
-                    
+
                     JSONSSearchResStudy st_search_res = processor.CreateStudySearchResult(st);
                     processor.AddNewStudySearchRecord(st_search_res);
                     string search_res_json = JsonSerializer.Serialize(st_search_res, _jsonOptions);
-                    
+
                     JSONOAStudy? st_open_aire = processor.CreateStudyOAObject(st);
                     if (st_open_aire is not null)
                     {
-                        open_aire_json =  JsonSerializer.Serialize(st_open_aire, _jsonOptions);
+                        open_aire_json = JsonSerializer.Serialize(st_open_aire, _jsonOptions);
                     }
-                    
+
                     JSONC19PStudy? st_c19p = processor.CreateStudyC19PStudyObject(st);
                     if (st_c19p is not null)
                     {
-                        c19p_json =  JsonSerializer.Serialize(st_c19p, _jsonOptions);
+                        c19p_json = JsonSerializer.Serialize(st_c19p, _jsonOptions);
                     }
-                    
+
                     // Add all json strings to the database
 
-                    processor.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_json);                    
+                    processor.StoreJSONStudyInDB(id, full_json, search_res_json, open_aire_json, c19p_json);
                 }
                 k++;
                 if (k % 100 == 0) _loggingHelper.LogLine(k.ToString() + " records processed");
             }
         }
     }
-    
-    
-    
-    
+
+
+
+
     // temp function, obtaining table data back from json (!)
     /*
     public void CreateObjectSearchDataFromJSON(int offset)

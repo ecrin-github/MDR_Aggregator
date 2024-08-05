@@ -4,3 +4,4 @@ bin
 .vs
 .vscode
 appsettings.json
+/appsettings.json

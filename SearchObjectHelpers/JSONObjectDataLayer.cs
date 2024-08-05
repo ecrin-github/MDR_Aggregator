@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using Dapper.Contrib.Extensions;
 using Npgsql;
 using NpgsqlTypes;
@@ -36,7 +36,7 @@ public class JSONObjectDataLayer
         using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
-   
+
     public IEnumerable<int> FetchIds(int n, int batch)
     {
         string sql_string = @"select id from core.data_objects
@@ -45,11 +45,11 @@ public class JSONObjectDataLayer
         using var conn = new NpgsqlConnection(_connString);
         return conn.Query<int>(sql_string);
     }
-    
+
     private void ConstructObjectQueryStrings()
     {
         // data object query string
-        
+
         _dataObjectQueryString = @"Select dob.id, dob.doi, 
             dob.display_title, dob.version, 
             dob.object_class_id, oc.name as object_class,
@@ -66,9 +66,9 @@ public class JSONObjectDataLayer
             left join context_lup.object_access_types oat on dob.access_type_id = oat.id
             where dob.id = ";
 
-        
+
         // dataset query string
-        
+
         _dataSetQueryString = @"select ds.id, 
             ds.record_keys_type_id, rt.name as record_keys_type, 
             ds.record_keys_details,
@@ -86,7 +86,7 @@ public class JSONObjectDataLayer
 
 
         // object instances
-        
+
         _objectInstanceQueryString = @"select
             oi.id, system_id, system, url,
             url_accessible, url_last_checked,
@@ -97,7 +97,7 @@ public class JSONObjectDataLayer
             where object_id = ";
 
         // object title query string
-        
+
         _objectTitleQueryString = @"select
             ot.id, ot.title_type_id, tt.name as title_type, 
             ot.title_text, ot.lang_code, ot.comments
@@ -107,7 +107,7 @@ public class JSONObjectDataLayer
 
 
         // object date query string
-        
+
         _objectDateQueryString = @"select
             od.id, date_type_id, dt.name as date_type, date_is_range,
             date_as_string, start_year, start_month, start_day,
@@ -115,9 +115,9 @@ public class JSONObjectDataLayer
             from core.object_dates od
             left join context_lup.date_types dt on od.date_type_id = dt.id
             where object_id = ";
-        
+
         // object contributors
-        
+
         _objectPersonQueryString = @"select 
             op.id, op.contrib_type_id, ct.name as contrib_type, op.person_full_name,
             op.orcid_id, op.person_affiliation, op.organisation_id, 
@@ -132,9 +132,9 @@ public class JSONObjectDataLayer
             from core.object_organisations og
             left join context_lup.contribution_types ct on og.contrib_type_id = ct.id
             where object_id = ";
-        
+
         // object topics 
-        
+
         _objectTopicQueryString = @"select
             ot.id, topic_type_id, tt.name as topic_type, original_value, 
             original_ct_type_id, tv.name as original_ct_type, original_ct_code,
@@ -144,9 +144,9 @@ public class JSONObjectDataLayer
             left join context_lup.topic_vocabularies tv on ot.original_ct_type_id = tv.id
             where ot.object_id = ";
 
-        
+
         // object identifiers query string 
-        
+
         _objectIdentifierQueryString = @"select
             oi.id, identifier_value, 
             identifier_type_id, it.name as identifier_type,
@@ -232,7 +232,7 @@ public class JSONObjectDataLayer
         return conn.Query<int>(sql_string);
     }
 
-    
+
     // Fetches all linked title records for the specified data object
 
     public IEnumerable<DBObjectTitle> FetchObjectTitles(int id)
@@ -251,8 +251,8 @@ public class JSONObjectDataLayer
         string sql_string = _objectDateQueryString + Id;
         return conn.Query<DBObjectDate>(sql_string);
     }
-    
-    
+
+
     // Fetches all linked people for the specified data object
 
     public IEnumerable<DBObjectPerson> FetchObjectPeople(int Id)
@@ -261,8 +261,8 @@ public class JSONObjectDataLayer
         string sql_string = _objectPersonQueryString + Id;
         return conn.Query<DBObjectPerson>(sql_string);
     }
-    
-    
+
+
     // Fetches all linked organisations for the specified data object
 
     public IEnumerable<DBObjectOrganisation> FetchObjectOrganisations(int Id)
@@ -272,7 +272,7 @@ public class JSONObjectDataLayer
         return conn.Query<DBObjectOrganisation>(sql_string);
     }
 
-    
+
     // Fetches all linked topics for the specified data object
 
     public IEnumerable<DBObjectTopic> FetchObjectTopics(int Id)
@@ -281,8 +281,8 @@ public class JSONObjectDataLayer
         string sql_string = _objectTopicQueryString + Id;
         return conn.Query<DBObjectTopic>(sql_string);
     }
-    
-   // Fetches all linked identifier records for the specified data object
+
+    // Fetches all linked identifier records for the specified data object
 
     public IEnumerable<DBObjectIdentifier> FetchObjectIdentifiers(int id)
     {
@@ -305,14 +305,14 @@ public class JSONObjectDataLayer
         return conn.Query<DBObjectRelationship>(sql_string);
     }
 
-    
+
     public IEnumerable<DBObjectRight> FetchObjectRights(int id)
     {
         using NpgsqlConnection conn = new NpgsqlConnection(_connString);
         string sql_string = _objectRightsQueryString + id;
         return conn.Query<DBObjectRight>(sql_string);
     }
-   
+
     public void StoreSearchRecord(JSONSearchResObject sres)
     {
         using NpgsqlConnection conn = new NpgsqlConnection(_connString);

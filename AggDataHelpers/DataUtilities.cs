@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using MDR_Aggregator.LoggingHelpers.Interfaces;
 using Npgsql;
 
@@ -14,8 +14,8 @@ public class DbUtilities
         _connString = connString;
         _loggingHelper = loggingHelper;
     }
-    
-    
+
+
     public int ExecuteSql(string sqlString)
     {
         using var conn = new NpgsqlConnection(_connString);
@@ -45,7 +45,7 @@ public class DbUtilities
         return conn.ExecuteScalar<int>(sql_string);
     }
 
-    
+
     public int GetAggMaxId(string fullTableName)
     {
         var sql_string = $"select max(id) from {fullTableName}";
@@ -69,7 +69,7 @@ public class DbUtilities
     }
 
 
-    
+
     public int GetCount(string fullTableName)
     {
         var sql_string = $"SELECT COUNT(*) FROM {fullTableName}";
@@ -80,15 +80,15 @@ public class DbUtilities
     // Used by the Study Transfer Helper and Object Transfer Helper to process ids, 
     // e.g. when identifying new and existing studies and objects, (4 calls in each)
     // and extensively by the Pubmed Transfer process - 11 calls
-    
-    public int Update_UsingTempTable(string indexTableName, string updatedTableName, 
-                                     string sqlString, string conditional, int batchSize, 
+
+    public int Update_UsingTempTable(string indexTableName, string updatedTableName,
+                                     string sqlString, string conditional, int batchSize,
                                      string feedbackAddition)
     {
         try
         {
             var max_id = GetCount(indexTableName);
-            var updated = 0; 
+            var updated = 0;
             if (max_id > batchSize)
             {
                 sqlString += conditional;
@@ -107,7 +107,7 @@ public class DbUtilities
                 _loggingHelper.LogLine($"Updating {updatedTableName}{feedbackAddition} as a single batch");
             }
             return updated;
-        } 
+        }
         catch (Exception e)
         {
             _loggingHelper.LogError($"In update of {updatedTableName}: {e.Message}");
@@ -117,8 +117,8 @@ public class DbUtilities
 
     // The main routine used when transferring data from the source databases to the aggs database.
     // 15 calls involved in transferring object data, 23 calls for study data
-    
-    public int ExecuteTransferSql(string sqlString, string ftwSchemaName, string tableName, 
+
+    public int ExecuteTransferSql(string sqlString, string ftwSchemaName, string tableName,
                                   string qualifier, string context)
     {
         try
@@ -154,11 +154,11 @@ public class DbUtilities
             return 0;
         }
     }
-    
+
     // The main routine for transferring data from the aggs database to the core database
     // 24 calls within this process, plus 4 calls when setting up tables of temp titles,
     // topics and conditions data, and search_lexemes table, in the indexing process. 
-    
+
     public int ExecuteCoreTransferSql(string sqlString, string qualifier, string fullTableName)
     {
         try
@@ -195,9 +195,9 @@ public class DbUtilities
             return 0;
         }
     }
-    
+
     // Used just for transferring study condition icd data to the icd table
-    
+
     public int TransferIcdSql(string sqlString, string fullTableName)
     {
         try
@@ -263,11 +263,11 @@ public class DbUtilities
         }
     }
 
-    
-    
+
+
     // Used twice in the search setup process, to recreate the base search_studies
     // and search_objects tables.
-    
+
     public int SearchTableTransfer(string topSql, string bottomSql, string idField,
                            int minId, int maxId, string tableName, int recBatch)
     {
@@ -317,13 +317,13 @@ public class DbUtilities
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In study search update ({dataType}): { e.Message}");
+            _loggingHelper.LogError($"In study search update ({dataType}): {e.Message}");
             return 0;
         }
     }
 
     // Used twice times in updating the search_studies table with feature data.
-    
+
     public int UpdateSearchFeatureData(string sqlString, string dataType, int minId, int maxId)
     {
         try
@@ -351,7 +351,7 @@ public class DbUtilities
 
     // Used in the search setup process to collect the 'has an object of type X' data.
     // Called 16 times, i.e. for each object type
-    
+
     public int CollectHasObjectData(string whereString, int bitPos, string objectType)
     {
         try
@@ -372,11 +372,11 @@ public class DbUtilities
             return 0;
         }
     }
-    
+
     // Used in the search setup process to transfer the 'has an object of type X' data to
     // a bitmap. Called 16 times, for each object type, from within a single loop.
-    
-    public int UpdateBitMap(string sqlString, int n, int minId, int maxId )
+
+    public int UpdateBitMap(string sqlString, int n, int minId, int maxId)
     {
         try
         {
@@ -394,23 +394,23 @@ public class DbUtilities
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In bit map update (n = {n}): { e.Message}");
+            _loggingHelper.LogError($"In bit map update (n = {n}): {e.Message}");
             return 0;
         }
     }
 
     // Used to update the search_studies table with lists of countries and conditions,
     // as two separate sets of calls.
-    
+
     public int UpdateListData(string topSql, string bottomSql, int minId, int maxId, string listType)
     {
         try
-        { 
+        {
             var updated = 0;
             const int recBatch = 20000;
             for (var r = minId; r <= maxId; r += recBatch)
             {
-                var batch_sql_string = topSql 
+                var batch_sql_string = topSql
                                        + $" where sc.study_id >= {r} and sc.study_id < {r + recBatch} " +
                                        bottomSql;
                 var res = ExecuteSql(batch_sql_string);
@@ -424,22 +424,22 @@ public class DbUtilities
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {listType} update: { e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
 
     // Used to create the data in the search_idents table
-    
+
     public int CreateSearchIdentsData(string topSql, string bottomSql, int minId, int maxId, string listType)
     {
         try
-        { 
+        {
             var created = 0;
             const int recBatch = 50000;
             for (var r = minId; r <= maxId; r += recBatch)
             {
-                var batch_sql_string = topSql 
+                var batch_sql_string = topSql
                                        + $" and si.study_id >= {r} and si.study_id < {r + recBatch} " +
                                        bottomSql;
                 var res = ExecuteSql(batch_sql_string);
@@ -453,15 +453,15 @@ public class DbUtilities
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {listType} update: { e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
-    
+
     public int CreateSearchCountriesData(string topSql, int minId, int maxId, string listType)
     {
         try
-        { 
+        {
             var created = 0;
             const int recBatch = 50000;
             for (var r = minId; r <= maxId; r += recBatch)
@@ -479,15 +479,15 @@ public class DbUtilities
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {listType} update: { e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
-    
-    
+
+
     // Used during construction of object search data. Called 3 times.
-    
-    public int UpdateObjectSearchData(string sqlString, int minId, int maxId, string qualifier, string fieldType )
+
+    public int UpdateObjectSearchData(string sqlString, int minId, int maxId, string qualifier, string fieldType)
     {
         try
         {
@@ -508,13 +508,13 @@ public class DbUtilities
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {fieldType} update: { e.Message}");
+            _loggingHelper.LogError($"In {fieldType} update: {e.Message}");
             return 0;
         }
     }
 
     // Used (3 times) within the search setup process for the titles and topic indexing process.
-    
+
     public int CreateLexSql(string sqlString, string dataType, string fullTableName)
     {
         try
@@ -539,7 +539,7 @@ public class DbUtilities
             return 0;
         }
     }
-   
+
     // Used (3 times) within the search setup process for the titles and topic indexing process.
     public int AggregateLexDataByStudy(string sqlString, string fullTableName, int minId, int maxId)
     {
@@ -552,7 +552,7 @@ public class DbUtilities
             {
                 for (var r = minId; r <= maxId; r += recBatch)
                 {
-                    var batch_sql_string = sqlString 
+                    var batch_sql_string = sqlString
                                            + $" where study_id >= {r} and study_id < {r + recBatch} ";
                     batch_sql_string += " group by study_id";
                     transferred += ExecuteSql(batch_sql_string);
@@ -574,8 +574,8 @@ public class DbUtilities
             return 0;
         }
     }
-    
-    
+
+
     // Used 2 times in the set up process for titles, topics and conditions indexing
     // Uses study id to go through records because records must be grouped by study
     public int TransferSearchDataByStudy(string sqlString, string dataType, int minId, int maxId)
@@ -595,16 +595,16 @@ public class DbUtilities
                 transferred += res;
             }
             return transferred;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In TransferSearchDataByStudy ({dataType}): { e.Message}");
+            _loggingHelper.LogError($"In TransferSearchDataByStudy ({dataType}): {e.Message}");
             return 0;
         }
     }
-    
-    
-    public int UpdateStudyFeatureList(string sqlString,  int minId, int maxId, string dataType)
+
+
+    public int UpdateStudyFeatureList(string sqlString, int minId, int maxId, string dataType)
     {
         try
         {
@@ -621,19 +621,19 @@ public class DbUtilities
                 transferred += res;
             }
             return transferred;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): { e.Message}");
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): {e.Message}");
             return 0;
         }
     }
-    
-    
-    public int UpdateSearchStudyObjectJson(int minId, int maxId, string listType )
+
+
+    public int UpdateSearchStudyObjectJson(int minId, int maxId, string listType)
     {
         try
-        { 
+        {
             var updated = 0;
             const int recBatch = 20000;
             for (var r = minId; r <= maxId; r += recBatch)
@@ -661,12 +661,12 @@ public class DbUtilities
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {listType} update: { e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
-    
-    public int UpdateStudyJson(string sqlString,  int minId, int maxId, string dataType)
+
+    public int UpdateStudyJson(string sqlString, int minId, int maxId, string dataType)
     {
         try
         {
@@ -683,15 +683,15 @@ public class DbUtilities
                 transferred += res;
             }
             return transferred;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): { e.Message}");
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): {e.Message}");
             return 0;
         }
     }
-    
-    public int TransferStudyJson(string sqlString,  int minId, int maxId, string dataType)
+
+    public int TransferStudyJson(string sqlString, int minId, int maxId, string dataType)
     {
         try
         {
@@ -708,10 +708,10 @@ public class DbUtilities
                 transferred += res;
             }
             return transferred;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): { e.Message}");
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): {e.Message}");
             return 0;
         }
     }

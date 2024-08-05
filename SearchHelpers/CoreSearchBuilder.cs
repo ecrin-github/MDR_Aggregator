@@ -1,4 +1,4 @@
-﻿using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
 using MDR_Aggregator.SearchStudyHelpers;
 
 namespace MDR_Aggregator.SearchHelpers;
@@ -10,7 +10,7 @@ public class CoreSearchBuilder
     private readonly SearchHelperLexemes _lexemesSrch;
     private readonly SearchHelperJson _jsonSrch;
     private readonly JsonStudyDataLayer _studyRepo;
-    
+
     public CoreSearchBuilder(string connString, ILoggingHelper loggingHelper)
     {
         _loggingHelper = loggingHelper;
@@ -28,7 +28,7 @@ public class CoreSearchBuilder
         }
         _jsonSrch.LoopThroughObjectRecords(offset);
     }
-    
+
     public void CreateJSONStudyData(bool createTable = true, int offset = 0)
     {
         if (createTable)
@@ -37,32 +37,32 @@ public class CoreSearchBuilder
         }
         _jsonSrch.LoopThroughStudyRecords(offset);
     }
-    
+
     public void CreateIdentifierSearchDataTable()
     {
-       _tablesSrch.CreateIdentifierSearchData();
-       int res = _studyRepo.AddDataToIdentsSearchData();
-       _loggingHelper.LogLine($"{res} study identifier search records created");
-       _loggingHelper.LogBlank();
+        _tablesSrch.CreateIdentifierSearchData();
+        int res = _studyRepo.AddDataToIdentsSearchData();
+        _loggingHelper.LogLine($"{res} study identifier search records created");
+        _loggingHelper.LogBlank();
     }
-       
+
     public void CreatePMIDSearchDataTable()
     {
-       _tablesSrch.CreatePMIDSearchData();
-       int res = _studyRepo.AddDataToPMIDSearchData();
-       _loggingHelper.LogLine($"{res} pmid search records created");
-       _loggingHelper.LogBlank();
-    } 
-    
+        _tablesSrch.CreatePMIDSearchData();
+        int res = _studyRepo.AddDataToPMIDSearchData();
+        _loggingHelper.LogLine($"{res} pmid search records created");
+        _loggingHelper.LogBlank();
+    }
+
     public void CreateCountrySearchDataTable()
     {
         _tablesSrch.CreateCountrySearchData();
         int res = _studyRepo.AddDataToCountrySearchData();
         _loggingHelper.LogLine($"{res} country search records created");
         _loggingHelper.LogBlank();
-    } 
-    
-    
+    }
+
+
     public void CreateLexemeSearchDataTable()
     {
         // Set up the text search configurations, then for both titles and topics, set up
@@ -80,7 +80,7 @@ public class CoreSearchBuilder
         _loggingHelper.LogLine($"{res} temporary topic records created");
         res = _lexemesSrch.GenerateConditionData();
         _loggingHelper.LogLine($"{res} temporary condition records created");
-        
+
         res = _lexemesSrch.GenerateTitleDataByStudy();
         _loggingHelper.LogLine($"{res} title records, by study, created");
         res = _lexemesSrch.GenerateTopicDataByStudy();
@@ -89,12 +89,12 @@ public class CoreSearchBuilder
         _loggingHelper.LogLine($"{res} condition  records, by study, created");
         res = _lexemesSrch.CombineTitleAndTopicText();
         _loggingHelper.LogLine($"{res} title and topic text combined");
-        
+
         _tablesSrch.CreateSearchLexemesTable();
         _lexemesSrch.ProcessLexemeBaseData();
-        
+
         // tidy up
-        
+
         _lexemesSrch.DropTempLexTables(); // leave in for now
     }
 

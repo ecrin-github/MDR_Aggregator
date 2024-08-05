@@ -1,4 +1,4 @@
-﻿using MDR_Aggregator.AggDataHelpers;
+using MDR_Aggregator.AggDataHelpers;
 using MDR_Aggregator.LoggingHelpers.Interfaces;
 
 namespace MDR_Aggregator.SearchHelpers;
@@ -6,15 +6,15 @@ namespace MDR_Aggregator.SearchHelpers;
 public class SearchHelperTables
 {
     private readonly DbUtilities _db;
-    
+
     private readonly ILoggingHelper _loggingHelper;
-    
+
     public SearchHelperTables(string connString, ILoggingHelper loggingHelper)
     {
         _db = new DbUtilities(connString, loggingHelper);
         _loggingHelper = loggingHelper;
     }
-    
+
     public void CreateObjectDataSearchTables()
     {
         string sql_string = @"DROP TABLE IF EXISTS core.new_search_objects_json;
@@ -43,7 +43,7 @@ public class SearchHelperTables
         create index os_object_id_new on core.new_search_objects(oid);";
         _db.ExecuteSql(sql_string);
     }
-    
+
     public void CreateStudyDataSearchTables()
     {
         string sql_string = @"DROP TABLE IF EXISTS core.new_search_studies_json;
@@ -56,7 +56,7 @@ public class SearchHelperTables
         );
         CREATE INDEX search_studies_json_id_new ON core.new_search_studies_json(id);";
         _db.ExecuteSql(sql_string);
-        
+
         sql_string = @"drop table if exists core.new_search_studies;
         create table core.new_search_studies
         (
@@ -78,8 +78,8 @@ public class SearchHelperTables
         create index ss_alloc_id_new on core.new_search_studies(alloc_id);";
         _db.ExecuteSql(sql_string);
     }
-    
-    
+
+
     public void CreatePMIDSearchData()
     {
         string sql_string = @"drop table if exists core.new_search_pmids;
@@ -91,12 +91,12 @@ public class SearchHelperTables
         );
         create index sp_pmid_new on core.new_search_pmids(pmid);
         create index sp_study_id_new on core.new_search_pmids(study_id);";
-        
+
         _db.ExecuteSql(sql_string);
-    }    
-    
+    }
+
     // idents table.
-    
+
     public void CreateIdentifierSearchData()
     {
         string sql_string = @"drop table if exists core.new_search_idents;
@@ -112,7 +112,7 @@ public class SearchHelperTables
 
         _db.ExecuteSql(sql_string);
     }
-    
+
     public void CreateCountrySearchData()
     {
         string sql_string = @"drop table if exists core.new_search_countries;
@@ -127,7 +127,7 @@ public class SearchHelperTables
 
         _db.ExecuteSql(sql_string);
     }
-    
+
     public void CreateSearchLexemesTable()
     {
         string sql_string = @"drop table if exists core.new_search_lexemes;
@@ -146,5 +146,5 @@ public class SearchHelperTables
 
         _db.ExecuteSql(sql_string);
     }
-    
+
 }
