@@ -1,5 +1,8 @@
-﻿using PostgreSQLCopyHelper;
-namespace MDR_Aggregator;
+﻿using MDR_Aggregator.LoggingHelpers;
+using MDR_Aggregator.SearchObjectHelpers;
+using PostgreSQLCopyHelper;
+
+namespace MDR_Aggregator.AggDataHelpers;
 
 public static class CopyHelpers
 {

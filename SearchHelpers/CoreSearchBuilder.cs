@@ -1,60 +1,63 @@
-﻿namespace MDR_Aggregator;
+﻿using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.SearchStudyHelpers;
+
+namespace MDR_Aggregator.SearchHelpers;
 
 public class CoreSearchBuilder
 {
     private readonly ILoggingHelper _loggingHelper;
-    private readonly SearchHelperTables tables_srch;
-    private readonly SearchHelperLexemes lexemes_srch;
-    private readonly SearchHelperJson json_srch;
-    private readonly JSONStudyDataLayer study_repo;
+    private readonly SearchHelperTables _tablesSrch;
+    private readonly SearchHelperLexemes _lexemesSrch;
+    private readonly SearchHelperJson _jsonSrch;
+    private readonly JsonStudyDataLayer _studyRepo;
     
     public CoreSearchBuilder(string connString, ILoggingHelper loggingHelper)
     {
         _loggingHelper = loggingHelper;
-        tables_srch = new SearchHelperTables(connString, _loggingHelper);
-        lexemes_srch = new SearchHelperLexemes(connString, _loggingHelper);
-        json_srch = new SearchHelperJson(connString, _loggingHelper);
-        study_repo = new JSONStudyDataLayer(connString, _loggingHelper);
+        _tablesSrch = new SearchHelperTables(connString, _loggingHelper);
+        _lexemesSrch = new SearchHelperLexemes(connString, _loggingHelper);
+        _jsonSrch = new SearchHelperJson(connString, _loggingHelper);
+        _studyRepo = new JsonStudyDataLayer(connString, _loggingHelper);
     }
 
-    public void CreateJSONObjectData(bool create_table = true, int offset = 0)
+    public void CreateJSONObjectData(bool createTable = true, int offset = 0)
     {
-        if (create_table)
+        if (createTable)
         {
-            tables_srch.CreateObjectDataSearchTables();
+            _tablesSrch.CreateObjectDataSearchTables();
         }
-        json_srch.LoopThroughObjectRecords(offset);
+        _jsonSrch.LoopThroughObjectRecords(offset);
     }
     
-    public void CreateJSONStudyData(bool create_table = true, int offset = 0)
+    public void CreateJSONStudyData(bool createTable = true, int offset = 0)
     {
-        if (create_table)
+        if (createTable)
         {
-            tables_srch.CreateStudyDataSearchTables();
+            _tablesSrch.CreateStudyDataSearchTables();
         }
-        json_srch.LoopThroughStudyRecords(offset);
+        _jsonSrch.LoopThroughStudyRecords(offset);
     }
     
     public void CreateIdentifierSearchDataTable()
     {
-       tables_srch.CreateIdentifierSearchData();
-       int res = study_repo.AddDataToIdentsSearchData();
+       _tablesSrch.CreateIdentifierSearchData();
+       int res = _studyRepo.AddDataToIdentsSearchData();
        _loggingHelper.LogLine($"{res} study identifier search records created");
        _loggingHelper.LogBlank();
     }
        
     public void CreatePMIDSearchDataTable()
     {
-       tables_srch.CreatePMIDSearchData();
-       int res = study_repo.AddDataToPMIDSearchData();
+       _tablesSrch.CreatePMIDSearchData();
+       int res = _studyRepo.AddDataToPMIDSearchData();
        _loggingHelper.LogLine($"{res} pmid search records created");
        _loggingHelper.LogBlank();
     } 
     
     public void CreateCountrySearchDataTable()
     {
-        tables_srch.CreateCountrySearchData();
-        int res = study_repo.AddDataToCountrySearchData();
+        _tablesSrch.CreateCountrySearchData();
+        int res = _studyRepo.AddDataToCountrySearchData();
         _loggingHelper.LogLine($"{res} country search records created");
         _loggingHelper.LogBlank();
     } 
@@ -66,44 +69,44 @@ public class CoreSearchBuilder
         // temporary tables and do an initial transition to lexemes.
         // Then aggregate to study based text, before indexing.
 
-        lexemes_srch.CreateTSConfig();
+        _lexemesSrch.CreateTSConfig();
         _loggingHelper.LogLine("Text search configuration reconstructed");
 
         // Obtain relevant data
 
-        int res = lexemes_srch.GenerateTitleData();
+        int res = _lexemesSrch.GenerateTitleData();
         _loggingHelper.LogLine($"{res} temporary title records created");
-        res = lexemes_srch.GenerateTopicData();
+        res = _lexemesSrch.GenerateTopicData();
         _loggingHelper.LogLine($"{res} temporary topic records created");
-        res = lexemes_srch.GenerateConditionData();
+        res = _lexemesSrch.GenerateConditionData();
         _loggingHelper.LogLine($"{res} temporary condition records created");
         
-        res = lexemes_srch.GenerateTitleDataByStudy();
+        res = _lexemesSrch.GenerateTitleDataByStudy();
         _loggingHelper.LogLine($"{res} title records, by study, created");
-        res = lexemes_srch.GenerateTopicDataByStudy();
+        res = _lexemesSrch.GenerateTopicDataByStudy();
         _loggingHelper.LogLine($"{res} topic records, by study, created");
-        res = lexemes_srch.GenerateConditionDataByStudy();
+        res = _lexemesSrch.GenerateConditionDataByStudy();
         _loggingHelper.LogLine($"{res} condition  records, by study, created");
-        res = lexemes_srch.CombineTitleAndTopicText();
+        res = _lexemesSrch.CombineTitleAndTopicText();
         _loggingHelper.LogLine($"{res} title and topic text combined");
         
-        tables_srch.CreateSearchLexemesTable();
-        lexemes_srch.ProcessLexemeBaseData();
+        _tablesSrch.CreateSearchLexemesTable();
+        _lexemesSrch.ProcessLexemeBaseData();
         
         // tidy up
         
-        lexemes_srch.DropTempLexTables(); // leave in for now
+        _lexemesSrch.DropTempLexTables(); // leave in for now
     }
 
     public void AddStudyJsonToSearchTables()
     {
-        int min_studies_id = study_repo.FetchMinId();
-        int max_studies_id = study_repo.FetchMaxId();
-        int res = study_repo.UpdateIdentsSearchWithStudyJson(min_studies_id, max_studies_id);
+        int min_studies_id = _studyRepo.FetchMinId();
+        int max_studies_id = _studyRepo.FetchMaxId();
+        int res = _studyRepo.UpdateIdentsSearchWithStudyJson(min_studies_id, max_studies_id);
         _loggingHelper.LogLine($"{res} idents search records updated with study json data");
-        res = study_repo.UpdatePMIDsSearchWithStudyJson(min_studies_id, max_studies_id);
+        res = _studyRepo.UpdatePMIDsSearchWithStudyJson(min_studies_id, max_studies_id);
         _loggingHelper.LogLine($"{res} pmids search records updated with study json data");
-        res = study_repo.UpdateLexemesSearchWithStudyJson(min_studies_id, max_studies_id);
+        res = _studyRepo.UpdateLexemesSearchWithStudyJson(min_studies_id, max_studies_id);
         _loggingHelper.LogLine($"{res} lexemes search records updated with study json data");
     }
 

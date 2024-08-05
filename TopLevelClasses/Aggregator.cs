@@ -1,4 +1,12 @@
-﻿namespace MDR_Aggregator;
+﻿using MDR_Aggregator.AggDataHelpers;
+using MDR_Aggregator.AggDBBuilders;
+using MDR_Aggregator.CoreDBBuilders;
+using MDR_Aggregator.LoggingHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.SearchHelpers;
+using MDR_Aggregator.TopLevelClasses.Interfaces;
+
+namespace MDR_Aggregator.TopLevelClasses;
  
 public class Aggregator
 {
@@ -6,14 +14,14 @@ public class Aggregator
     private readonly IMonDataLayer _monDatalayer;
     private readonly ICredentials _credentials;
     
-    private readonly int agg_event_id;
+    private readonly int _aggEventId;
 
     public Aggregator(ILoggingHelper loggingHelper, IMonDataLayer monDatalayer)
     {
         _loggingHelper = loggingHelper;
         _monDatalayer = monDatalayer;
         _credentials = monDatalayer.Credentials;
-        agg_event_id = _monDatalayer.GetNextAggEventId();
+        _aggEventId = _monDatalayer.GetNextAggEventId();
     }
     
     public int AggregateData(Options opts)
@@ -27,7 +35,7 @@ public class Aggregator
             // tables (ctx & lup), 
                      
             string agg_conn_string = _credentials.GetConnectionString("aggs");
-            List<string> context_schemas = new(){"ctx", "lup"};
+            List<string> context_schemas = ["ctx", "lup"];
             _monDatalayer.SetUpTempFTWs(_credentials, agg_conn_string, "nk", "context", context_schemas);
             _loggingHelper.LogLine("Context data established as FTWs in aggs DB");
 
@@ -51,7 +59,7 @@ public class Aggregator
             
             // Only then establish new tables and construct a new aggregation event record.
 
-            AggregationEvent agg_event = new AggregationEvent(agg_event_id);
+            AggregationEvent agg_event = new AggregationEvent(_aggEventId);
 
             _monDatalayer.DeleteSameEventDBStats(agg_event.id);  // in case needed            
             SchemaBuilder sb = new SchemaBuilder(agg_conn_string);
@@ -82,7 +90,7 @@ public class Aggregator
                 _loggingHelper.LogStudyHeader("Aggregating", db_name);
                 DataTransferBuilder dtb = new DataTransferBuilder(source, ftw_schema_name, 
                                              agg_conn_string, _monDatalayer, _loggingHelper);
-                SourceSummary srce_summary = new (agg_event_id, db_name);
+                SourceSummary srce_summary = new (_aggEventId, db_name);
                 
                 if (source.has_study_tables is true)
                 {
@@ -274,9 +282,9 @@ public class Aggregator
             // Set up a new IEC Aggravation Event record.
             
             string iec_conn_string = _credentials.GetConnectionString("iec");
-            IECTransferrer ieh = new IECTransferrer(iec_conn_string, _loggingHelper);
+            IecTransferrer ieh = new IecTransferrer(iec_conn_string, _loggingHelper);
             
-            ieh.BuildNewIECTables();
+            ieh.BuildNewIecTables();
             _loggingHelper.LogLine("IEC tables recreated");
 
             int iec_agg_id = _monDatalayer.GetNextIECAggEventId();
@@ -321,7 +329,7 @@ public class Aggregator
             _loggingHelper.LogLine("Key study data updated with lookup decodes");
             
             _loggingHelper.LogHeader("Updating IEC data");
-            ieh.UpdateIECWithStudyIds();
+            ieh.UpdateIecWithStudyIds();
             _loggingHelper.LogLine("IECdata updated with study ids");
         }
         

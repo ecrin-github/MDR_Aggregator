@@ -1,14 +1,17 @@
-﻿namespace MDR_Aggregator;
+﻿using MDR_Aggregator.LoggingHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+
+namespace MDR_Aggregator.AggDBBuilders;
 
 public class StatisticsBuilder
 {
     private readonly IMonDataLayer _monDatalayer;
     private readonly ILoggingHelper _loggingHelper;
     
-    public StatisticsBuilder(IMonDataLayer monDatalayer, ILoggingHelper logginghelper)
+    public StatisticsBuilder(IMonDataLayer monDatalayer, ILoggingHelper loggingHelper)
     {
         _monDatalayer = monDatalayer;
-        _loggingHelper = logginghelper;
+        _loggingHelper = loggingHelper;
     }
 
     public void WriteOutCoreDataSummary()
@@ -74,13 +77,11 @@ public class StatisticsBuilder
         _loggingHelper.LogLine(sub_heading);
         _loggingHelper.LogBlank();
         
-        List<Study1To1LinkData>? links_1to1 = _monDatalayer.GetLatestStudy1to1LinkData();
-        if (links_1to1?.Any() == true)
+        var links1To1 = _monDatalayer.GetLatestStudy1to1LinkData();
+        if (links1To1?.Any() == true)
         {
-            foreach (Study1To1LinkData kd in links_1to1)
+            foreach (var link_line in from kd in links1To1 let link_line = $"{kd.source_id}: {kd.source_name} <==> " select link_line + $"{kd.other_source_id}: {kd.other_source_name} :: {kd.number_in_other_source:n0}")
             {
-                string link_line = $"{kd.source_id}: {kd.source_name} <==> ";
-                link_line += $"{kd.other_source_id}: {kd.other_source_name} :: {kd.number_in_other_source:n0}";
                 _loggingHelper.LogLine(link_line);
             }
         }
@@ -93,11 +94,11 @@ public class StatisticsBuilder
         _loggingHelper.LogLine(sub_heading);
         _loggingHelper.LogBlank();
         
-        List<Study1ToNLinkData>? links_1ton = _monDatalayer.GetLatestStudy1toNLinkData();
-        if (links_1ton?.Any() == true)
+        var links1Ton = _monDatalayer.GetLatestStudy1toNLinkData();
+        if (links1Ton?.Any() != true) return;
         {
             int old_rel_id = 0;
-            foreach (Study1ToNLinkData kd in links_1ton)
+            foreach (var kd in links1Ton)
             {
                 if (kd.relationship_id != old_rel_id)
                 {
@@ -117,26 +118,24 @@ public class StatisticsBuilder
     public void WriteOutCoreObjectTypes()
     {
         List<AggregationObjectNum>? objectNumbers = _monDatalayer.GetLatestObjectNumbers();
-        if (objectNumbers?.Any() is true)
+        if (objectNumbers?.Any() is not true) return;
+        int small_cats = 0;
+        _loggingHelper.LogBlank();
+        _loggingHelper.LogHeader("OBJECT TYPE NUMBERS");
+        foreach (AggregationObjectNum a in objectNumbers)
         {
-            int small_cats = 0;
-            _loggingHelper.LogBlank();
-            _loggingHelper.LogHeader("OBJECT TYPE NUMBERS");
-            foreach (AggregationObjectNum a in objectNumbers)
+            if (a.number_of_type >= 30)
             {
-                if (a.number_of_type >= 30)
-                {
-                    _loggingHelper.LogLine(
-                        $"\t{a.object_type_id}\t{a.object_type_name}: {a.number_of_type:n0}");
-                }
-                else
-                {
-                    small_cats += a.number_of_type;
-                }
+                _loggingHelper.LogLine(
+                    $"\t{a.object_type_id}\t{a.object_type_name}: {a.number_of_type:n0}");
             }
-
-            _loggingHelper.LogLine($"\tXX\tTotal of smaller categories (n<30): {small_cats:n0}");
+            else
+            {
+                small_cats += a.number_of_type;
+            }
         }
+
+        _loggingHelper.LogLine($"\tXX\tTotal of smaller categories (n<30): {small_cats:n0}");
     }
     
     public void WriteOutSourceDataTableSummaries()

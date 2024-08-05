@@ -1,22 +1,24 @@
 ﻿using Dapper;
+using MDR_Aggregator.AggDataHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
 using Npgsql;
 using PostgreSQLCopyHelper;
 
-namespace MDR_Aggregator;
+namespace MDR_Aggregator.SourceSpecific.PubMed;
 
 internal class PubmedTransferHelper
 {
     private readonly string _connString;
-    private readonly string _schema_name;
-    private readonly DBUtilities db;
+    private readonly string _schemaName;
+    private readonly DbUtilities _db;
     private readonly ILoggingHelper _loggingHelper;
 
-    public PubmedTransferHelper(string schema_name, string connString, ILoggingHelper loggingHelper)
+    public PubmedTransferHelper(string schemaName, string connString, ILoggingHelper loggingHelper)
     {
-        _schema_name = schema_name;
+        _schemaName = schemaName;
         _connString = connString;
         _loggingHelper = loggingHelper;
-        db = new DBUtilities(connString, _loggingHelper);
+        _db = new DbUtilities(connString, _loggingHelper);
     }
 
     // Tables and functions used for the PMIDs collected from DB Sources
@@ -571,7 +573,7 @@ internal class PubmedTransferHelper
            string sql_string = $"select max(id) FROM mn.dbrefs_all";
            using var conn = new NpgsqlConnection(source_conn_string);
            int max_id = conn.ExecuteScalar<int>(sql_string);
-           int batch_size = 50000;
+           const int batchSize = 50000;
            try
            {
                ulong stored = 0;
@@ -582,15 +584,15 @@ internal class PubmedTransferHelper
                    from mn.dbrefs_all k
                    where pmid is not null "; 
                
-               if (max_id > batch_size)
+               if (max_id > batchSize)
                {
-                  for (int r = 1; r <= max_id; r += batch_size)
+                  for (int r = 1; r <= max_id; r += batchSize)
                   {
-                      string batch_sql_string = sql_string + $" and k.id >= {r} and k.id < {r + batch_size} ";
+                      string batch_sql_string = sql_string + $" and k.id >= {r} and k.id < {r + batchSize} ";
                       IEnumerable<PMIDLink> pmid_ids = conn.Query<PMIDLink>(batch_sql_string);
                       ulong num_stored = StorePMIDLinks(CopyHelpers.pmid_links_helper, pmid_ids); 
                       stored += num_stored;
-                      int e = r + batch_size < max_id ? r + batch_size - 1 : max_id;
+                      int e = r + batchSize < max_id ? r + batchSize - 1 : max_id;
                       _loggingHelper.LogLine($"Obtained {num_stored} pmid ids, from ids {r} to {e}");
                   }
                }
@@ -621,7 +623,7 @@ internal class PubmedTransferHelper
                 parent_study_source_id, 
                 parent_study_sd_sid, datetime_of_data_fetch
                 FROM nk.temp_collected_pmids t ";
-        int res = db.Update_UsingTempTable("nk.temp_collected_pmids", "nk.temp_all_pmids", sql_string, " where "
+        int res = _db.Update_UsingTempTable("nk.temp_collected_pmids", "nk.temp_all_pmids", sql_string, " where "
                     , 50000, ", with temp_pmid records");
         _loggingHelper.LogLine($"{res} PMID-study references passed to temp all pmid table");
     }
@@ -639,7 +641,7 @@ internal class PubmedTransferHelper
                 where t.parent_study_source_id = si.source_id
                 and t.parent_study_sd_sid = si.sd_sid ";
 
-        int res = db.Update_UsingTempTable("nk.temp_all_pmids", "nk.temp_all_pmids", sql_string, " and "
+        int res = _db.Update_UsingTempTable("nk.temp_all_pmids", "nk.temp_all_pmids", sql_string, " and "
                                , 50000, ", with parent study and is preferred status");
         _loggingHelper.LogLine($"{res} parent studies matched in temp all PMIDs table");
 
@@ -649,7 +651,7 @@ internal class PubmedTransferHelper
 
         sql_string = @"DELETE from nk.temp_all_pmids t
                    where t.parent_study_id is null;";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} PMID records with non-matched studies deleted from total");
 
         // Then convert sd_sid and source to the preferred version - all equivalent studies
@@ -667,7 +669,7 @@ internal class PubmedTransferHelper
                 where t.parent_study_id = si.study_id
                 and si.is_preferred = true ";
 
-        res = db.Update_UsingTempTable("nk.temp_all_pmids", "nk.temp_all_pmids", sql_string, " and "
+        res = _db.Update_UsingTempTable("nk.temp_all_pmids", "nk.temp_all_pmids", sql_string, " and "
                                , 50000, ", with parent study details");
         _loggingHelper.LogLine($"{res} PMID records updated with preferred study data");
     }
@@ -684,7 +686,7 @@ internal class PubmedTransferHelper
                     source_id, sd_oid, object_type_id, parent_study_source_id, 
                     parent_study_sd_sid, parent_study_id, is_preferred_study
                     FROM nk.temp_all_pmids ";
-        int res = db.ExecuteSQL(sql_string);
+        int res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} distinct study-PMID links found");
 
         // Update with latest datetime_of_data_fetch for each study-PMID combination
@@ -699,7 +701,7 @@ internal class PubmedTransferHelper
                          group by parent_study_id, sd_oid) mx
                     WHERE dp.parent_study_id = mx.parent_study_id
                     and dp.sd_oid = mx.sd_oid ";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} record updated with latest date of data fetch");
         
         // Update with maximum of the type id (non defaults are always bigger than the
@@ -716,7 +718,7 @@ internal class PubmedTransferHelper
                          group by parent_study_id, sd_oid) mx
                     WHERE dp.parent_study_id = mx.parent_study_id
                     and dp.sd_oid = mx.sd_oid ";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} record updated with most specific type of pubmed article");
     }
 
@@ -731,7 +733,7 @@ internal class PubmedTransferHelper
         where t.parent_study_id = doi.parent_study_id
         and t.sd_oid = doi.sd_oid ";
 
-        db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
+        _db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
                                   sql_string, " and ", 50000, ", with match status = 1 for existing objects");
         _loggingHelper.LogLine("Existing objects matched in temp table");
 
@@ -745,7 +747,7 @@ internal class PubmedTransferHelper
         where doi.parent_study_id = t.parent_study_id
         and doi.sd_oid = t.sd_oid ";
 
-        int res = db.Update_UsingTempTable("nk.temp_pmids", "data_object_identifiers", 
+        int res = _db.Update_UsingTempTable("nk.temp_pmids", "data_object_identifiers", 
                                             sql_string, " and ", 50000
                                             , ", with match status 1 and time of most recent data fetch");
         _loggingHelper.LogLine($"{res} existing PMID objects matched in identifiers table");
@@ -753,7 +755,7 @@ internal class PubmedTransferHelper
         // delete the matched records from the temp table
         sql_string = @"DELETE from nk.temp_pmids
         where match_status = 1 ";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
 
 
@@ -763,15 +765,15 @@ internal class PubmedTransferHelper
 
         string sql_string = @"Drop table if exists nk.pub_titles;
         Create table nk.pub_titles as select sd_oid, title
-                 from " + _schema_name + @".data_objects ";
-        db.ExecuteSQL(sql_string);
+                 from " + _schemaName + @".data_objects ";
+        _db.ExecuteSql(sql_string);
 
         sql_string = @"UPDATE nk.temp_pmids t
         SET title = pt.title
         FROM nk.pub_titles pt
         where t.sd_oid = pt.sd_oid ";
 
-        int res = db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
+        int res = _db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
                                            sql_string, " and ", 50000, ", with article title for new objects");
         _loggingHelper.LogLine($"{res} new PMID-study combinations updated with article titles");
 
@@ -781,7 +783,7 @@ internal class PubmedTransferHelper
         sql_string = @"Delete from nk.temp_pmids t
         where title is null";
 
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} records deleted from PMID-study combinations as PMID cannot be found in pubmed data");
 
         // Identify and label completely new PMIDs first. This identifies PMIDs that are completely
@@ -795,7 +797,7 @@ internal class PubmedTransferHelper
                  on p.sd_oid = doi.sd_oid
                  where doi.sd_oid is null; ";
 
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
 
         sql_string = @"UPDATE nk.temp_pmids t
         set match_status = 3
@@ -803,7 +805,7 @@ internal class PubmedTransferHelper
         where t.id = n.id
         and t.match_status = 0 ";
 
-        res = db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
+        res = _db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
                                         sql_string, " and ", 50000, ", with status = 3, for new pubmed records");
         _loggingHelper.LogLine($"{res} new PMID-study combinations found with completely new PMIDs");
 
@@ -821,7 +823,7 @@ internal class PubmedTransferHelper
         and p.match_status = 0 
         where doi.sd_oid is null";
 
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
 
         sql_string = @"UPDATE nk.temp_pmids t
         set match_status = 2
@@ -829,7 +831,7 @@ internal class PubmedTransferHelper
         where t.match_status = 0
         and t.id = n.id ";
 
-        res = db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
+        res = _db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
                                         sql_string, " and ", 50000
                                         , ", with status = 2, for new links for existing pubmed records");
         _loggingHelper.LogLine($"{res} new PMID-study combinations found for existing PMIDs");
@@ -849,7 +851,7 @@ internal class PubmedTransferHelper
                       and doi.is_preferred_object = true
                       and t.match_status = 2 ";
 
-         int res = db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
+         int res = _db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
                                             sql_string, " and ", 50000, ", with object id, for existing objects");
          _loggingHelper.LogLine($"{res} new PMID-study combinations updated");
 
@@ -863,7 +865,7 @@ internal class PubmedTransferHelper
          FROM nk.temp_pmids t
          where t.match_status = 2 ";
 
-         res = db.Update_UsingTempTable("nk.temp_pmids", "nk.data_object_ids",  
+         res = _db.Update_UsingTempTable("nk.temp_pmids", "nk.data_object_ids",  
                                         sql_string, " and ", 50000, ", adding new data object id records");
         _loggingHelper.LogLine($"{res} new PMID-study combinations added");
 
@@ -885,7 +887,7 @@ internal class PubmedTransferHelper
                               where s.sd_oid = m.sd_oid
                               and s.parent_study_id = m.min_study
                               and s.match_status = 3 ";
-        int res = db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
+        int res = _db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
                sql_string, " and ", 50000, ", with preferred status, for min of parent study ids");
         _loggingHelper.LogLine($"{res} objects set as 'preferred' for new PMIDs");
         
@@ -895,7 +897,7 @@ internal class PubmedTransferHelper
                              SET is_preferred_object = false
                              where is_preferred_object is null
                              and t.match_status = 3 ";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} objects set as 'non-preferred' for new PMIDs");
 
         // Add in the preferred new PMID records. Note that the match status (3) is included.
@@ -913,7 +915,7 @@ internal class PubmedTransferHelper
          where t.match_status = 3 
          and is_preferred_object = true";
 
-         res = db.ExecuteSQL(sql_string);
+         res = _db.ExecuteSql(sql_string);
          _loggingHelper.LogLine($"{res} new 'preferred' PMID-study combinations added for new PMIDs");
 
          // Update newly added records with object ids, if the 'preferred' object record.
@@ -924,7 +926,7 @@ internal class PubmedTransferHelper
                         and source_id = 100135
                         and object_id is null
                         and is_preferred_object = true;";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} object ids created for new PMIDs and applied to 'preferred' objects");
 
         // Update remaining study-PMID combinations with new object id
@@ -936,7 +938,7 @@ internal class PubmedTransferHelper
                        where t.sd_oid = doi.sd_oid
                        and t.match_status = 3 
                        and t.is_preferred_object = false ";
-        res = db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
+        res = _db.Update_UsingTempTable("nk.temp_pmids", "nk.temp_pmids", 
                                         sql_string, " and "
                                         , 50000, ", with object ids, for new pubmed-study combinations");
         _loggingHelper.LogLine($"{res} object ids applied to new PMIDs and 'non-preferred' objects");
@@ -956,7 +958,7 @@ internal class PubmedTransferHelper
          where t.match_status = 3 
          and is_preferred_object = false ";
 
-         res = db.ExecuteSQL(sql_string);
+         res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} new 'non-preferred' PMID-study combinations added");
     }
 
@@ -969,7 +971,7 @@ internal class PubmedTransferHelper
              from nk.data_object_ids doi
              WHERE is_preferred_object = true and 
              source_id = {source_id}";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
 
 

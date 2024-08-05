@@ -1,50 +1,49 @@
-﻿namespace MDR_Aggregator;
+﻿namespace MDR_Aggregator.AggDBBuilders;
 
 public class SchemaBuilder
 {
-    private readonly StudyTableBuilder study_tablebuilder;
-    private readonly ObjectTableBuilder object_tablebuilder;
+    private readonly StudyTableBuilder _studyTablebuilder;
+    private readonly ObjectTableBuilder _objectTablebuilder;
 
-    public SchemaBuilder(string _connString)
+    public SchemaBuilder(string connString)
     {
-        var connString = _connString;
-        study_tablebuilder = new StudyTableBuilder(connString);
-        object_tablebuilder = new ObjectTableBuilder(connString);
+        _studyTablebuilder = new StudyTableBuilder(connString);
+        _objectTablebuilder = new ObjectTableBuilder(connString);
     }
     
     public void BuildNewStudyTables()
     {
-        study_tablebuilder.create_table_studies();
-        study_tablebuilder.create_table_study_identifiers();
-        study_tablebuilder.create_table_study_titles();
-        study_tablebuilder.create_table_study_topics();
-        study_tablebuilder.create_table_study_conditions();
-        study_tablebuilder.create_table_study_icd();
-        study_tablebuilder.create_table_study_features();
-        study_tablebuilder.create_table_study_people();
-        study_tablebuilder.create_table_study_organisations();
-        study_tablebuilder.create_table_study_relationships();
-        study_tablebuilder.create_table_study_countries();
-        study_tablebuilder.create_table_study_locations();
+        _studyTablebuilder.create_table_studies();
+        _studyTablebuilder.create_table_study_identifiers();
+        _studyTablebuilder.create_table_study_titles();
+        _studyTablebuilder.create_table_study_topics();
+        _studyTablebuilder.create_table_study_conditions();
+        _studyTablebuilder.create_table_study_icd();
+        _studyTablebuilder.create_table_study_features();
+        _studyTablebuilder.create_table_study_people();
+        _studyTablebuilder.create_table_study_organisations();
+        _studyTablebuilder.create_table_study_relationships();
+        _studyTablebuilder.create_table_study_countries();
+        _studyTablebuilder.create_table_study_locations();
     }
 
     public void BuildNewObjectTables()
     {
-        object_tablebuilder.create_table_data_objects();
-        object_tablebuilder.create_table_object_instances();
-        object_tablebuilder.create_table_object_titles();
+        _objectTablebuilder.create_table_data_objects();
+        _objectTablebuilder.create_table_object_instances();
+        _objectTablebuilder.create_table_object_titles();
 
-        object_tablebuilder.create_table_object_datasets();
-        object_tablebuilder.create_table_object_dates();
-        object_tablebuilder.create_table_object_relationships();
-        object_tablebuilder.create_table_object_rights();
+        _objectTablebuilder.create_table_object_datasets();
+        _objectTablebuilder.create_table_object_dates();
+        _objectTablebuilder.create_table_object_relationships();
+        _objectTablebuilder.create_table_object_rights();
 
-        object_tablebuilder.create_table_object_people();
-        object_tablebuilder.create_table_object_organisations();
-        object_tablebuilder.create_table_object_topics();
-        object_tablebuilder.create_table_object_descriptions();
-        object_tablebuilder.create_table_object_identifiers();
+        _objectTablebuilder.create_table_object_people();
+        _objectTablebuilder.create_table_object_organisations();
+        _objectTablebuilder.create_table_object_topics();
+        _objectTablebuilder.create_table_object_descriptions();
+        _objectTablebuilder.create_table_object_identifiers();
         
-        object_tablebuilder.create_table_study_object_links();
+        _objectTablebuilder.create_table_study_object_links();
     }
 }

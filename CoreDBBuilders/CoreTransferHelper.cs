@@ -1,15 +1,18 @@
-﻿namespace MDR_Aggregator;
+﻿using MDR_Aggregator.AggDataHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+
+namespace MDR_Aggregator.CoreDBBuilders;
 
 public class CoreDataTransferrer
 {
-    readonly DBUtilities db;
+    readonly DbUtilities _db;
 
-    public CoreDataTransferrer(string connString, ILoggingHelper logginghelper)
+    public CoreDataTransferrer(string connString, ILoggingHelper loggingHelper)
     {
-        db = new DBUtilities(connString, logginghelper);
+        _db = new DbUtilities(connString, loggingHelper);
     }
     
-    private readonly Dictionary<string, string> addFields = new() 
+    private readonly Dictionary<string, string> _addFields = new() 
     {
         { "studies", @"id, 
                 display_title, title_lang_code, brief_description, data_sharing_statement,
@@ -45,115 +48,115 @@ public class CoreDataTransferrer
     };
     
 
-    public int LoadCoreStudyData(string schema_name)
+    public int LoadCoreStudyData(string schemaName)
     {
-        string field_string = addFields["studies"];
+        string field_string = _addFields["studies"];
         string sql_string = $@"INSERT INTO core.studies({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.studies";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.studies");
+                FROM {schemaName}.studies";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.studies");
     }
 
-    public int LoadCoreStudyIdentifiers(string schema_name)
+    public int LoadCoreStudyIdentifiers(string schemaName)
     {
-        string field_string = addFields["study_identifiers"];
+        string field_string = _addFields["study_identifiers"];
         string sql_string = $@"INSERT INTO core.study_identifiers({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_identifiers";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_identifiers");
+                FROM {schemaName}.study_identifiers";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_identifiers");
     }
 
-    public int LoadCoreStudyTitles(string schema_name)
+    public int LoadCoreStudyTitles(string schemaName)
     {
-        string field_string = addFields["study_titles"];
+        string field_string = _addFields["study_titles"];
         string sql_string = $@"INSERT INTO core.study_titles({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_titles";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_titles");
+                FROM {schemaName}.study_titles";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_titles");
     }
     
-    public int LoadCoreStudyPeople(string schema_name)
+    public int LoadCoreStudyPeople(string schemaName)
     {
-        string field_string = addFields["study_people"];
+        string field_string = _addFields["study_people"];
         string sql_string = $@"INSERT INTO core.study_people({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_people";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_people");
+                FROM {schemaName}.study_people";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_people");
     }
     
-    public int LoadCoreStudyOrganisations(string schema_name)
+    public int LoadCoreStudyOrganisations(string schemaName)
     {
-        string field_string = addFields["study_organisations"];
+        string field_string = _addFields["study_organisations"];
         string sql_string = $@"INSERT INTO core.study_organisations({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_organisations";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_organisations");
+                FROM {schemaName}.study_organisations";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_organisations");
     }
 
-    public int LoadCoreStudyTopics(string schema_name)
+    public int LoadCoreStudyTopics(string schemaName)
     {
-        string field_string = addFields["study_topics"];
+        string field_string = _addFields["study_topics"];
         string sql_string = $@"INSERT INTO core.study_topics({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_topics";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_topics");
+                FROM {schemaName}.study_topics";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_topics");
     }
 
-    public int LoadCoreStudyFeatures(string schema_name)
+    public int LoadCoreStudyFeatures(string schemaName)
     {
-        string field_string = addFields["study_features"];
+        string field_string = _addFields["study_features"];
         string sql_string = $@"INSERT INTO core.study_features({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_features";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_features");
+                FROM {schemaName}.study_features";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_features");
     }
 
-    public int LoadCoreStudyRelationShips(string schema_name)
+    public int LoadCoreStudyRelationShips(string schemaName)
     {
-        string field_string = addFields["study_relationships"];
+        string field_string = _addFields["study_relationships"];
         string sql_string = $@"INSERT INTO core.study_relationships({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_relationships";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_relationships");
+                FROM {schemaName}.study_relationships";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_relationships");
     }
 
-    public int LoadCoreStudyConditions(string schema_name)
+    public int LoadCoreStudyConditions(string schemaName)
     {
-        string field_string = addFields["study_conditions"];
+        string field_string = _addFields["study_conditions"];
         string sql_string = $@"INSERT INTO core.study_conditions({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_conditions";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_conditions");
+                FROM {schemaName}.study_conditions";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_conditions");
     }
     
-    public int LoadCoreStudyICDs(string schema_name)
+    public int LoadCoreStudyICDs(string schemaName)
     {
-        string field_string = addFields["study_icd"];
+        string field_string = _addFields["study_icd"];
         string sql_string = $@"INSERT INTO core.study_icd({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_icd";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_icd");
+                FROM {schemaName}.study_icd";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_icd");
     }
     
-    public int LoadCoreStudyCountries(string schema_name)
+    public int LoadCoreStudyCountries(string schemaName)
     {
-        string field_string = addFields["study_countries"];
+        string field_string = _addFields["study_countries"];
         string sql_string = $@"INSERT INTO core.study_countries({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_countries";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_countries");
+                FROM {schemaName}.study_countries";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_countries");
     }
     
-    public int LoadCoreStudyLocations(string schema_name)
+    public int LoadCoreStudyLocations(string schemaName)
     {
-        string field_string = addFields["study_locations"];
+        string field_string = _addFields["study_locations"];
         string sql_string = $@"INSERT INTO core.study_locations({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.study_locations";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_st.study_locations");
+                FROM {schemaName}.study_locations";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_st.study_locations");
     }
     
-    private readonly Dictionary<string, string> objectFields = new() 
+    private readonly Dictionary<string, string> _objectFields = new() 
     {
         { "data_objects", @"id, title, version, display_title, 
          doi, doi_status_id, publication_year, object_class_id, object_type_id, 
@@ -187,121 +190,121 @@ public class CoreDataTransferrer
         { "study_object_links", @"id, study_id, object_id" },
     };
     
-    public int LoadCoreDataObjects(string schema_name)
+    public int LoadCoreDataObjects(string schemaName)
     {
-        string field_string = objectFields["data_objects"];
+        string field_string = _objectFields["data_objects"];
         string sql_string = $@"INSERT INTO core.data_objects({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.data_objects";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.data_objects");
+                FROM {schemaName}.data_objects";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.data_objects");
     }
 
-    public int LoadCoreObjectDatasets(string schema_name)
+    public int LoadCoreObjectDatasets(string schemaName)
     {
-        string field_string = objectFields["object_datasets"];
+        string field_string = _objectFields["object_datasets"];
         string sql_string = $@"INSERT INTO core.object_datasets({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_datasets";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_datasets");
+                FROM {schemaName}.object_datasets";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_datasets");
     }
 
-    public int LoadCoreObjectInstances(string schema_name)
+    public int LoadCoreObjectInstances(string schemaName)
     {
-        string field_string = objectFields["object_instances"];
+        string field_string = _objectFields["object_instances"];
         string sql_string = $@"INSERT INTO core.object_instances({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_instances";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_instances");
+                FROM {schemaName}.object_instances";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_instances");
     }
 
-    public int LoadCoreObjectTitles(string schema_name)
+    public int LoadCoreObjectTitles(string schemaName)
     {
-        string field_string = objectFields["object_titles"];
+        string field_string = _objectFields["object_titles"];
         string sql_string = $@"INSERT INTO core.object_titles({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_titles";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_titles");
+                FROM {schemaName}.object_titles";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_titles");
     }
 
-    public int LoadCoreObjectDates(string schema_name)
+    public int LoadCoreObjectDates(string schemaName)
     {
-        string field_string = objectFields["object_dates"];
+        string field_string = _objectFields["object_dates"];
         string sql_string = $@"INSERT INTO core.object_dates({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_dates";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_dates");
+                FROM {schemaName}.object_dates";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_dates");
     }
 
-    public int LoadCoreObjectPeople(string schema_name)
+    public int LoadCoreObjectPeople(string schemaName)
     {
-        string field_string = objectFields["object_people"];
+        string field_string = _objectFields["object_people"];
         string sql_string = $@"INSERT INTO core.object_people({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_people";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_people");
+                FROM {schemaName}.object_people";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_people");
     }
     
-    public int LoadCoreObjectOrganisations(string schema_name)
+    public int LoadCoreObjectOrganisations(string schemaName)
     {
-        string field_string = objectFields["object_organisations"];
+        string field_string = _objectFields["object_organisations"];
         string sql_string = $@"INSERT INTO core.object_organisations({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_organisations";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_organisations");
+                FROM {schemaName}.object_organisations";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_organisations");
     }
 
-    public int LoadCoreObjectTopics(string schema_name)
-    {string field_string = objectFields["object_topics"];
+    public int LoadCoreObjectTopics(string schemaName)
+    {string field_string = _objectFields["object_topics"];
         string sql_string = $@"INSERT INTO core.object_topics({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_topics ";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_topics");
+                FROM {schemaName}.object_topics ";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_topics");
     }
 
-    public int LoadCoreObjectDescriptions(string schema_name)
-    {string field_string = objectFields["object_descriptions"];
+    public int LoadCoreObjectDescriptions(string schemaName)
+    {string field_string = _objectFields["object_descriptions"];
         string sql_string = $@"INSERT INTO core.object_descriptions({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_descriptions ";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_descriptions");
+                FROM {schemaName}.object_descriptions ";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_descriptions");
     }
 
-    public int LoadCoreObjectIdentifiers(string schema_name)
+    public int LoadCoreObjectIdentifiers(string schemaName)
     {
-        string field_string = objectFields["object_identifiers"];
+        string field_string = _objectFields["object_identifiers"];
         string sql_string = $@"INSERT INTO core.object_identifiers({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_identifiers ";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_identifiers");
+                FROM {schemaName}.object_identifiers ";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_identifiers");
     }
 
-    public int LoadCoreObjectRelationships(string schema_name)
+    public int LoadCoreObjectRelationships(string schemaName)
     {
-        string field_string = objectFields["object_relationships"];
+        string field_string = _objectFields["object_relationships"];
         string sql_string = $@"INSERT INTO core.object_relationships({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_relationships ";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_relationships");
+                FROM {schemaName}.object_relationships ";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_relationships");
     }
 
-    public int LoadCoreObjectRights(string schema_name)
+    public int LoadCoreObjectRights(string schemaName)
     {
-        string field_string = objectFields["object_rights"];
+        string field_string = _objectFields["object_rights"];
         string sql_string = $@"INSERT INTO core.object_rights({field_string})
                 SELECT {field_string}
-                FROM {schema_name}.object_rights ";
-        return db.ExecuteCoreTransferSQL(sql_string, " where ", "aggs_ob.object_rights");
+                FROM {schemaName}.object_rights ";
+        return _db.ExecuteCoreTransferSql(sql_string, " where ", "aggs_ob.object_rights");
     }
 
-    public int LoadStudyObjectLinks(string schema_name)
+    public int LoadStudyObjectLinks(string schemaName)
     {
         string sql_string = $@"INSERT INTO core.study_object_links(id, 
             study_id, object_id)
             SELECT  id, parent_study_id, object_id
-            FROM {schema_name}.data_object_ids
+            FROM {schemaName}.data_object_ids
             where is_valid_link = true ";
 
-        return db.ExecuteCoreTransferSQL(sql_string, " and ", "aggs_nk.data_object_ids");
+        return _db.ExecuteCoreTransferSql(sql_string, " and ", "aggs_nk.data_object_ids");
     }
 
 
@@ -323,16 +326,16 @@ public class CoreDataTransferrer
                          from mon_sf.source_parameters) d
                      on s.source_id = d.id
                      group by study_id ";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
 
         sql_string = @"update core.studies s
                     set provenance_string = tt.provenance
                     from core.temp_study_provenance tt
                     where s.id = tt.study_id ";
-        db.ExecuteProvenanceSQL(sql_string, "core.studies", "");
+        _db.ExecuteProvenanceSql(sql_string, "core.studies", "");
 
         sql_string = @"drop table core.temp_study_provenance;";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
 
 
@@ -355,7 +358,7 @@ public class CoreDataTransferrer
                     on s.source_id = d.id
                     where s.source_id <> 100135
                     group by object_id ";
-            db.ExecuteSQL(sql_string);
+            _db.ExecuteSql(sql_string);
 
             // PubMed objects need a different approach
 
@@ -371,14 +374,14 @@ public class CoreDataTransferrer
                      on s.source_id = d.id
                      where s.source_id = 100135
                      group by s.sd_oid ";
-            db.ExecuteSQL(sql_string);
+            _db.ExecuteSql(sql_string);
 
             // update non pubmed objects
             sql_string = @"update core.data_objects s
                     set provenance_string = tt.provenance
                     from core.temp_object_provenance tt
                     where s.id = tt.object_id ";
-            db.ExecuteProvenanceSQL(sql_string, "core.data_objects", " (non pubmed records) ");
+            _db.ExecuteProvenanceSql(sql_string, "core.data_objects", " (non pubmed records) ");
 
             // update pubmed objects
             sql_string = @"update core.data_objects s
@@ -387,10 +390,10 @@ public class CoreDataTransferrer
                     inner join aggs_nk.data_object_ids k
                     on tt.sd_oid = k.sd_oid
                     where s.id = k.object_id ";
-            db.ExecuteProvenanceSQL(sql_string, "core.data_objects", " (pubmed records) ");
+            _db.ExecuteProvenanceSql(sql_string, "core.data_objects", " (pubmed records) ");
 
             sql_string = @"drop table core.temp_object_provenance;
             drop table core.temp_pubmed_object_provenance;";
-            db.ExecuteSQL(sql_string);
+            _db.ExecuteSql(sql_string);
     }
 }

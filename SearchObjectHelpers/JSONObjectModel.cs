@@ -1,5 +1,6 @@
 ﻿using Dapper.Contrib.Extensions;
-namespace MDR_Aggregator;
+
+namespace MDR_Aggregator.SearchObjectHelpers;
 
 public class JSONFullObject
 {

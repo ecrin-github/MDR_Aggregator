@@ -1,19 +1,22 @@
 ﻿using System.Text.Encodings.Web;
 using System.Text.Json;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.SearchObjectHelpers;
+using MDR_Aggregator.SearchStudyHelpers;
 
-namespace MDR_Aggregator;
+namespace MDR_Aggregator.SearchHelpers;
 
 public class SearchHelperJson
 {
     private readonly string _connString;
     private readonly ILoggingHelper _loggingHelper;
-    private readonly JsonSerializerOptions? _json_options;
+    private readonly JsonSerializerOptions? _jsonOptions;
     
-    public SearchHelperJson(string connString, ILoggingHelper logginghelper)
+    public SearchHelperJson(string connString, ILoggingHelper loggingHelper)
     {
         _connString = connString;
-        _loggingHelper = logginghelper;
-        _json_options = new()
+        _loggingHelper = loggingHelper;
+        _jsonOptions = new()
         {
             AllowTrailingCommas = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -41,7 +44,7 @@ public class SearchHelperJson
                 JSONFullObject? obj = processor.CreateFullObject(id);
                 if (obj != null)
                 {
-                    string full_json = JsonSerializer.Serialize(obj, _json_options);
+                    string full_json = JsonSerializer.Serialize(obj, _jsonOptions);
                     processor.StoreJSONObjectInDB(id, full_json);   // full object details 
                     
                     List<JSONSearchResObject> ob_search_results = processor.CreateSearchResObjects(obj);
@@ -64,7 +67,7 @@ public class SearchHelperJson
 
     public void LoopThroughStudyRecords(int offset = 0)
     {
-        JSONStudyDataLayer repo = new JSONStudyDataLayer(_connString, _loggingHelper);
+        JsonStudyDataLayer repo = new JsonStudyDataLayer(_connString, _loggingHelper);
         JSONStudyProcessor processor = new JSONStudyProcessor(repo);
         int min_id = repo.FetchMinId();
         int max_id = repo.FetchMaxId();
@@ -87,25 +90,25 @@ public class SearchHelperJson
                 JSONFullStudy? st = processor.CreateFullStudyObject(id);
                 if (st is not null)
                 {
-                    string full_json = JsonSerializer.Serialize(st, _json_options);
+                    string full_json = JsonSerializer.Serialize(st, _jsonOptions);
                     
                     // Construct to-search record, json search result and Covid19 Portal objects
                     // as subsets of the full study, and the open aire object by combining elements 
                     
                     JSONSSearchResStudy st_search_res = processor.CreateStudySearchResult(st);
                     processor.AddNewStudySearchRecord(st_search_res);
-                    string search_res_json = JsonSerializer.Serialize(st_search_res, _json_options);
+                    string search_res_json = JsonSerializer.Serialize(st_search_res, _jsonOptions);
                     
                     JSONOAStudy? st_open_aire = processor.CreateStudyOAObject(st);
                     if (st_open_aire is not null)
                     {
-                        open_aire_json =  JsonSerializer.Serialize(st_open_aire, _json_options);
+                        open_aire_json =  JsonSerializer.Serialize(st_open_aire, _jsonOptions);
                     }
                     
                     JSONC19PStudy? st_c19p = processor.CreateStudyC19PStudyObject(st);
                     if (st_c19p is not null)
                     {
-                        c19p_json =  JsonSerializer.Serialize(st_c19p, _json_options);
+                        c19p_json =  JsonSerializer.Serialize(st_c19p, _jsonOptions);
                     }
                     
                     // Add all json strings to the database

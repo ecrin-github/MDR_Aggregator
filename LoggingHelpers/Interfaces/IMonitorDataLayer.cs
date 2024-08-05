@@ -1,6 +1,7 @@
-﻿using PostgreSQLCopyHelper;
+﻿using MDR_Aggregator.TopLevelClasses.Interfaces;
+using PostgreSQLCopyHelper;
 
-namespace MDR_Aggregator;
+namespace MDR_Aggregator.LoggingHelpers.Interfaces;
 
 public interface IMonDataLayer
 {
@@ -12,9 +13,9 @@ public interface IMonDataLayer
     IEnumerable<Source> RetrieveDataSources();
     IEnumerable<Source> RetrieveIECDataSources();
     
-    List<string> SetUpTempFTWs(ICredentials credentials, string dbConnString, string fdw_schema,
-        string source_db, List<string> source_schemas);
-    void DropTempFTWs(string dbConnString, string source_db, List<string>  source_schemas);
+    List<string> SetUpTempFTWs(ICredentials credentials, string dbConnString, string fdwSchema,
+        string sourceDb, List<string> sourceSchemas);
+    void DropTempFTWs(string dbConnString, string sourceDb, List<string>  sourceSchemas);
 
     int GetNextAggEventId();
     int GetNextIECAggEventId();
@@ -24,28 +25,28 @@ public interface IMonDataLayer
     // Used in removing prior results data with the same Agg Id
     // (e.g. after test runs that do not fully complete)
     
-    void DeleteSameEventDBStats(int agg_event_id);
-    void DeleteSameEventSummaryStats(int agg_event_id);    
-    void DeleteSameEventObjectStats(int agg_event_id);
-    void DeleteSameEventStudy1to1LinkData(int agg_event_id);
-    void DeleteSameEventStudy1toNLinkData(int agg_event_id);
+    void DeleteSameEventDBStats(int aggEventId);
+    void DeleteSameEventSummaryStats(int aggEventId);    
+    void DeleteSameEventObjectStats(int aggEventId);
+    void DeleteSameEventStudy1to1LinkData(int aggEventId);
+    void DeleteSameEventStudy1toNLinkData(int aggEventId);
     
     // Used in generating and storing results and statistics
     
-    void UpdateIECAggregationEvent(IECAggregationEvent iec_agg_event, string iec_conn_string);
-    int GetRecNum(string table_name, string source_conn_string);
-    int GetAggregateRecNum(string table_name, string schema_name);
+    void UpdateIECAggregationEvent(IECAggregationEvent iecAggEvent, string iecConnString);
+    int GetRecNum(string tableName, string sourceConnString);
+    int GetAggregateRecNum(string tableName, string schemaName);
     
-    List<AggregationObjectNum> GetObjectTypes(int aggregation_event_id, string dest_conn_string);
-    List<Study1To1LinkData>? FetchStudy1to1LinkData(int last_agg_event_id);
-    List<Study1To1LinkData>? FetchStudy1to1LinkData2(int last_agg_event_id);
-    List<Study1ToNLinkData>? FetchStudy1toNLinkData(int last_agg_event_id);
+    List<AggregationObjectNum> GetObjectTypes(int aggregationEventId, string destConnString);
+    List<Study1To1LinkData>? FetchStudy1to1LinkData(int lastAggEventId);
+    List<Study1To1LinkData>? FetchStudy1to1LinkData2(int lastAggEventId);
+    List<Study1ToNLinkData>? FetchStudy1toNLinkData(int lastAggEventId);
     
     int StoreAggregationEvent(AggregationEvent aggregation);
-    int StoreIECAggregationEvent(IECAggregationEvent iec_agg);
+    int StoreIECAggregationEvent(IECAggregationEvent iecAgg);
     void StoreSourceSummary(SourceSummary sm);
     void StoreAdSummary(SourceADSummary sad);
-    void StoreSourceIECData(int iec_agg_id, Source source, Int64 res);    
+    void StoreSourceIECData(int iecAggId, Source source, Int64 res);    
     void StoreCoreSummary(CoreSummary asm);
     ulong StoreObjectNumbers(PostgreSQLCopyHelper<AggregationObjectNum> copyHelper,
                              IEnumerable<AggregationObjectNum> entities);
@@ -60,5 +61,5 @@ public interface IMonDataLayer
     List<AggregationObjectNum>? GetLatestObjectNumbers();    
     List<Study1To1LinkData>? GetLatestStudy1to1LinkData();
     List<Study1ToNLinkData>? GetLatestStudy1toNLinkData();
-    SourceSummary? RetrieveSourceSummary(int last_agg_event_id, string database_name);
+    SourceSummary? RetrieveSourceSummary(int lastAggEventId, string databaseName);
 }

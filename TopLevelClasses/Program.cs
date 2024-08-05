@@ -2,7 +2,10 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MDR_Aggregator;
+using MDR_Aggregator.LoggingHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.TopLevelClasses;
+using MDR_Aggregator.TopLevelClasses.Interfaces;
 
 // Set up file based configuration environment.
 
@@ -74,5 +77,4 @@ catch (Exception e)
     loggingHelper.LogCodeError("MDR_Aggregator application aborted", message, e.StackTrace);
     loggingHelper.CloseLog();
     return -1;
-
 }

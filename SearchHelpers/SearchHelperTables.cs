@@ -1,14 +1,17 @@
-﻿namespace MDR_Aggregator;
+﻿using MDR_Aggregator.AggDataHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+
+namespace MDR_Aggregator.SearchHelpers;
 
 public class SearchHelperTables
 {
-    private readonly DBUtilities db;
+    private readonly DbUtilities _db;
     
     private readonly ILoggingHelper _loggingHelper;
     
     public SearchHelperTables(string connString, ILoggingHelper loggingHelper)
     {
-        db = new DBUtilities(connString, loggingHelper);
+        _db = new DbUtilities(connString, loggingHelper);
         _loggingHelper = loggingHelper;
     }
     
@@ -20,7 +23,7 @@ public class SearchHelperTables
         , full_object              JSON            NULL
         );
         CREATE INDEX search_objects_json_id_new ON core.new_search_objects_json(id);";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
 
         sql_string = @"drop table if exists core.new_search_objects;
         create table core.new_search_objects
@@ -38,7 +41,7 @@ public class SearchHelperTables
           , prov                  varchar             null
         );
         create index os_object_id_new on core.new_search_objects(oid);";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
     
     public void CreateStudyDataSearchTables()
@@ -52,7 +55,7 @@ public class SearchHelperTables
         , c19p                     JSON            NULL 
         );
         CREATE INDEX search_studies_json_id_new ON core.new_search_studies_json(id);";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
         
         sql_string = @"drop table if exists core.new_search_studies;
         create table core.new_search_studies
@@ -73,7 +76,7 @@ public class SearchHelperTables
         create index ss_status_new on core.new_search_studies(status_id);
         create index ss_phase_id_new on core.new_search_studies(phase_id);
         create index ss_alloc_id_new on core.new_search_studies(alloc_id);";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
     
     
@@ -89,7 +92,7 @@ public class SearchHelperTables
         create index sp_pmid_new on core.new_search_pmids(pmid);
         create index sp_study_id_new on core.new_search_pmids(study_id);";
         
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }    
     
     // idents table.
@@ -107,7 +110,7 @@ public class SearchHelperTables
         create index si_type_value_new on core.new_search_idents(ident_type, ident_value);
         create index si_study_id_new on core.new_search_idents(study_id);";
 
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
     
     public void CreateCountrySearchData()
@@ -122,7 +125,7 @@ public class SearchHelperTables
         create index sc_country_id_new on core.new_search_countries(country_id);
         create index sc_study_id_new on core.new_search_countries(study_id);";
 
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
     
     public void CreateSearchLexemesTable()
@@ -141,7 +144,7 @@ public class SearchHelperTables
         CREATE INDEX tt_search_idx_new ON core.new_search_lexemes USING GIN (tt_lex);
         CREATE INDEX cond_search_idx_new ON core.new_search_lexemes USING GIN (conditions_lex);";
 
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
     
 }

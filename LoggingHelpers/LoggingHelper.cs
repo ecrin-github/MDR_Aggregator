@@ -1,5 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
-namespace MDR_Aggregator;
+﻿using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.TopLevelClasses;
+using Microsoft.Extensions.Configuration;
+
+namespace MDR_Aggregator.LoggingHelpers;
 
 public class LoggingHelper : ILoggingHelper
 {
@@ -118,10 +121,10 @@ public class LoggingHelper : ILoggingHelper
         Transmit("");
     }
 
-    public void SpacedInformation(string header_text)
+    public void SpacedInformation(string headerText)
     {
         LogBlank();
-        LogLine(header_text);
+        LogLine(headerText);
     }
     
     public void LogParseError(string header, string errorNum, string errorType)

@@ -1,10 +1,14 @@
 ﻿using Dapper;
 using Dapper.Contrib.Extensions;
+using MDR_Aggregator.AggDataHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.SearchObjectHelpers;
 using Npgsql;
 using NpgsqlTypes;
-namespace MDR_Aggregator;
 
-public class JSONStudyDataLayer
+namespace MDR_Aggregator.SearchStudyHelpers;
+
+public class JsonStudyDataLayer
 {
     private readonly string _connString;
 
@@ -13,18 +17,18 @@ public class JSONStudyDataLayer
     // and can then be applied for each object constructed,
     // by adding the id parameter at the end of the string.
 
-    private string? study_query_string, study_identifier_query_string, study_title_query_string;
-    private string? study_object_link_query_string, study_relationship_query_string;
-    private string? study_feature_query_string, study_topics_query_string;
-    private string? study_people_query_string, study_organisation_query_string;
-    private string? study_condition_query_string, study_icd_query_string;
-    private string? study_country_query_string, study_location_query_string;
-    private readonly DBUtilities db;
+    private string? _studyQueryString, _studyIdentifierQueryString, _studyTitleQueryString;
+    private string? _studyObjectLinkQueryString, _studyRelationshipQueryString;
+    private string? _studyFeatureQueryString, _studyTopicsQueryString;
+    private string? _studyPeopleQueryString, _studyOrganisationQueryString;
+    private string? _studyConditionQueryString, _studyIcdQueryString;
+    private string? _studyCountryQueryString, _studyLocationQueryString;
+    private readonly DbUtilities _db;
     
-    public JSONStudyDataLayer(string connString, ILoggingHelper logginghelper)
+    public JsonStudyDataLayer(string connString, ILoggingHelper logginghelper)
     {
         _connString = connString;
-        db = new DBUtilities(connString, logginghelper);
+        _db = new DbUtilities(connString, logginghelper);
         ConstructStudyQueryStrings();
     }
 
@@ -44,16 +48,15 @@ public class JSONStudyDataLayer
 
     public IEnumerable<int> FetchIds(int n, int batch)
     {
-        string sql_string = @"select id from core.studies
-                 where id between " + n + @" 
-                 and " + (n + batch - 1);
+        string sql_string = @$"select id from core.studies
+                 where id between {n} and {n + batch - 1}";
         using var conn = new NpgsqlConnection(_connString);
         return conn.Query<int>(sql_string);
     }
 
     private void ConstructStudyQueryStrings()
     {
-        study_query_string = @"Select s.id, display_title, title_lang_code,
+        _studyQueryString = @"Select s.id, display_title, title_lang_code,
             brief_description, data_sharing_statement, 
             study_type_id, st.name as study_type,
             study_status_id, ss.name as study_status,
@@ -70,7 +73,7 @@ public class JSONStudyDataLayer
             left join context_lup.time_units tu2 on s.max_age_units_id = tu2.id
             where s.id = ";
 
-        study_identifier_query_string = @"select
+        _studyIdentifierQueryString = @"select
             si.id, identifier_value,
             identifier_type_id, it.name as identifier_type,
             source_id, si.source, source_ror_id,
@@ -79,14 +82,14 @@ public class JSONStudyDataLayer
             left join context_lup.identifier_types it on si.identifier_type_id = it.id
             where study_id = ";
 
-        study_title_query_string = @"select
+        _studyTitleQueryString = @"select
             st.id, title_type_id, tt.name as title_type, title_text,
             lang_code, comments
             from core.study_titles st
             left join context_lup.title_types tt on st.title_type_id = tt.id
             where study_id = ";
 
-        study_people_query_string = @"select 
+        _studyPeopleQueryString = @"select 
             sp.id, sp.contrib_type_id, ct.name as contrib_type, sp.person_full_name,
             sp.orcid_id, sp.person_affiliation, sp.organisation_id, 
             sp.organisation_name, sp.organisation_ror_id
@@ -94,14 +97,14 @@ public class JSONStudyDataLayer
             left join context_lup.contribution_types ct on sp.contrib_type_id = ct.id
             where study_id = ";
 
-        study_organisation_query_string = @"select
+        _studyOrganisationQueryString = @"select
             sg.id, sg.contrib_type_id, ct.name as contrib_type, sg.organisation_id, 
             sg.organisation_name, sg.organisation_ror_id
             from core.study_organisations sg 
             left join context_lup.contribution_types ct on sg.contrib_type_id = ct.id
             where study_id = ";
         
-        study_topics_query_string = @"select
+        _studyTopicsQueryString = @"select
             st.id, topic_type_id, tt.name as topic_type, original_value,
             original_ct_type_id, tv.name as original_ct_type, original_ct_code,
             mesh_code, mesh_value 
@@ -110,7 +113,7 @@ public class JSONStudyDataLayer
             left join context_lup.topic_vocabularies tv on st.original_ct_type_id = tv.id
             where study_id = ";
 
-        study_feature_query_string = @"select
+        _studyFeatureQueryString = @"select
             sf.id, sf.feature_type_id, ft.name as feature_type,
             sf.feature_value_id, fv.name as feature_value
             from core.study_features sf
@@ -118,26 +121,26 @@ public class JSONStudyDataLayer
             left join context_lup.study_feature_categories fv on sf.feature_value_id = fv.id
             where study_id = ";
 
-        study_condition_query_string = @"select
+        _studyConditionQueryString = @"select
             sc.id, sc.original_value, sc.original_ct_type_id, 
             tv.name as original_ct_type, sc.original_ct_code
             from core.study_conditions sc
             left join context_lup.topic_vocabularies tv on sc.original_ct_type_id = tv.id
             where study_id = ";
 
-        study_icd_query_string = @"select 
+        _studyIcdQueryString = @"select 
             id, icd_code, icd_code 
             from core.study_icd 
             where study_id = ";
         
-        study_country_query_string = @"select 
+        _studyCountryQueryString = @"select 
              sc.id, sc.country_id, sc.country_name, 
              sc.status_id, ss.name as status
              from core.study_countries sc
              left join context_lup.study_statuses ss on sc.status_id = ss.id
              where study_id = ";
         
-        study_location_query_string = @"select
+        _studyLocationQueryString = @"select
              sn.id, sn.facility_org_id, sn.facility, sn.facility_ror_id,
              sn.city_id, sn.city_name, sn.country_id, sn.country_name, 
              sn.status_id, ss.name as status
@@ -145,7 +148,7 @@ public class JSONStudyDataLayer
              left join context_lup.study_statuses ss on sn.status_id = ss.id
              where study_id = ";
         
-        study_relationship_query_string = @"select
+        _studyRelationshipQueryString = @"select
             sr.id, relationship_type_id, rt.name as relationship_type,
             target_study_id
             from core.study_relationships sr
@@ -153,7 +156,7 @@ public class JSONStudyDataLayer
             on sr.relationship_type_id = rt.id
             where study_id = ";
 
-        study_object_link_query_string = @"select object_id
+        _studyObjectLinkQueryString = @"select object_id
             from core.study_object_links
             where study_id = ";
     }
@@ -161,108 +164,108 @@ public class JSONStudyDataLayer
 
     public DBStudy? FetchDbStudy(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_query_string + id;
-        return Conn.QueryFirstOrDefault<DBStudy>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyQueryString + id;
+        return conn.QueryFirstOrDefault<DBStudy>(sql_string);
     }
 
 
     public IEnumerable<DBStudyIdentifier> FetchDbStudyIdentifiers(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_identifier_query_string + id;
-        return Conn.Query<DBStudyIdentifier>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyIdentifierQueryString + id;
+        return conn.Query<DBStudyIdentifier>(sql_string);
     }
 
 
     public IEnumerable<DBStudyTitle> FetchDbStudyTitles(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_title_query_string + id;
-        return Conn.Query<DBStudyTitle>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyTitleQueryString + id;
+        return conn.Query<DBStudyTitle>(sql_string);
     }
 
     
     public IEnumerable<DBStudyPerson> FetchDbStudyPeople(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_people_query_string + id;
-        return Conn.Query<DBStudyPerson>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyPeopleQueryString + id;
+        return conn.Query<DBStudyPerson>(sql_string);
     }
 
     
     public IEnumerable<DBStudyOrganisation> FetchDbStudyOrganisations(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_organisation_query_string + id;
-        return Conn.Query<DBStudyOrganisation>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyOrganisationQueryString + id;
+        return conn.Query<DBStudyOrganisation>(sql_string);
     }
     
     
     public IEnumerable<DBStudyFeature> FetchDbStudyFeatures(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_feature_query_string + id;
-        return Conn.Query<DBStudyFeature>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyFeatureQueryString + id;
+        return conn.Query<DBStudyFeature>(sql_string);
     }
     
     
     public IEnumerable<DBStudyTopic> FetchDbStudyTopics(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_topics_query_string + id;
-        return Conn.Query<DBStudyTopic>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyTopicsQueryString + id;
+        return conn.Query<DBStudyTopic>(sql_string);
     }
 
 
     public IEnumerable<DBStudyCondition> FetchDbStudyConditions(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_condition_query_string + id;
-        return Conn.Query<DBStudyCondition>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyConditionQueryString + id;
+        return conn.Query<DBStudyCondition>(sql_string);
     }
 
     
     public IEnumerable<DBStudyICD> FetchDbStudyICDs(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_icd_query_string + id;
-        return Conn.Query<DBStudyICD>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyIcdQueryString + id;
+        return conn.Query<DBStudyICD>(sql_string);
     }
  
     public IEnumerable<DBStudyCountry> FetchDbStudyCountries(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_country_query_string + id;
-        return Conn.Query<DBStudyCountry>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyCountryQueryString + id;
+        return conn.Query<DBStudyCountry>(sql_string);
     }
     
     
     public IEnumerable<DBStudyLocation> FetchDbStudyLocations(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_location_query_string + id;
-        return Conn.Query<DBStudyLocation>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyLocationQueryString + id;
+        return conn.Query<DBStudyLocation>(sql_string);
     }
     
     public IEnumerable<DBStudyRelationship> FetchDbStudyRelationships(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_relationship_query_string + id;
-        return Conn.Query<DBStudyRelationship>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyRelationshipQueryString + id;
+        return conn.Query<DBStudyRelationship>(sql_string);
     }
 
 
     public IEnumerable<DBStudyObjectLink> FetchDbStudyObjectLinks(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = study_object_link_query_string + id;
-        return Conn.Query<DBStudyObjectLink>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _studyObjectLinkQueryString + id;
+        return conn.Query<DBStudyObjectLink>(sql_string);
     }
 
     public IEnumerable<JSONSearchResObject>? FetchObjectDetails(int study_id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
         string sql_string = $@"select os.* 
         from core.study_object_links sol
         inner join core.new_search_objects os
@@ -270,39 +273,39 @@ public class JSONStudyDataLayer
         where sol.study_id = {study_id}  
         order by os.year_pub";
         
-        return Conn.Query<JSONSearchResObject>(sql_string);
+        return conn.Query<JSONSearchResObject>(sql_string);
     }
     
     public int StoreSearchRecord(StudyToSearchRecord tsr)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        return (int)Conn.Insert(tsr);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        return (int)conn.Insert(tsr);
     }
 
-    public void StoreJSONStudyInDB(int id, string full_json, string? search_res_json, 
-                                   string? open_aire_json, string? c19p_json)
+    public void StoreJSONStudyInDB(int id, string fullJson, string? searchResJson, 
+                                   string? openAireJson, string? c19PJson)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        Conn.Open();
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        conn.Open();
 
         // To insert the string into a json field the parameters for the 
         // command have to be explicitly declared and typed
         
-        search_res_json ??= "{}";
-        open_aire_json ??= "{}";
-        c19p_json ??= "{}";
+        searchResJson ??= "{}";
+        openAireJson ??= "{}";
+        c19PJson ??= "{}";
 
         using var cmd = new NpgsqlCommand();
         cmd.CommandText = @"INSERT INTO core.new_search_studies_json (id, search_res, full_study, open_aire, c19p) 
                             VALUES (@id, @sr, @fs, @oa, @c19)";
         cmd.Parameters.Add(new NpgsqlParameter("@id", NpgsqlDbType.Integer) {Value = id });
-        cmd.Parameters.Add(new NpgsqlParameter("@sr", NpgsqlDbType.Json) {Value = search_res_json });
-        cmd.Parameters.Add(new NpgsqlParameter("@fs", NpgsqlDbType.Json) {Value = full_json });
-        cmd.Parameters.Add(new NpgsqlParameter("@oa", NpgsqlDbType.Json) {Value = open_aire_json });
-        cmd.Parameters.Add(new NpgsqlParameter("@c19", NpgsqlDbType.Json) {Value = c19p_json });
-        cmd.Connection = Conn;
+        cmd.Parameters.Add(new NpgsqlParameter("@sr", NpgsqlDbType.Json) {Value = searchResJson });
+        cmd.Parameters.Add(new NpgsqlParameter("@fs", NpgsqlDbType.Json) {Value = fullJson });
+        cmd.Parameters.Add(new NpgsqlParameter("@oa", NpgsqlDbType.Json) {Value = openAireJson });
+        cmd.Parameters.Add(new NpgsqlParameter("@c19", NpgsqlDbType.Json) {Value = c19PJson });
+        cmd.Connection = conn;
         cmd.ExecuteNonQuery();
-        Conn.Close();
+        conn.Close();
     }
     
     
@@ -316,7 +319,7 @@ public class JSONStudyDataLayer
         where identifier_type_id = 16
         order by oi.identifier_value::int ;";
         
-        return db.ExecuteSQL(sql_string);
+        return _db.ExecuteSql(sql_string);
     }    
     
     // idents table.
@@ -331,7 +334,7 @@ public class JSONStudyDataLayer
         
         int min_studies_id = FetchMinId();
         int max_studies_id = FetchMaxId();
-        return db.CreateSearchIdentsData(top_sql, bottom_sql, min_studies_id, max_studies_id, "search_idents");
+        return _db.CreateSearchIdentsData(top_sql, bottom_sql, min_studies_id, max_studies_id, "search_idents");
     }
     
     public int AddDataToCountrySearchData()
@@ -343,7 +346,7 @@ public class JSONStudyDataLayer
         
         int min_studies_id = FetchMinId();
         int max_studies_id = FetchMaxId();
-        return db.CreateSearchCountriesData(top_sql,min_studies_id, max_studies_id, "search_countries");
+        return _db.CreateSearchCountriesData(top_sql,min_studies_id, max_studies_id, "search_countries");
     }
     
     public int UpdateIdentsSearchWithStudyJson(int min_studies_id, int max_studies_id)
@@ -352,7 +355,7 @@ public class JSONStudyDataLayer
                               set study_json = sj.search_res
                               from core.search_studies_json sj
                               where s.study_id = sj.id ";
-        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "idents study json");
+        return _db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "idents study json");
     }
     
     public int UpdatePMIDsSearchWithStudyJson(int min_studies_id, int max_studies_id)
@@ -361,7 +364,7 @@ public class JSONStudyDataLayer
                               set study_json = sj.search_res
                               from core.new_search_studies_json sj
                               where s.study_id = sj.id ";
-        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "pmids study json");
+        return _db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "pmids study json");
     }
     
     public int UpdateLexemesSearchWithStudyJson(int min_studies_id, int max_studies_id)
@@ -370,9 +373,8 @@ public class JSONStudyDataLayer
                               set study_json = sj.search_res
                               from core.new_search_studies_json sj
                               where s.study_id = sj.id ";
-        return db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "lexemes study json");
+        return _db.TransferStudyJson(sql_string, min_studies_id, max_studies_id, "lexemes study json");
     }
-    
 }
 
 

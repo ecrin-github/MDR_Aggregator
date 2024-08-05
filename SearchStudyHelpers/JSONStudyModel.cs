@@ -1,5 +1,7 @@
 ﻿using Dapper.Contrib.Extensions;
-namespace MDR_Aggregator;
+using MDR_Aggregator.SearchObjectHelpers;
+
+namespace MDR_Aggregator.SearchStudyHelpers;
 
 public class JSONFullStudy
 {
