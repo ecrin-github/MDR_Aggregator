@@ -1,32 +1,30 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ecrinadmin\\RiderProjects\\MDR_Aggregator\\MDR_Aggregator.csproj": {}
+    "/Users/iproger/Projects/ecrin/MDR/MDR_Aggregator/MDR_Aggregator.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ecrinadmin\\RiderProjects\\MDR_Aggregator\\MDR_Aggregator.csproj": {
+    "/Users/iproger/Projects/ecrin/MDR/MDR_Aggregator/MDR_Aggregator.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ecrinadmin\\RiderProjects\\MDR_Aggregator\\MDR_Aggregator.csproj",
+        "projectUniqueName": "/Users/iproger/Projects/ecrin/MDR/MDR_Aggregator/MDR_Aggregator.csproj",
         "projectName": "MDR_Aggregator",
-        "projectPath": "C:\\Users\\ecrinadmin\\RiderProjects\\MDR_Aggregator\\MDR_Aggregator.csproj",
-        "packagesPath": "C:\\Users\\ecrinadmin\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ecrinadmin\\RiderProjects\\MDR_Aggregator\\obj\\",
+        "projectPath": "/Users/iproger/Projects/ecrin/MDR/MDR_Aggregator/MDR_Aggregator.csproj",
+        "packagesPath": "/Users/iproger/.nuget/packages/",
+        "outputPath": "/Users/iproger/Projects/ecrin/MDR/MDR_Aggregator/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\ecrinadmin\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/iproger/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net7.0"
+          "net8.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net7.0": {
-            "targetAlias": "net7.0",
+          "net8.0": {
+            "targetAlias": "net8.0",
             "projectReferences": {}
           }
         },
@@ -37,8 +35,8 @@
         }
       },
       "frameworks": {
-        "net7.0": {
-          "targetAlias": "net7.0",
+        "net8.0": {
+          "targetAlias": "net8.0",
           "dependencies": {
             "CommandLineParser": {
               "target": "Package",
@@ -46,27 +44,47 @@
             },
             "Dapper": {
               "target": "Package",
-              "version": "[2.0.123, )"
+              "version": "[2.1.35, )"
             },
             "Dapper.Contrib": {
               "target": "Package",
               "version": "[2.0.78, )"
             },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.7, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.7, )"
+            },
+            "Microsoft.EntityFrameworkCore.Tools": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.7, )"
+            },
             "Microsoft.Extensions.Configuration": {
               "target": "Package",
-              "version": "[7.0.0, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Extensions.Configuration.Json": {
               "target": "Package",
-              "version": "[7.0.0, )"
+              "version": "[8.0.0, )"
             },
             "Microsoft.Extensions.Hosting": {
               "target": "Package",
-              "version": "[7.0.0, )"
+              "version": "[8.0.0, )"
             },
             "Npgsql": {
               "target": "Package",
-              "version": "[7.0.0, )"
+              "version": "[8.0.3, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[8.0.4, )"
             },
             "PostgreSQLCopyHelper": {
               "target": "Package",
@@ -89,7 +107,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.302\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.302/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

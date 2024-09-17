@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+using MDR_Aggregator.TopLevelClasses.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Npgsql;
-namespace MDR_Aggregator;
+
+namespace MDR_Aggregator.TopLevelClasses;
 
 public class Credentials : ICredentials
 {
@@ -8,10 +10,10 @@ public class Credentials : ICredentials
     private readonly string _username;
     private readonly string _password;
     private readonly int _port;
-    
+
     public string Username => _username;
     public string Password => _password;
-    
+
     public Credentials(IConfiguration settings)
     {
         // all asserted as non-null
@@ -19,18 +21,18 @@ public class Credentials : ICredentials
         _host = settings["host"]!;
         _username = settings["user"]!;
         _password = settings["password"]!;
-        string? PortAsString = settings["port"];
-        if (string.IsNullOrWhiteSpace(PortAsString))
+        string? portAsString = settings["port"];
+        if (string.IsNullOrWhiteSpace(portAsString))
         {
             _port = 5432;  // default
         }
         else
         {
-            _port = int.TryParse(PortAsString, out int port_num) ? port_num : 5432;
+            _port = int.TryParse(portAsString, out int port_num) ? port_num : 5432;
         }
     }
 
-    public string GetConnectionString(string database_name)
+    public string GetConnectionString(string databaseName)
     {
         NpgsqlConnectionStringBuilder builder = new()
         {
@@ -38,11 +40,10 @@ public class Credentials : ICredentials
             Username = _username,
             Password = _password,
             Port = _port,
-            Database = database_name,
-            CommandTimeout = 360,           // Some very long cluster commands require this
-            InternalCommandTimeout = 360,   // Not clear onf difference between this and above
-            KeepAlive = 300,
-            IncludeErrorDetail = true
+            Database = databaseName,
+            KeepAlive = 600,
+            IncludeErrorDetail = true,            
+            CommandTimeout = 600 
         };
         return builder.ConnectionString;
     }

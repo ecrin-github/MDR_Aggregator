@@ -1,20 +1,21 @@
 ﻿using Dapper;
 using Npgsql;
-namespace MDR_Aggregator;
+
+namespace MDR_Aggregator.AggDBBuilders;
 
 public class ObjectTableBuilder
 {
-    readonly string db_conn;
+    readonly string _dbConn;
 
-    public ObjectTableBuilder(string _db_conn)
+    public ObjectTableBuilder(string dbConn)
     {
-        db_conn = _db_conn;
+        _dbConn = dbConn;
     }
  
-    private void ExecuteSQL(string sql_string)
+    private void ExecuteSql(string sqlString)
     {
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        using var conn = new NpgsqlConnection(_dbConn);
+        conn.Execute(sqlString);
     }
 
 
@@ -45,7 +46,7 @@ public class ObjectTableBuilder
           , aggregated_on          TIMESTAMPTZ     NOT NULL DEFAULT Now()
         );";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -75,7 +76,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_datasets_object_id ON ob.object_datasets(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -99,7 +100,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_dates_object_id ON ob.object_dates(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -122,7 +123,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_instances_object_id ON ob.object_instances(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
     
@@ -145,7 +146,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_people_object_id ON ob.object_people(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
   
     
@@ -163,7 +164,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_organisations_study_id ON ob.object_organisations(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -184,7 +185,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_titles_object_id ON ob.object_titles(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -204,7 +205,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_topics_object_id ON ob.object_topics(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -222,7 +223,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_descriptions_object_id ON ob.object_descriptions(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -242,7 +243,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_identifiers_object_id ON ob.object_identifiers(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -258,7 +259,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_relationships_object_id ON ob.object_relationships(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 
@@ -275,7 +276,7 @@ public class ObjectTableBuilder
         );
         CREATE INDEX object_rights_object_id ON ob.object_rights(object_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
     
     
@@ -290,7 +291,7 @@ public class ObjectTableBuilder
         CREATE INDEX study_object_links_objectid ON nk.study_object_links(object_id);
         CREATE INDEX study_object_links_studyid ON nk.study_object_links(study_id);";
 
-        ExecuteSQL(sql_string);
+        ExecuteSql(sql_string);
     }
 
 

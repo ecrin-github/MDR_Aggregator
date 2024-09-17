@@ -1,21 +1,22 @@
 ﻿using Dapper;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
 using Npgsql;
-namespace MDR_Aggregator;
+namespace MDR_Aggregator.CoreDBBuilders;
 
 public class CoreStudyTableBuilder
 {
-    private readonly string db_conn;
+    private readonly string _dbConn;
     private readonly ILoggingHelper _loggingHelper;
 
-    public CoreStudyTableBuilder(string _db_conn, ILoggingHelper loggingHelper)
+    public CoreStudyTableBuilder(string dbConn, ILoggingHelper loggingHelper)
     {
-        db_conn = _db_conn;
+        _dbConn = dbConn;
         _loggingHelper = loggingHelper;
     }
   
     private void ExecuteSQL(string sql_string)
     {
-        using var conn = new NpgsqlConnection(db_conn);
+        using var conn = new NpgsqlConnection(_dbConn);
         try
         {
             conn.Execute(sql_string);

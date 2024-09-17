@@ -1,21 +1,21 @@
 ﻿using Dapper;
 using Npgsql;
 
-namespace MDR_Aggregator;
+namespace MDR_Aggregator.AggDBBuilders;
 
 public class StudyTableBuilder
 {
-    readonly string db_conn;
+    readonly string _dbConn;
 
-    public StudyTableBuilder(string _db_conn)
+    public StudyTableBuilder(string dbConn)
     {
-        db_conn = _db_conn;
+        _dbConn = dbConn;
     }
     
-    private void ExecuteSQL(string sql_string)
+    private void ExecuteSQL(string sqlString)
     {
-        using var conn = new NpgsqlConnection(db_conn);
-        conn.Execute(sql_string);
+        using var conn = new NpgsqlConnection(_dbConn);
+        conn.Execute(sqlString);
     }
 
     public void create_table_studies()

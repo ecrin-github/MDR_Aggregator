@@ -1,4 +1,4 @@
-﻿namespace MDR_Aggregator;
+﻿namespace MDR_Aggregator.AggDBBuilders;
 
 public class LinkTableBuilder
 {

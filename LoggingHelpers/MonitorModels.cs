@@ -1,6 +1,6 @@
 ﻿using Dapper.Contrib.Extensions;
 
-namespace MDR_Aggregator;
+namespace MDR_Aggregator.LoggingHelpers;
 
 [Table("sf.source_parameters")]
 public class Source

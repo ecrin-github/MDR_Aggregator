@@ -1,10 +1,12 @@
-﻿namespace MDR_Aggregator;
+﻿using MDR_Aggregator.TopLevelClasses;
+
+namespace MDR_Aggregator.LoggingHelpers.Interfaces;
 
 public interface ILoggingHelper
 {
     void OpenFile(string[] args);
     void LogLine(string message, string identifier = "");
-    void LogHeader(string header_text);
+    void LogHeader(string headerText);
     void LogBlank();
     void LogError(string message);
     void LogCodeError(string header, string errorMessage, string? stackTrace);

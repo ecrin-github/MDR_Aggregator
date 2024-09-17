@@ -1,20 +1,21 @@
-﻿using Dapper;
+using Dapper;
 using Dapper.Contrib.Extensions;
 using Npgsql;
 using NpgsqlTypes;
-namespace MDR_Aggregator;
+
+namespace MDR_Aggregator.SearchObjectHelpers;
 
 public class JSONObjectDataLayer
 {
     private readonly string _connString;
 
-    private string? data_object_query_string, data_set_query_string;
-    private string? object_link_query_string, object_identifier_query_string;
-    private string? object_date_query_string, object_title_query_string;
-    private string? object_person_query_string, object_organisation_query_string;
-    private string? object_topic_query_string, object_instance_query_string;
-    private string? object_description_query_string, object_relationships_query_string;
-    private string? object_rights_query_string;
+    private string? _dataObjectQueryString, _dataSetQueryString;
+    private string? _objectLinkQueryString, _objectIdentifierQueryString;
+    private string? _objectDateQueryString, _objectTitleQueryString;
+    private string? _objectPersonQueryString, _objectOrganisationQueryString;
+    private string? _objectTopicQueryString, _objectInstanceQueryString;
+    private string? _objectDescriptionQueryString, _objectRelationshipsQueryString;
+    private string? _objectRightsQueryString;
 
     public JSONObjectDataLayer(string connString)
     {
@@ -35,7 +36,7 @@ public class JSONObjectDataLayer
         using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
-   
+
     public IEnumerable<int> FetchIds(int n, int batch)
     {
         string sql_string = @"select id from core.data_objects
@@ -44,12 +45,12 @@ public class JSONObjectDataLayer
         using var conn = new NpgsqlConnection(_connString);
         return conn.Query<int>(sql_string);
     }
-    
+
     private void ConstructObjectQueryStrings()
     {
         // data object query string
-        
-        data_object_query_string = @"Select dob.id, dob.doi, 
+
+        _dataObjectQueryString = @"Select dob.id, dob.doi, 
             dob.display_title, dob.version, 
             dob.object_class_id, oc.name as object_class,
             dob.object_type_id, ot.name as object_type,
@@ -65,10 +66,10 @@ public class JSONObjectDataLayer
             left join context_lup.object_access_types oat on dob.access_type_id = oat.id
             where dob.id = ";
 
-        
+
         // dataset query string
-        
-        data_set_query_string = @"select ds.id, 
+
+        _dataSetQueryString = @"select ds.id, 
             ds.record_keys_type_id, rt.name as record_keys_type, 
             ds.record_keys_details,
             ds.deident_type_id, it.name as deident_type, 
@@ -85,8 +86,8 @@ public class JSONObjectDataLayer
 
 
         // object instances
-        
-        object_instance_query_string = @"select
+
+        _objectInstanceQueryString = @"select
             oi.id, system_id, system, url,
             url_accessible, url_last_checked,
             resource_type_id, rt.name as resource_type,
@@ -96,8 +97,8 @@ public class JSONObjectDataLayer
             where object_id = ";
 
         // object title query string
-        
-        object_title_query_string = @"select
+
+        _objectTitleQueryString = @"select
             ot.id, ot.title_type_id, tt.name as title_type, 
             ot.title_text, ot.lang_code, ot.comments
             from core.object_titles ot
@@ -106,18 +107,18 @@ public class JSONObjectDataLayer
 
 
         // object date query string
-        
-        object_date_query_string = @"select
+
+        _objectDateQueryString = @"select
             od.id, date_type_id, dt.name as date_type, date_is_range,
             date_as_string, start_year, start_month, start_day,
             end_year, end_month, end_day, details as comments
             from core.object_dates od
             left join context_lup.date_types dt on od.date_type_id = dt.id
             where object_id = ";
-        
+
         // object contributors
-        
-        object_person_query_string = @"select 
+
+        _objectPersonQueryString = @"select 
             op.id, op.contrib_type_id, ct.name as contrib_type, op.person_full_name,
             op.orcid_id, op.person_affiliation, op.organisation_id, 
             op.organisation_name, op.organisation_ror_id
@@ -125,16 +126,16 @@ public class JSONObjectDataLayer
             left join context_lup.contribution_types ct on op.contrib_type_id = ct.id
             where object_id = ";
 
-        object_organisation_query_string = @"select
+        _objectOrganisationQueryString = @"select
             og.id, og.contrib_type_id, ct.name as contrib_type, og.organisation_id, 
             og.organisation_name, og.organisation_ror_id
             from core.object_organisations og
             left join context_lup.contribution_types ct on og.contrib_type_id = ct.id
             where object_id = ";
-        
+
         // object topics 
-        
-        object_topic_query_string = @"select
+
+        _objectTopicQueryString = @"select
             ot.id, topic_type_id, tt.name as topic_type, original_value, 
             original_ct_type_id, tv.name as original_ct_type, original_ct_code,
             mesh_code, mesh_value 
@@ -143,10 +144,10 @@ public class JSONObjectDataLayer
             left join context_lup.topic_vocabularies tv on ot.original_ct_type_id = tv.id
             where ot.object_id = ";
 
-        
+
         // object identifiers query string 
-        
-        object_identifier_query_string = @"select
+
+        _objectIdentifierQueryString = @"select
             oi.id, identifier_value, 
             identifier_type_id, it.name as identifier_type,
             source_id, oi.source, 
@@ -157,7 +158,7 @@ public class JSONObjectDataLayer
 
 
         // object description query string 
-        object_description_query_string = @"select
+        _objectDescriptionQueryString = @"select
             od.id, description_type_id, dt.name as description_type,
             label, description_text, lang_code 
             from core.object_descriptions od
@@ -167,7 +168,7 @@ public class JSONObjectDataLayer
 
 
         // object relationships query string 
-        object_relationships_query_string = @"select 
+        _objectRelationshipsQueryString = @"select 
             r.id, relationship_type_id, rt.name as relationship_type,
             target_object_id 
             from core.object_relationships r
@@ -177,14 +178,14 @@ public class JSONObjectDataLayer
 
 
         // object rights query string 
-        object_rights_query_string = @"select
+        _objectRightsQueryString = @"select
             id, rights_name, rights_uri, comments
             from core.object_rights
             where object_id = ";
 
 
         // data study object link query string
-        object_link_query_string = @"select study_id
+        _objectLinkQueryString = @"select study_id
             from core.study_object_links
             where object_id = ";
     }
@@ -195,9 +196,9 @@ public class JSONObjectDataLayer
 
     public DBDataObject? FetchDbDataObject(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = data_object_query_string + id;
-        return Conn.QueryFirstOrDefault<DBDataObject>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _dataObjectQueryString + id;
+        return conn.QueryFirstOrDefault<DBDataObject>(sql_string);
     }
 
 
@@ -206,9 +207,9 @@ public class JSONObjectDataLayer
 
     public DBDatasetProperties? FetchDbDatasetProperties(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = data_set_query_string + id;
-        return Conn.QueryFirstOrDefault<DBDatasetProperties>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _dataSetQueryString + id;
+        return conn.QueryFirstOrDefault<DBDatasetProperties>(sql_string);
     }
 
 
@@ -216,9 +217,9 @@ public class JSONObjectDataLayer
 
     public IEnumerable<DBObjectInstance> FetchObjectInstances(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_instance_query_string + id;
-        return Conn.Query<DBObjectInstance>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectInstanceQueryString + id;
+        return conn.Query<DBObjectInstance>(sql_string);
     }
 
 
@@ -226,19 +227,19 @@ public class JSONObjectDataLayer
 
     public IEnumerable<int> FetchLinkedStudies(int Id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_link_query_string + Id;
-        return Conn.Query<int>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectLinkQueryString + Id;
+        return conn.Query<int>(sql_string);
     }
 
-    
+
     // Fetches all linked title records for the specified data object
 
     public IEnumerable<DBObjectTitle> FetchObjectTitles(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_title_query_string + id;
-        return Conn.Query<DBObjectTitle>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectTitleQueryString + id;
+        return conn.Query<DBObjectTitle>(sql_string);
     }
 
 
@@ -246,98 +247,96 @@ public class JSONObjectDataLayer
 
     public IEnumerable<DBObjectDate> FetchObjectDates(int Id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_date_query_string + Id;
-        return Conn.Query<DBObjectDate>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectDateQueryString + Id;
+        return conn.Query<DBObjectDate>(sql_string);
     }
-    
-    
+
+
     // Fetches all linked people for the specified data object
 
     public IEnumerable<DBObjectPerson> FetchObjectPeople(int Id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_person_query_string + Id;
-        return Conn.Query<DBObjectPerson>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectPersonQueryString + Id;
+        return conn.Query<DBObjectPerson>(sql_string);
     }
-    
-    
+
+
     // Fetches all linked organisations for the specified data object
 
     public IEnumerable<DBObjectOrganisation> FetchObjectOrganisations(int Id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_organisation_query_string + Id;
-        return Conn.Query<DBObjectOrganisation>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectOrganisationQueryString + Id;
+        return conn.Query<DBObjectOrganisation>(sql_string);
     }
 
-    
+
     // Fetches all linked topics for the specified data object
 
     public IEnumerable<DBObjectTopic> FetchObjectTopics(int Id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_topic_query_string + Id;
-        return Conn.Query<DBObjectTopic>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectTopicQueryString + Id;
+        return conn.Query<DBObjectTopic>(sql_string);
     }
-    
-   // Fetches all linked identifier records for the specified data object
+
+    // Fetches all linked identifier records for the specified data object
 
     public IEnumerable<DBObjectIdentifier> FetchObjectIdentifiers(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_identifier_query_string + id;
-        return Conn.Query<DBObjectIdentifier>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectIdentifierQueryString + id;
+        return conn.Query<DBObjectIdentifier>(sql_string);
     }
 
     public IEnumerable<DBObjectDescription> FetchObjectDescriptions(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_description_query_string + id;
-        return Conn.Query<DBObjectDescription>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectDescriptionQueryString + id;
+        return conn.Query<DBObjectDescription>(sql_string);
     }
 
     public IEnumerable<DBObjectRelationship> FetchObjectRelationships(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_relationships_query_string + id;
-        return Conn.Query<DBObjectRelationship>(sql_string);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectRelationshipsQueryString + id;
+        return conn.Query<DBObjectRelationship>(sql_string);
     }
 
-    
+
     public IEnumerable<DBObjectRight> FetchObjectRights(int id)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        string sql_string = object_rights_query_string + id;
-        return Conn.Query<DBObjectRight>(sql_string);
-    }
-   
-    public void StoreSearchRecord(JSONSearchResObject sres)
-    {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        Conn.Insert(sres);
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        string sql_string = _objectRightsQueryString + id;
+        return conn.Query<DBObjectRight>(sql_string);
     }
 
-    public void StoreJSONObjectInDB(int id, string object_json)
+    public void StoreSearchRecord(JSONSearchResObject sres)
     {
-        using NpgsqlConnection Conn = new NpgsqlConnection(_connString);
-        Conn.Open();
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        conn.Insert(sres);
+    }
+
+    public void StoreJSONObjectInDB(int id, string objectJson)
+    {
+        using NpgsqlConnection conn = new NpgsqlConnection(_connString);
+        conn.Open();
 
         // To insert the string into a json field the parameters for the 
         // command have to be explicitly declared and typed
 
         using (var cmd = new NpgsqlCommand())
         {
-            cmd.CommandText = "INSERT INTO search.new_objects_json (id, full_object) VALUES (@id, @p)";
+            cmd.CommandText = "INSERT INTO core.new_search_objects_json (id, full_object) VALUES (@id, @p)";
             cmd.Parameters.Add(new NpgsqlParameter("@id", NpgsqlDbType.Integer) { Value = id });
-            cmd.Parameters.Add(new NpgsqlParameter("@p", NpgsqlDbType.Json) { Value = object_json });
-            cmd.Connection = Conn;
+            cmd.Parameters.Add(new NpgsqlParameter("@p", NpgsqlDbType.Json) { Value = objectJson });
+            cmd.Connection = conn;
             cmd.ExecuteNonQuery();
         }
-        Conn.Close();
+        conn.Close();
     }
-    
-    
 }
 
 

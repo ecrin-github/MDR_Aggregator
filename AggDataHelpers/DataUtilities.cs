@@ -1,229 +1,227 @@
-﻿using Dapper;
+using Dapper;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
 using Npgsql;
-namespace MDR_Aggregator;
 
-public class DBUtilities
+namespace MDR_Aggregator.AggDataHelpers;
+
+public class DbUtilities
 {
-    readonly string connstring;
+    private readonly string _connString;
     readonly ILoggingHelper _loggingHelper;
 
-    public DBUtilities(string _connstring, ILoggingHelper logginghelper)
+    public DbUtilities(string connString, ILoggingHelper loggingHelper)
     {
-        connstring = _connstring;
-        _loggingHelper = logginghelper;
+        _connString = connString;
+        _loggingHelper = loggingHelper;
     }
-    
-    
-    public int ExecuteSQL(string sql_string)
+
+
+    public int ExecuteSql(string sqlString)
     {
-        using var conn = new NpgsqlConnection(connstring);
+        using var conn = new NpgsqlConnection(_connString);
         try
         {
-            return conn.Execute(sql_string);
+            return conn.Execute(sqlString);
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError("In ExecuteSQL; " + e.Message + ", \nSQL was: " + sql_string);
+            _loggingHelper.LogError("In ExecuteSQL; " + e.Message + ", \nSQL was: " + sqlString);
             return 0;
         }
     }
-    
-    public int GetMaxId(string ftw_schema_name, string table_name)
+
+    private int GetMaxId(string ftwSchemaName, string tableName)
     {
-        string sql_string = $@"select max(id) from {ftw_schema_name}.{table_name}";
-        using var conn = new NpgsqlConnection(connstring);
+        var sql_string = $"select max(id) from {ftwSchemaName}.{tableName}";
+        using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
 
 
-    public int GetAggMinId(string full_table_name)
+    public int GetAggMinId(string fullTableName)
     {
-        string sql_string = $"select min(id) from {full_table_name}";
-        using var conn = new NpgsqlConnection(connstring);
-        return conn.ExecuteScalar<int>(sql_string);
-    }
-
-    
-    public int GetAggMaxId(string full_table_name)
-    {
-        string sql_string = $"select max(id) from {full_table_name}";
-        using var conn = new NpgsqlConnection(connstring);
-        return conn.ExecuteScalar<int>(sql_string);
-    }
-    
-    public int GetMinStudyId(string full_table_name)
-    {
-        string sql_string = $"select min(study_id) from {full_table_name}";
-        using var conn = new NpgsqlConnection(connstring);
-        return conn.ExecuteScalar<int>(sql_string);
-    }
-
-    
-    public int GetMaxStudyId(string full_table_name)
-    {
-        string sql_string = $"select max(study_id) from {full_table_name}";
-        using var conn = new NpgsqlConnection(connstring);
+        var sql_string = $"select min(id) from {fullTableName}";
+        using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
 
 
-    
-    public int GetCount(string full_table_name)
+    public int GetAggMaxId(string fullTableName)
     {
-        string sql_string = $"SELECT COUNT(*) FROM {full_table_name}";
-        using var conn = new NpgsqlConnection(connstring);
+        var sql_string = $"select max(id) from {fullTableName}";
+        using var conn = new NpgsqlConnection(_connString);
+        return conn.ExecuteScalar<int>(sql_string);
+    }
+
+    private int GetMinStudyId(string fullTableName)
+    {
+        var sql_string = $"select min(study_id) from {fullTableName}";
+        using var conn = new NpgsqlConnection(_connString);
+        return conn.ExecuteScalar<int>(sql_string);
+    }
+
+
+    private int GetMaxStudyId(string fullTableName)
+    {
+        var sql_string = $"select max(study_id) from {fullTableName}";
+        using var conn = new NpgsqlConnection(_connString);
+        return conn.ExecuteScalar<int>(sql_string);
+    }
+
+
+
+    public int GetCount(string fullTableName)
+    {
+        var sql_string = $"SELECT COUNT(*) FROM {fullTableName}";
+        using var conn = new NpgsqlConnection(_connString);
         return conn.ExecuteScalar<int>(sql_string);
     }
 
     // Used by the Study Transfer Helper and Object Transfer Helper to process ids, 
     // e.g. when identifying new and existing studies and objects, (4 calls in each)
     // and extensively by the Pubmed Transfer process - 11 calls
-    
-    public int Update_UsingTempTable(string index_table_name, string updated_table_name, 
-                                     string sql_string, string conditional, int batch_size, 
-                                     string feedback_addition)
+
+    public int Update_UsingTempTable(string indexTableName, string updatedTableName,
+                                     string sqlString, string conditional, int batchSize,
+                                     string feedbackAddition)
     {
         try
         {
-            int max_id = GetCount(index_table_name);
-            int updated = 0; 
-            if (max_id > batch_size)
+            var max_id = GetCount(indexTableName);
+            var updated = 0;
+            if (max_id > batchSize)
             {
-                sql_string += conditional;
-                for (int r = 1; r <= max_id; r += batch_size)
+                sqlString += conditional;
+                for (var r = 1; r <= max_id; r += batchSize)
                 {
-                    string batch_sql_string = sql_string + $" t.id >= {r} and t.id < {r + batch_size} ";
-                    updated += ExecuteSQL(batch_sql_string);
-                    int e = r + batch_size < max_id ? r + batch_size - 1 : max_id;
-                    string feedback = $"Updating {updated_table_name}{feedback_addition}, ids {r} to {e}";
+                    var batch_sql_string = sqlString + $" t.id >= {r} and t.id < {r + batchSize} ";
+                    updated += ExecuteSql(batch_sql_string);
+                    var e = r + batchSize < max_id ? r + batchSize - 1 : max_id;
+                    var feedback = $"Updating {updatedTableName}{feedbackAddition}, ids {r} to {e}";
                     _loggingHelper.LogLine(feedback);
                 }
             }
             else
             {
-                updated = ExecuteSQL(sql_string);
-                _loggingHelper.LogLine($"Updating {updated_table_name}{feedback_addition} as a single batch");
+                updated = ExecuteSql(sqlString);
+                _loggingHelper.LogLine($"Updating {updatedTableName}{feedbackAddition} as a single batch");
             }
             return updated;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In update of {updated_table_name}: {e.Message}");
+            _loggingHelper.LogError($"In update of {updatedTableName}: {e.Message}");
             return 0;
         }
     }
 
     // The main routine used when transferring data from the source databases to the aggs database.
     // 15 calls involved in transferring object data, 23 calls for study data
-    
-    public int ExecuteTransferSQL(string sql_string, string ftw_schema_name, string table_name, 
+
+    public int ExecuteTransferSql(string sqlString, string ftwSchemaName, string tableName,
                                   string qualifier, string context)
     {
         try
         {
-            int transferred = 0;
-            int max_id = GetMaxId(ftw_schema_name, table_name);
-            int rec_batch = 50000;
+            var transferred = 0;
+            var max_id = GetMaxId(ftwSchemaName, tableName);
+            const int recBatch = 50000;
             // int rec_batch = 10000;  // for testing 
-            if (max_id > rec_batch)
+            if (max_id > recBatch)
             {
-                sql_string += qualifier;
-                for (int r = 1; r <= max_id; r += rec_batch)
+                sqlString += qualifier;
+                for (var r = 1; r <= max_id; r += recBatch)
                 {
-                    string batch_sql_string = sql_string + $" s.id >= {r} and s.id < {r + rec_batch} ";
-                    transferred += ExecuteSQL(batch_sql_string);
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Transferred {ftw_schema_name}.{table_name} ({context}) data, ids {r} to {e}";
+                    var batch_sql_string = sqlString + $" s.id >= {r} and s.id < {r + recBatch} ";
+                    transferred += ExecuteSql(batch_sql_string);
+                    var e = r + recBatch < max_id ? r + recBatch - 1 : max_id;
+                    var feedback = $"Transferred {ftwSchemaName}.{tableName} ({context}) data, ids {r} to {e}";
                     _loggingHelper.LogLine(feedback);
                 }
             }
             else
             {
-                transferred = ExecuteSQL(sql_string);
-                _loggingHelper.LogLine($"Transferred {ftw_schema_name}.{table_name} ({context}) data, as a single batch");
+                transferred = ExecuteSql(sqlString);
+                _loggingHelper.LogLine($"Transferred {ftwSchemaName}.{tableName} ({context}) data, as a single batch");
             }
             return transferred;
         }
         catch (Exception e)
         {
-            string feedback =
-                $"In data transfer ({ftw_schema_name}.{table_name} ({context})) to aggregate table: {e.Message}";
+            var feedback =
+                $"In data transfer ({ftwSchemaName}.{tableName} ({context})) to aggregate table: {e.Message}";
             _loggingHelper.LogError(feedback);
             return 0;
         }
     }
-    
+
     // The main routine for transferring data from the aggs database to the core database
     // 24 calls within this process, plus 4 calls when setting up tables of temp titles,
     // topics and conditions data, and search_lexemes table, in the indexing process. 
-    
-    public int ExecuteCoreTransferSQL(string sql_string, string qualifier, string full_table_name)
+
+    public int ExecuteCoreTransferSql(string sqlString, string qualifier, string fullTableName)
     {
         try
         {
-            int transferred = 0;
-            int min_id = GetAggMinId(full_table_name);
-            int max_id = GetAggMaxId(full_table_name);
-            int rec_batch = 50000;
-            string fbc = $"records of {full_table_name} data";
-            if (max_id - min_id > rec_batch)
+            var transferred = 0;
+            var min_id = GetAggMinId(fullTableName);
+            var max_id = GetAggMaxId(fullTableName);
+            const int recBatch = 50000;
+            var fbc = $"records of {fullTableName} data";
+            if (max_id - min_id > recBatch)
             {
-                sql_string += qualifier;
-                for (int r = min_id; r <= max_id; r += rec_batch)
+                sqlString += qualifier;
+                for (var r = min_id; r <= max_id; r += recBatch)
                 {
-                    string batch_sql_string = sql_string + $" id >= {r} and id < {r + rec_batch} ";
-                    int res = ExecuteSQL(batch_sql_string);
-                    if (res > 0)
-                    {
-                        int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                        string feedback = $"Transferred {res} {fbc}, ids {r} to {e}";
-                        _loggingHelper.LogLine(feedback);
-                        transferred += res;
-                    }
+                    var batch_sql_string = sqlString + $" id >= {r} and id < {r + recBatch} ";
+                    var res = ExecuteSql(batch_sql_string);
+                    if (res <= 0) continue;
+                    var e = r + recBatch < max_id ? r + recBatch - 1 : max_id;
+                    var feedback = $"Transferred {res} {fbc}, ids {r} to {e}";
+                    _loggingHelper.LogLine(feedback);
+                    transferred += res;
                 }
             }
             else
             {
-                transferred = ExecuteSQL(sql_string);
+                transferred = ExecuteSql(sqlString);
                 _loggingHelper.LogLine($"Transferred {transferred} {fbc}, as a single batch");
             }
             return transferred;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In data transfer ({full_table_name} to core table: {e.Message}");
+            _loggingHelper.LogError($"In data transfer ({fullTableName} to core table: {e.Message}");
             return 0;
         }
     }
-    
+
     // Used just for transferring study condition icd data to the icd table
-    
-    public int TransferICDSQL(string sql_string, string full_table_name)
+
+    public int TransferIcdSql(string sqlString, string fullTableName)
     {
         try
         {
-            int transferred = 0;
-            int min_id = GetMinStudyId(full_table_name);
-            int max_id = GetMaxStudyId(full_table_name);
-            int rec_batch = 100000;
-            string fbc = $"ICD data records from {full_table_name} data";
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var transferred = 0;
+            var min_id = GetMinStudyId(fullTableName);
+            var max_id = GetMaxStudyId(fullTableName);
+            const int recBatch = 100000;
+            var fbc = $"ICD data records from {fullTableName} data";
+            for (var r = min_id; r <= max_id; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" study_id >= {r} and study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Transferred {res} {fbc}, study ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    transferred += res;
-                }
+                var batch_sql_string = sqlString + $" study_id >= {r} and study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < max_id ? r + recBatch - 1 : max_id;
+                var feedback = $"Transferred {res} {fbc}, study ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                transferred += res;
             }
             return transferred;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In data transfer ({full_table_name} to core table: {e.Message}");
+            _loggingHelper.LogError($"In data transfer ({fullTableName} to core table: {e.Message}");
             return 0;
         }
     }
@@ -231,29 +229,29 @@ public class DBUtilities
     // Used once for studies and twice for data objects (pubmed and non pubmed) to create and 
     // insert the provenance strings for the data in the core schema.
 
-    public int ExecuteProvenanceSQL(string sql_string, string full_table_name, string type_qualifier)
+    public int ExecuteProvenanceSql(string sqlString, string fullTableName, string typeQualifier)
     {
-        string feedback_name = full_table_name + type_qualifier;
+        var feedback_name = fullTableName + typeQualifier;
         try
         {
-            int transferred = 0;
-            int min_id = GetAggMinId(full_table_name);
-            int max_id = GetAggMaxId(full_table_name);
-            int rec_batch = 50000;
-            if (max_id - min_id > rec_batch)
+            var transferred = 0;
+            var min_id = GetAggMinId(fullTableName);
+            var max_id = GetAggMaxId(fullTableName);
+            const int recBatch = 50000;
+            if (max_id - min_id > recBatch)
             {
-                for (int r = min_id; r <= max_id; r += rec_batch)
+                for (var r = min_id; r <= max_id; r += recBatch)
                 {
-                    string batch_sql_string = sql_string + $" and s.id >= {r} and s.id < {r + rec_batch} ";
-                    transferred += ExecuteSQL(batch_sql_string);
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {feedback_name} with provenance data, ids {r} to {e}";
+                    var batch_sql_string = sqlString + $" and s.id >= {r} and s.id < {r + recBatch} ";
+                    transferred += ExecuteSql(batch_sql_string);
+                    var e = r + recBatch < max_id ? r + recBatch - 1 : max_id;
+                    var feedback = $"Updated {feedback_name} with provenance data, ids {r} to {e}";
                     _loggingHelper.LogLine(feedback);
                 }
             }
             else
             {
-                transferred = ExecuteSQL(sql_string);
+                transferred = ExecuteSql(sqlString);
                 _loggingHelper.LogLine($"Updated {feedback_name} with provenance data, as a single batch");
             }
             return transferred;
@@ -265,265 +263,223 @@ public class DBUtilities
         }
     }
 
-    
-    
+
+
     // Used twice in the search setup process, to recreate the base search_studies
     // and search_objects tables.
-    
-    public int SearchTableTransfer(string top_sql, string bottom_sql, string id_field,
-                           int min_id, int max_id, string table_name, int rec_batch)
+
+    public int SearchTableTransfer(string topSql, string bottomSql, string idField,
+                           int minId, int maxId, string tableName, int recBatch)
     {
         try
         {
-            int transferred = 0;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var transferred = 0;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = top_sql
-                                          + $" where s.{id_field} >= {r} and s.{id_field} < {r + rec_batch} "
-                                          + bottom_sql;
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Transferred {res} records to {table_name}, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    transferred += res;
-                }
+                var batch_sql_string = topSql
+                                       + $" where s.{idField} >= {r} and s.{idField} < {r + recBatch} "
+                                       + bottomSql;
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Transferred {res} records to {tableName}, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                transferred += res;
             }
             return transferred;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In data transfer to ({table_name}: {e.Message}");
+            _loggingHelper.LogError($"In data transfer to ({tableName}: {e.Message}");
             return 0;
         }
     }
 
     // Used 5 times in updating the search_studies table with text decodes for study parameter ids.
 
-    public int UpdateSearchStudyData(string sql_string, string data_type, int min_id, int max_id)
+    public int UpdateSearchStudyData(string sqlString, string dataType, int minId, int maxId)
     {
         try
         {
-            int updated = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var updated = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} {data_type} fields, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    updated += res;
-                }
+                var batch_sql_string = sqlString + $" and ss.study_id >= {r} and ss.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {res} {dataType} fields, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                updated += res;
             }
             return updated;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In study search update ({data_type}): { e.Message}");
+            _loggingHelper.LogError($"In study search update ({dataType}): {e.Message}");
             return 0;
         }
     }
 
     // Used twice times in updating the search_studies table with feature data.
-    
-    public int UpdateSearchFeatureData(string sql_string, string data_type, int min_id, int max_id)
+
+    public int UpdateSearchFeatureData(string sqlString, string dataType, int minId, int maxId)
     {
         try
         {
-            int transferred = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var transferred = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} records in study_search table with {data_type} data, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    transferred += res;
-                }
+                var batch_sql_string = sqlString + $" and ss.study_id >= {r} and ss.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {res} records in study_search table with {dataType} data, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                transferred += res;
             }
             return transferred;
         }
         catch (Exception e)
         {
-            string res = e.Message;
-            _loggingHelper.LogError($"In study search update ({data_type}): {res}");
+            _loggingHelper.LogError($"In study search update ({dataType}): {e.Message}");
             return 0;
         }
     }
 
     // Used in the search setup process to collect the 'has an object of type X' data.
     // Called 16 times, i.e. for each object type
-    
-    public int CollectHasObjectData(string where_string, int bit_pos, string object_type)
+
+    public int CollectHasObjectData(string whereString, int bitPos, string objectType)
     {
         try
         {
-            string setup_sql = $@"INSERT INTO core.temp_searchobjects(study_id, bit_pos)
-                        SELECT DISTINCT k.study_id, {bit_pos}
-                        from core.study_object_links k
-                        inner join core.data_objects b
-                        on k.object_id = b.id
-                        where " + where_string;
-            return ExecuteSQL(setup_sql);
+            var setup_sql = $"""
+                             INSERT INTO core.temp_searchobjects(study_id, bit_pos)
+                                                     SELECT DISTINCT k.study_id, {bitPos}
+                                                     from core.study_object_links k
+                                                     inner join core.data_objects b
+                                                     on k.object_id = b.id
+                                                     where 
+                             """ + whereString;
+            return ExecuteSql(setup_sql);
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In collecting object data (has_{object_type}) : {e.Message}");
+            _loggingHelper.LogError($"In collecting object data (has_{objectType}) : {e.Message}");
             return 0;
         }
     }
-    
+
     // Used in the search setup process to transfer the 'has an object of type X' data to
     // a bitmap. Called 16 times, for each object type, from within a single loop.
-    
-    public int UpdateBitMap(string sql_string, int n, int min_id, int max_id )
+
+    public int UpdateBitMap(string sqlString, int n, int minId, int maxId)
     {
         try
         {
-            int updated = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var updated = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    updated += res;
-                }
+                var batch_sql_string = sqlString + $" and ss.study_id >= {r} and ss.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                // var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                updated += res;
             }
             return updated;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In bit map update (n = {n}): { e.Message}");
+            _loggingHelper.LogError($"In bit map update (n = {n}): {e.Message}");
             return 0;
         }
     }
 
     // Used to update the search_studies table with lists of countries and conditions,
     // as two separate sets of calls.
-    
-    public int UpdateListData(string top_sql, string bottom_sql, int min_id, int max_id, string list_type )
+
+    public int UpdateListData(string topSql, string bottomSql, int minId, int maxId, string listType)
     {
         try
-        { 
-            int updated = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+        {
+            var updated = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = top_sql 
-                                          + $" where sc.study_id >= {r} and sc.study_id < {r + rec_batch} " +
-                                          bottom_sql;
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    updated += res;
-                }
+                var batch_sql_string = topSql
+                                       + $" where sc.study_id >= {r} and sc.study_id < {r + recBatch} " +
+                                       bottomSql;
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {res} {listType} fields, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                updated += res;
             }
             return updated;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {list_type} update: { e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
 
     // Used to create the data in the search_idents table
-    
-    public int CreateSearchIdentsData(string top_sql, string bottom_sql, int min_id, int max_id, string list_type )
+
+    public int CreateSearchIdentsData(string topSql, string bottomSql, int minId, int maxId, string listType)
     {
         try
-        { 
-            int created = 0;
-            int rec_batch = 50000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+        {
+            var created = 0;
+            const int recBatch = 50000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = top_sql 
-                                          + $" and si.study_id >= {r} and si.study_id < {r + rec_batch} " +
-                                          bottom_sql;
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    created += res;
-                }
+                var batch_sql_string = topSql
+                                       + $" and si.study_id >= {r} and si.study_id < {r + recBatch} " +
+                                       bottomSql;
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {res} {listType} fields, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                created += res;
             }
             return created;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {list_type} update: { e.Message}");
-            return 0;
-        }
-    }
-    
-    public int CreateSearchCountriesData(string top_sql, int min_id, int max_id, string list_type )
-    {
-        try
-        { 
-            int created = 0;
-            int rec_batch = 50000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
-            {
-                string batch_sql_string = top_sql
-                                          + $" and sc.study_id >= {r} and sc.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    created += res;
-                }
-            }
-            return created;
-        }
-        catch (Exception e)
-        {
-            _loggingHelper.LogError($"In {list_type} update: { e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
 
-
-    public int CreateSearchObjectTypesData(string top_sql, int min_id, int max_id, string list_type)
+    public int CreateSearchCountriesData(string topSql, int minId, int maxId, string listType)
     {
         try
         {
-            int created = 0;
-            int rec_batch = 50000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var created = 0;
+            const int recBatch = 50000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = top_sql
-                                          + $" and sol.id >= {r} and sol.id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    created += res;
-                }
+                var batch_sql_string = topSql
+                                       + $" and sc.study_id >= {r} and sc.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {res} {listType} fields, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                created += res;
             }
             return created;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {list_type} update: {e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
@@ -531,247 +487,232 @@ public class DBUtilities
 
     // Used during construction of object search data. Called 3 times.
 
-    public int UpdateObjectSearchData(string sql_string, int min_id, int max_id, string qualifier, string field_type )
+    public int UpdateObjectSearchData(string sqlString, int minId, int maxId, string qualifier, string fieldType)
     {
         try
         {
-            int updated = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var updated = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = sql_string + qualifier
-                            + $" so.study_id >= {r} and so.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} {field_type} fields, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    updated += res;
-                }
+                var batch_sql_string = sqlString + qualifier
+                                                  + $" so.study_id >= {r} and so.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {res} {fieldType} fields, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                updated += res;
             }
             return updated;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {field_type} update: { e.Message}");
+            _loggingHelper.LogError($"In {fieldType} update: {e.Message}");
             return 0;
         }
     }
 
     // Used (3 times) within the search setup process for the titles and topic indexing process.
-    
-    public int CreateLexSQL(string sql_string, string data_type, string full_table_name)
+
+    public int CreateLexSql(string sqlString, string dataType, string fullTableName)
     {
         try
         {
-            int created = 0;
-            int min_id = GetAggMinId(full_table_name);
-            int max_id = GetAggMaxId(full_table_name);
-            int rec_batch = 25000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var created = 0;
+            var min_id = GetAggMinId(fullTableName);
+            var max_id = GetAggMaxId(fullTableName);
+            const int recBatch = 25000;
+            for (var r = min_id; r <= max_id; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" where s.id >= {r} and s.id < {r + rec_batch} ";
-                created += ExecuteSQL(batch_sql_string);
-                int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                string feedback = $"Updated {data_type} data, ids {r} to {e}";
+                var batch_sql_string = sqlString + $" where s.id >= {r} and s.id < {r + recBatch} ";
+                created += ExecuteSql(batch_sql_string);
+                var e = r + recBatch < max_id ? r + recBatch - 1 : max_id;
+                var feedback = $"Updated {dataType} data, ids {r} to {e}";
                 _loggingHelper.LogLine(feedback);
             }
             return created;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In create lexemes ({data_type}): {e.Message}");
+            _loggingHelper.LogError($"In create lexemes ({dataType}): {e.Message}");
             return 0;
         }
     }
-   
+
     // Used (3 times) within the search setup process for the titles and topic indexing process.
-    
-    public int AggregateLexDataByStudy(string sql_string, string full_table_name, int min_id, int max_id)
+    public int AggregateLexDataByStudy(string sqlString, string fullTableName, int minId, int maxId)
     {
         try
         {
-            int transferred = 0;
-            int rec_batch = 25000;
+            var transferred = 0;
+            const int recBatch = 25000;
             // int rec_batch = 10000;  // for testing 
-            
-            if (max_id - min_id > rec_batch)
+            if (maxId - minId > recBatch)
             {
-                for (int r = min_id; r <= max_id; r += rec_batch)
+                for (var r = minId; r <= maxId; r += recBatch)
                 {
-                    string batch_sql_string = sql_string 
-                                    + $" where study_id >= {r} and study_id < {r + rec_batch} ";
+                    var batch_sql_string = sqlString
+                                           + $" where study_id >= {r} and study_id < {r + recBatch} ";
                     batch_sql_string += " group by study_id";
-                    transferred += ExecuteSQL(batch_sql_string);
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {full_table_name} data, ids {r} to {e}";
+                    transferred += ExecuteSql(batch_sql_string);
+                    var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                    var feedback = $"Updated {fullTableName} data, ids {r} to {e}";
                     _loggingHelper.LogLine(feedback);
                 }
             }
             else
             {
-                transferred = ExecuteSQL(sql_string);
-                _loggingHelper.LogLine($"Updated {full_table_name} data, as a single batch");
+                transferred = ExecuteSql(sqlString);
+                _loggingHelper.LogLine($"Updated {fullTableName} data, as a single batch");
             }
             return transferred;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In AggregateLexDataByStudy ({full_table_name} in search table: {e.Message}");
+            _loggingHelper.LogError($"In AggregateLexDataByStudy ({fullTableName} in search table: {e.Message}");
             return 0;
         }
     }
-    
-    
+
+
     // Used 2 times in the set up process for titles, topics and conditions indexing
     // Uses study id to go through records because records must be grouped by study
-    
-    public int TransferSearchDataByStudy(string sql_string, string data_type, int min_id, int max_id)
+    public int TransferSearchDataByStudy(string sqlString, string dataType, int minId, int maxId)
     {
         try
         {
-            int transferred = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var transferred = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" and s.study_id >= {r} and s.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated search_lexemes table with {data_type} data, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    transferred += res;
-                }
+                var batch_sql_string = sqlString + $" and s.study_id >= {r} and s.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated search_lexemes table with {dataType} data, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                transferred += res;
             }
             return transferred;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In TransferSearchDataByStudy ({data_type}): { e.Message}");
+            _loggingHelper.LogError($"In TransferSearchDataByStudy ({dataType}): {e.Message}");
             return 0;
         }
     }
-    
-    
-    public int UpdateStudyFeatureList(string sql_string,  int min_id, int max_id, string data_type)
-    {
-        try
-        {
-            int transferred = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
-            {
-                string batch_sql_string = sql_string + $" and ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated search_studies table with {data_type} data, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    transferred += res;
-                }
-            }
-            return transferred;
-        } 
-        catch (Exception e)
-        {
-            _loggingHelper.LogError($"In UpdateStudyFeatureList ({data_type}s): { e.Message}");
-            return 0;
-        }
-    }
-    
-    /*
-    public int UpdateSearchStudyObjectJson(int min_id, int max_id, string list_type )
-    {
-        try
-        { 
-            int updated = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
-            {
-                string batch_sql_string = $@"Update search.studies ss
-                   set object_json = b.obj_json
-                from
-                    (select study_id, json_agg(object_json) as obj_json
-                    from search.objects 
-                    where study_id >= {r}
-                    and study_id < {r + rec_batch} 
-                    group by study_id) b
-                    where ss.study_id = b.study_id ";
 
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {res} {list_type} fields, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    updated += res;
-                }
+
+    public int UpdateStudyFeatureList(string sqlString, int minId, int maxId, string dataType)
+    {
+        try
+        {
+            var transferred = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
+            {
+                var batch_sql_string = sqlString + $" and ss.study_id >= {r} and ss.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated search_studies table with {dataType} data, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                transferred += res;
+            }
+            return transferred;
+        }
+        catch (Exception e)
+        {
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): {e.Message}");
+            return 0;
+        }
+    }
+
+
+    public int UpdateSearchStudyObjectJson(int minId, int maxId, string listType)
+    {
+        try
+        {
+            var updated = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
+            {
+                var batch_sql_string = $"""
+                                        Update core.search_studies ss
+                                                           set object_json = b.obj_json
+                                                        from
+                                                            (select study_id, json_agg(object_json) as obj_json
+                                                            from core.search_objects 
+                                                            where study_id >= {r}
+                                                            and study_id < {r + recBatch} 
+                                                            group by study_id) b
+                                                            where ss.study_id = b.study_id 
+                                        """;
+
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {res} {listType} fields, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                updated += res;
             }
             return updated;
         }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In {list_type} update: { e.Message}");
+            _loggingHelper.LogError($"In {listType} update: {e.Message}");
             return 0;
         }
     }
-    */
-    
-    public int UpdateStudyJson(string sql_string,  int min_id, int max_id, string data_type)
+
+    public int UpdateStudyJson(string sqlString, int minId, int maxId, string dataType)
     {
         try
         {
-            int transferred = 0;
-            int rec_batch = 20000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var transferred = 0;
+            const int recBatch = 20000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" where ss.study_id >= {r} and ss.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated search_studies table with {data_type} data, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    transferred += res;
-                }
+                var batch_sql_string = sqlString + $" where ss.study_id >= {r} and ss.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated search_studies table with {dataType} data, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                transferred += res;
             }
             return transferred;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In UpdateStudyFeatureList ({data_type}s): { e.Message}");
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): {e.Message}");
             return 0;
         }
     }
-    
-    public int TransferStudyJson(string sql_string,  int min_id, int max_id, string data_type)
+
+    public int TransferStudyJson(string sqlString, int minId, int maxId, string dataType)
     {
         try
         {
-            int transferred = 0;
-            int rec_batch = 10000;
-            for (int r = min_id; r <= max_id; r += rec_batch)
+            var transferred = 0;
+            const int recBatch = 10000;
+            for (var r = minId; r <= maxId; r += recBatch)
             {
-                string batch_sql_string = sql_string + $" and s.study_id >= {r} and s.study_id < {r + rec_batch} ";
-                int res = ExecuteSQL(batch_sql_string);
-                if (res > 0)
-                {
-                    int e = r + rec_batch < max_id ? r + rec_batch - 1 : max_id;
-                    string feedback = $"Updated {data_type} table with study json data, ids {r} to {e}";
-                    _loggingHelper.LogLine(feedback);
-                    transferred += res;
-                }
+                var batch_sql_string = sqlString + $" and s.study_id >= {r} and s.study_id < {r + recBatch} ";
+                var res = ExecuteSql(batch_sql_string);
+                if (res <= 0) continue;
+                var e = r + recBatch < maxId ? r + recBatch - 1 : maxId;
+                var feedback = $"Updated {dataType} table with study json data, ids {r} to {e}";
+                _loggingHelper.LogLine(feedback);
+                transferred += res;
             }
             return transferred;
-        } 
+        }
         catch (Exception e)
         {
-            _loggingHelper.LogError($"In UpdateStudyFeatureList ({data_type}s): { e.Message}");
+            _loggingHelper.LogError($"In UpdateStudyFeatureList ({dataType}s): {e.Message}");
             return 0;
         }
     }
-    
 }

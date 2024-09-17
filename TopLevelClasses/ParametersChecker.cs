@@ -1,13 +1,15 @@
 ﻿using CommandLine;
-namespace MDR_Aggregator;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+
+namespace MDR_Aggregator.TopLevelClasses;
 
 internal class ParametersChecker
 {
     private readonly ILoggingHelper _loggingHelper;
 
-    public ParametersChecker(ILoggingHelper logginghelper)
+    public ParametersChecker(ILoggingHelper loggingHelper)
     {
-        _loggingHelper = logginghelper;
+        _loggingHelper = loggingHelper;
     }
 
     public ParamsCheckResult CheckParams(IEnumerable<string>? args)
@@ -68,20 +70,20 @@ internal class ParametersChecker
         {
             n++;
             _loggingHelper.LogParseError("Error {n}: Tag was {Tag}", n.ToString(), e.Tag.ToString());
-            if (e.GetType().Name == "UnknownOptionError")
+            switch (e.GetType().Name)
             {
-                _loggingHelper.LogParseError("Error {n}: Unknown option was {UnknownOption}", n.ToString(), 
-                    ((UnknownOptionError)e).Token);
-            }
-            if (e.GetType().Name == "MissingRequiredOptionError")
-            {
-                _loggingHelper.LogParseError("Error {n}: Missing option was {MissingOption}", n.ToString(), 
-                    ((MissingRequiredOptionError)e).NameInfo.NameText);
-            }
-            if (e.GetType().Name == "BadFormatConversionError")
-            {
-                _loggingHelper.LogParseError("Error {n}: Wrongly formatted option was {MissingOption}", n.ToString(), 
-                    ((BadFormatConversionError)e).NameInfo.NameText);
+                case "UnknownOptionError":
+                    _loggingHelper.LogParseError("Error {n}: Unknown option was {UnknownOption}", n.ToString(), 
+                        ((UnknownOptionError)e).Token);
+                    break;
+                case "MissingRequiredOptionError":
+                    _loggingHelper.LogParseError("Error {n}: Missing option was {MissingOption}", n.ToString(), 
+                        ((MissingRequiredOptionError)e).NameInfo.NameText);
+                    break;
+                case "BadFormatConversionError":
+                    _loggingHelper.LogParseError("Error {n}: Wrongly formatted option was {MissingOption}", n.ToString(), 
+                        ((BadFormatConversionError)e).NameInfo.NameText);
+                    break;
             }
         }
         _loggingHelper.LogLine("MDR_Aggregator application aborted");
@@ -120,10 +122,10 @@ public class ParamsCheckResult
     internal bool ValidityError { get; set; }
     internal Options? Pars { get; set; }
 
-    internal ParamsCheckResult(bool _ParseError, bool _ValidityError, Options? _Pars)
+    internal ParamsCheckResult(bool parseError, bool validityError, Options? pars)
     {
-        ParseError = _ParseError;
-        ValidityError = _ValidityError;
-        Pars = _Pars;
+        ParseError = parseError;
+        ValidityError = validityError;
+        Pars = pars;
     }
 }

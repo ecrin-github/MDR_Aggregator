@@ -1,186 +1,122 @@
-﻿namespace MDR_Aggregator;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
+using MDR_Aggregator.SearchStudyHelpers;
+
+namespace MDR_Aggregator.SearchHelpers;
 
 public class CoreSearchBuilder
 {
     private readonly ILoggingHelper _loggingHelper;
-    private readonly SearchHelperTables tables_srch;
-    private readonly SearchHelperLexemes lexemes_srch;
-    private readonly SearchHelperJson json_srch;
-    private readonly JSONStudyDataLayer study_repo;
-    
+    private readonly SearchHelperTables _tablesSrch;
+    private readonly SearchHelperLexemes _lexemesSrch;
+    private readonly SearchHelperJson _jsonSrch;
+    private readonly JsonStudyDataLayer _studyRepo;
+
     public CoreSearchBuilder(string connString, ILoggingHelper loggingHelper)
     {
         _loggingHelper = loggingHelper;
-        tables_srch = new SearchHelperTables(connString, _loggingHelper);
-        lexemes_srch = new SearchHelperLexemes(connString, _loggingHelper);
-        json_srch = new SearchHelperJson(connString, _loggingHelper);
-        study_repo = new JSONStudyDataLayer(connString, _loggingHelper);
+        _tablesSrch = new SearchHelperTables(connString, _loggingHelper);
+        _lexemesSrch = new SearchHelperLexemes(connString, _loggingHelper);
+        _jsonSrch = new SearchHelperJson(connString, _loggingHelper);
+        _studyRepo = new JsonStudyDataLayer(connString, _loggingHelper);
     }
 
-    public void CreateJSONObjectData(bool create_table = true, int offset = 0)
+    public void CreateJSONObjectData(bool createTable = true, int offset = 0)
     {
-        if (create_table)
+        if (createTable)
         {
-            tables_srch.CreateObjectDataSearchTables();
+            _tablesSrch.CreateObjectDataSearchTables();
         }
-        json_srch.LoopThroughObjectRecords(offset);
+        _jsonSrch.LoopThroughObjectRecords(offset);
     }
-    
-    public void CreateJSONStudyData(bool create_table = true, int offset = 0)
+
+    public void CreateJSONStudyData(bool createTable = true, int offset = 0)
     {
-        if (create_table)
+        if (createTable)
         {
-            tables_srch.CreateStudyDataSearchTables();
+            _tablesSrch.CreateStudyDataSearchTables();
         }
-        json_srch.LoopThroughStudyRecords(offset);
+        _jsonSrch.LoopThroughStudyRecords(offset);
     }
-    
+
     public void CreateIdentifierSearchDataTable()
     {
-       tables_srch.CreateIdentifierSearchData();
-       int res = study_repo.AddDataToIdentsSearchData();
-       _loggingHelper.LogLine($"{res} study identifier search records created");
-       _loggingHelper.LogBlank();
+        _tablesSrch.CreateIdentifierSearchData();
+        int res = _studyRepo.AddDataToIdentsSearchData();
+        _loggingHelper.LogLine($"{res} study identifier search records created");
+        _loggingHelper.LogBlank();
     }
-       
+
     public void CreatePMIDSearchDataTable()
     {
-       tables_srch.CreatePMIDSearchData();
-       int res = study_repo.AddDataToPMIDSearchData();
-       _loggingHelper.LogLine($"{res} pmid search records created");
-       _loggingHelper.LogBlank();
-    } 
-    
+        _tablesSrch.CreatePMIDSearchData();
+        int res = _studyRepo.AddDataToPMIDSearchData();
+        _loggingHelper.LogLine($"{res} pmid search records created");
+        _loggingHelper.LogBlank();
+    }
+
     public void CreateCountrySearchDataTable()
     {
-        tables_srch.CreateCountrySearchData();
-        int res = study_repo.AddDataToCountrySearchData();
+        _tablesSrch.CreateCountrySearchData();
+        int res = _studyRepo.AddDataToCountrySearchData();
         _loggingHelper.LogLine($"{res} country search records created");
         _loggingHelper.LogBlank();
     }
 
-    public void CreateObjectTypeSearchDataTable()
-    {
-        tables_srch.CreateObjectTypeSearchData();
-        int res = study_repo.AddDataToObjectTypeSearchData();
-        _loggingHelper.LogLine($"{res} object type search records created");
-        _loggingHelper.LogBlank();
-    }
 
-
- 
     public void CreateLexemeSearchDataTable()
     {
         // Set up the text search configurations, then for both titles and topics, set up
         // temporary tables and do an initial transition to lexemes.
         // Then aggregate to study based text, before indexing.
 
-        lexemes_srch.CreateTSConfig();
+        _lexemesSrch.CreateTSConfig();
         _loggingHelper.LogLine("Text search configuration reconstructed");
 
         // Obtain relevant data
 
-        int res = lexemes_srch.GenerateTitleData();
+        int res = _lexemesSrch.GenerateTitleData();
         _loggingHelper.LogLine($"{res} temporary title records created");
-        res = lexemes_srch.GenerateTopicData();
+        res = _lexemesSrch.GenerateTopicData();
         _loggingHelper.LogLine($"{res} temporary topic records created");
-        res = lexemes_srch.GenerateConditionData();
+        res = _lexemesSrch.GenerateConditionData();
         _loggingHelper.LogLine($"{res} temporary condition records created");
-        
-        res = lexemes_srch.GenerateTitleDataByStudy();
+
+        res = _lexemesSrch.GenerateTitleDataByStudy();
         _loggingHelper.LogLine($"{res} title records, by study, created");
-        res = lexemes_srch.GenerateTopicDataByStudy();
+        res = _lexemesSrch.GenerateTopicDataByStudy();
         _loggingHelper.LogLine($"{res} topic records, by study, created");
-        res = lexemes_srch.GenerateConditionDataByStudy();
+        res = _lexemesSrch.GenerateConditionDataByStudy();
         _loggingHelper.LogLine($"{res} condition  records, by study, created");
-        res = lexemes_srch.CombineTitleAndTopicText();
+        res = _lexemesSrch.CombineTitleAndTopicText();
         _loggingHelper.LogLine($"{res} title and topic text combined");
 
-        tables_srch.CreateSearchLexemesTable();
-        lexemes_srch.ProcessLexemeBaseData();
-        
+        _tablesSrch.CreateSearchLexemesTable();
+        _lexemesSrch.ProcessLexemeBaseData();
+
         // tidy up
-        
-        lexemes_srch.DropTempLexTables(); // leave in for now
+
+        _lexemesSrch.DropTempLexTables(); // leave in for now
     }
 
     public void AddStudyJsonToSearchTables()
     {
-        int min_studies_id = study_repo.FetchMinId();
-        int max_studies_id = study_repo.FetchMaxId();
-        int res = study_repo.UpdateIdentsSearchWithStudyJson(min_studies_id, max_studies_id);
+        int min_studies_id = _studyRepo.FetchMinId();
+        int max_studies_id = _studyRepo.FetchMaxId();
+        int res = _studyRepo.UpdateIdentsSearchWithStudyJson(min_studies_id, max_studies_id);
         _loggingHelper.LogLine($"{res} idents search records updated with study json data");
-        res = study_repo.UpdatePMIDsSearchWithStudyJson(min_studies_id, max_studies_id);
+        res = _studyRepo.UpdatePMIDsSearchWithStudyJson(min_studies_id, max_studies_id);
         _loggingHelper.LogLine($"{res} pmids search records updated with study json data");
-        res = study_repo.UpdateLexemesSearchWithStudyJson(min_studies_id, max_studies_id);
+        res = _studyRepo.UpdateLexemesSearchWithStudyJson(min_studies_id, max_studies_id);
         _loggingHelper.LogLine($"{res} lexemes search records updated with study json data");
-    }
-
-    public void TileLexemeTable()
-    {
-        tables_srch.TileLexemeTable();
-    }
-
-
-    public void ClusterSearchTables()
-    {
-        tables_srch.ClusterTable("countries", "sc_country_id");
-        tables_srch.ClusterTable("pmids", "sp_pmid");
-        tables_srch.ClusterTable("idents", "si_type_value");
-        tables_srch.ClusterTable("object_types", "sb_type_id");
-        tables_srch.ClusterTable("lexemes", "bucket_study");
     }
 
     public void SwitchToNewTables()
     {
-        // turn 'new_' tables into correctly named ones
-        // Applies to search.new_pmids, search.new_idents, search.new_lexemes, search.new_countries
-        // search.new_studies, search.new_studies_json, search.new_objects_json, search.new_objects 
-
-        // for each, drop the one with the target name and rename the new_table as having the target name
-        // Also rename PKs and indexes toi keep consistent naming scheme and avoid conflicts
-
-        tables_srch.RenameTable("pmids");
-        tables_srch.RenameIndex("sp_study_id");
-        tables_srch.RenameIndex("sp_pmid");
-
-        tables_srch.RenameTable("idents");
-        tables_srch.RenameIndex("si_study_id");
-        tables_srch.RenameIndex("si_type_value");
-
-        tables_srch.RenameTable("countries");
-        tables_srch.RenameIndex("sc_study_id");
-        tables_srch.RenameIndex("sc_country_id");
-
-        tables_srch.RenameTable("object_types");
-        tables_srch.RenameIndex("sb_study_id");
-        tables_srch.RenameIndex("sb_type_id");
-                
-        tables_srch.RenameTable("lexemes");
-        tables_srch.RenamePK("lexemes_pkey");
-        tables_srch.RenameIndex("cond_search_idx");
-        tables_srch.RenameIndex("tt_search_idx");
-        tables_srch.RenameIndex("bucket_study");
-
-        tables_srch.RenameTable("objects");
-        tables_srch.RenamePK("objects_pkey");
-        tables_srch.RenameIndex("os_object_id");
-
-        tables_srch.RenameTable("objects_json");
-        tables_srch.RenamePK("objects_json_pkey");        
-        tables_srch.RenameIndex("search_objects_json_id");
-
-        tables_srch.RenameTable("studies");
-        tables_srch.RenamePK("studies_pkey");
-        tables_srch.RenameIndex("ss_alloc_id");
-        tables_srch.RenameIndex("ss_phase_id");
-        tables_srch.RenameIndex("ss_start_year");
-        tables_srch.RenameIndex("ss_status");
-        tables_srch.RenameIndex("ss_type");
-
-        tables_srch.RenameTable("studies_json");
-        tables_srch.RenamePK("studies_json_pkey");
-        tables_srch.RenameIndex("search_studies_json_id");
+        // to do
+        // turn new tables into correctly named ones
+        // Applies to search_pmids, search_idents, search_lexemes, 
+        // search_studies, search_studies_json, search_objects_json, search_objects   ==> rename to search_objects
+        // drop old ones
     }
 
 }

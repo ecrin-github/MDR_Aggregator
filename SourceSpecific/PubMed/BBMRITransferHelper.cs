@@ -1,16 +1,19 @@
-﻿namespace MDR_Aggregator;
+﻿using MDR_Aggregator.AggDataHelpers;
+using MDR_Aggregator.LoggingHelpers.Interfaces;
 
-internal class BBMRITransferHelper
+namespace MDR_Aggregator.SourceSpecific.PubMed;
+
+internal class BbmriTransferHelper
 {
-    private readonly string _schema_name;
-    private readonly DBUtilities db;
+    private readonly string _schemaName;
+    private readonly DbUtilities _db;
     private readonly ILoggingHelper _loggingHelper;
 
-    public BBMRITransferHelper(string schema_name, string connString, ILoggingHelper loggingHelper)
+    public BbmriTransferHelper(string schemaName, string connString, ILoggingHelper loggingHelper)
     {
-        _schema_name = schema_name;
+        _schemaName = schemaName;
         _loggingHelper = loggingHelper;
-        db = new DBUtilities(connString, _loggingHelper);
+        _db = new DbUtilities(connString, _loggingHelper);
     }
     
     public void MatchExistingBBMRILinks()
@@ -39,13 +42,13 @@ internal class BBMRITransferHelper
              CREATE INDEX dist_temp_object_ids_parent_study_sdidsource 
                              ON nk.temp_bbmris(parent_study_source_id, parent_study_sd_sid);";
                   
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
         
         sql_string = $@"Insert into nk.temp_bbmris(source_id, sd_oid, parent_study_sd_sid,
                         object_type_id, title, datetime_of_data_fetch)
                         select 110426, a.sd_oid, a.sd_sid, 301, a.title, a.datetime_of_data_fetch
-                        from {_schema_name}.data_objects a ";
-        db.ExecuteSQL(sql_string);
+                        from {_schemaName}.data_objects a ";
+        _db.ExecuteSql(sql_string);
         
         // The source id can at the moment be found from the sd_sid as these are unique across registries.
         // If this were to change a more complex method would need to be employed, or it would need to be 
@@ -57,7 +60,7 @@ internal class BBMRITransferHelper
                        is_preferred_study = ids.is_preferred
                        from nk.study_ids ids
                        where b.parent_study_sd_sid = ids.sd_sid ";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
         
         // Identify the matched records in the temp table. Matching is against sd_oid and study.
         
@@ -67,7 +70,7 @@ internal class BBMRITransferHelper
         where b.parent_study_id = doi.parent_study_id
         and b.sd_oid = doi.sd_oid ";
 
-        int res = db.ExecuteSQL(sql_string);
+        int res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} existing objects matched in temp table");
 
         // Update the matched records in the data object identifier table
@@ -79,14 +82,14 @@ internal class BBMRITransferHelper
         from nk.temp_bbmris b
         where doi.parent_study_id = b.parent_study_id
         and doi.sd_oid = b.sd_oid ";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} existing BBMRI sample objects matched in identifiers table");
 
         // Delete the matched records from the temp table
         
         sql_string = @"DELETE from nk.temp_bbmris
         where match_status = 1 ";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
     
     
@@ -97,7 +100,7 @@ internal class BBMRITransferHelper
         
         string sql_string = @"Delete from nk.temp_bbmris t
                               where parent_study_id is null";
-        int res = db.ExecuteSQL(sql_string);
+        int res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} records deleted from BBMRI-study combinations as sd_sid could not be matched");
 
         // Identify and label completely new objects first. 
@@ -109,14 +112,14 @@ internal class BBMRITransferHelper
                  left join nk.data_object_ids doi
                  on b.sd_oid = doi.sd_oid
                  where doi.sd_oid is null; ";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
 
         sql_string = @"UPDATE nk.temp_bbmris b
             set match_status = 3
             FROM nk.new_bbmris n
             where b.id = n.id
             and b.match_status = 0 ";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} new sample-study combinations found with completely new sample Ids");
 
         // Then identify records where the sample exists but the link with that study is not yet in the
@@ -132,7 +135,7 @@ internal class BBMRITransferHelper
         and b.match_status = 0 
         where doi.sd_oid is null";
 
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
 
         sql_string = @"UPDATE nk.temp_bbmris b
         set match_status = 2
@@ -140,7 +143,7 @@ internal class BBMRITransferHelper
         where b.match_status = 0
         and b.id = n.id ";
 
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} new BBMRI-study combinations found for existing BBMRI samples");
 
     }
@@ -158,7 +161,7 @@ internal class BBMRITransferHelper
                       and doi.is_preferred_object = true
                       and b.match_status = 2 ";
 
-         int res = db.ExecuteSQL(sql_string);
+         int res = _db.ExecuteSql(sql_string);
          _loggingHelper.LogLine($"{res} new BBMRI sample-study combinations updated");
 
          sql_string = @"Insert into nk.data_object_ids
@@ -171,7 +174,7 @@ internal class BBMRITransferHelper
          FROM nk.temp_bbmris b
          where b.match_status = 2 ";
 
-         res = db.ExecuteSQL(sql_string);
+         res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} new BBMRI-study combinations added");
     }
 
@@ -191,7 +194,7 @@ internal class BBMRITransferHelper
                               where b.sd_oid = m.sd_oid
                               and b.parent_study_id = m.min_study
                               and b.match_status = 3 ";
-        int res = db.ExecuteSQL(sql_string);
+        int res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} objects set as 'preferred' for new BBMRI samples");
         
         // Put the remaining study-sample combinations as non-preferred.
@@ -200,7 +203,7 @@ internal class BBMRITransferHelper
                              SET is_preferred_object = false
                              where is_preferred_object is null
                              and b.match_status = 3 ";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} objects set as 'non-preferred' for new BBMRI samples");
 
         // Add in the 'preferred' new sample records. Note that the match status (3) is included.
@@ -218,7 +221,7 @@ internal class BBMRITransferHelper
          where b.match_status = 3 
          and is_preferred_object = true";
 
-         res = db.ExecuteSQL(sql_string);
+         res = _db.ExecuteSql(sql_string);
          _loggingHelper.LogLine($"{res} new 'preferred' sample-study combinations added for new BBMRI samples");
 
          // Update newly added records with object ids, if the 'preferred' object record.
@@ -229,7 +232,7 @@ internal class BBMRITransferHelper
                         and source_id = 110426
                         and object_id is null
                         and is_preferred_object = true;";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} object ids created for new samples and applied to 'preferred' objects");
 
         // Update remaining study-sample combinations with new object id
@@ -241,7 +244,7 @@ internal class BBMRITransferHelper
                        where b.sd_oid = doi.sd_oid
                        and b.match_status = 3 
                        and b.is_preferred_object = false ";
-        res = db.ExecuteSQL(sql_string);
+        res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} object ids applied to new sample links with 'non-preferred' objects");
 
         // Add remaining matching study-sample records. Note object_id is included in the add this time.
@@ -259,7 +262,7 @@ internal class BBMRITransferHelper
          where b.match_status = 3 
          and is_preferred_object = false ";
 
-         res = db.ExecuteSQL(sql_string);
+         res = _db.ExecuteSql(sql_string);
         _loggingHelper.LogLine($"{res} new 'non-preferred' sample-study combinations added");
     }
 
@@ -271,7 +274,7 @@ internal class BBMRITransferHelper
              from nk.data_object_ids doi
              WHERE is_preferred_object = true and 
              source_id = {source_id}";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
     
     public void DropTempBBMRITables()
@@ -279,7 +282,7 @@ internal class BBMRITransferHelper
         string sql_string = @"DROP TABLE IF EXISTS nk.new_bbmris;
                               DROP TABLE IF EXISTS nk.new_bbmri_links;
                               DROP TABLE IF EXISTS nk.temp_bbmris;";
-        db.ExecuteSQL(sql_string);
+        _db.ExecuteSql(sql_string);
     }
 }
 

@@ -1,4 +1,4 @@
-﻿namespace MDR_Aggregator;
+﻿namespace MDR_Aggregator.TopLevelClasses.Interfaces;
 
 public interface ICredentials
 {
