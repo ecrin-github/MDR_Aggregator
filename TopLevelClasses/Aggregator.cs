@@ -226,17 +226,26 @@ public class Aggregator
             
             CoreSearchBuilder csb = new CoreSearchBuilder(core_conn_string, _loggingHelper);
             
-            //_loggingHelper.LogHeader("Creating JSON object data");
-           // csb.CreateJSONObjectData();  
+            _loggingHelper.LogHeader("Creating JSON object data");
+            csb.CreateJSONObjectData();  
                 
             // Tables are then created to hold data for querying in various ways
             
             _loggingHelper.LogHeader("Setting up study search tables");
 
             //csb.CreateIdentifierSearchDataTable();
+            
+            _loggingHelper.LogHeader("Setting up PMID search data tables");
+            
             //csb.CreatePMIDSearchDataTable();
+            
+            _loggingHelper.LogHeader("Setting up LEXEME search data tables");
+            
             //csb.CreateLexemeSearchDataTable();
-            //csb.CreateCountrySearchDataTable();  
+            
+            _loggingHelper.LogHeader("Setting up Country search data tables");
+            
+            csb.CreateCountrySearchDataTable();  
             
             // The study data json objects are then created
             

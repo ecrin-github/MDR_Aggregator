@@ -293,17 +293,28 @@ public class StudyDataTransferrer
     
     private void CreateSourceDataTable(string ftw_schema_name, string table_name)
     {
-        // This sets up a table of all the subset of data in the source DB table,
-        // that matches existing studies in the aggregated db schema. It is the data that 
-        // * could * be added, but only if it does not match what is already there.
-        
         string sql_string = $@"DROP TABLE IF EXISTS nk.source_data;
-                       CREATE TABLE nk.source_data as 
-                       SELECT es.study_id, d.* 
-                       FROM {ftw_schema_name}.{table_name} d
-                       INNER JOIN nk.existing_studies es
-                       ON d.sd_sid = es.sd_sid";
-        db.ExecuteSQL(sql_string);
+                           CREATE TABLE nk.source_data as 
+                           SELECT es.study_id, d.* 
+                           FROM {ftw_schema_name}.{table_name} d
+                           INNER JOIN nk.existing_studies es
+                           ON d.sd_sid = es.sd_sid";
+        try
+        {
+            db.ExecuteSQL(sql_string);
+        }
+        catch (NpgsqlException ex)
+        {
+            _loggingHelper.LogLine($"***ERROR*** In ExecuteSQL; Exception: {ex.Message},SQL was: {sql_string}");
+            _loggingHelper.LogLine($"Full error stack: {ex.StackTrace}");
+
+            if (ex.InnerException != null)
+            {
+                _loggingHelper.LogLine($"Inner Exception: {ex.InnerException.Message}");
+                _loggingHelper.LogLine($"Inner Exception Stack Trace: {ex.InnerException.StackTrace}");
+            }
+            return;
+        }
     }
     
     private void CreateExistingDataTable(string dest_schema_name, string table_name, string comparison_fields)

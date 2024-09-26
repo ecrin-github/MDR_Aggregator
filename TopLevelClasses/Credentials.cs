@@ -39,8 +39,10 @@ public class Credentials : ICredentials
             Password = _password,
             Port = _port,
             Database = database_name,
-            KeepAlive = 300,
-            IncludeErrorDetail = true
+            KeepAlive = 600,
+            IncludeErrorDetail = true,
+            // Set Command Timeout here (in seconds)
+            CommandTimeout = 600 // 5 minutes
         };
         return builder.ConnectionString;
     }
